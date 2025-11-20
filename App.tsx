@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, Ore, OreInventoryItem, SignalBuff, Fish, FishInventoryItem, Plant, PlantInventoryItem } from './types';
+import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, OreInventoryItem, FishInventoryItem, PlantInventoryItem } from './types';
 import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, BURST_COST, MINING_SPEEDS, ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS } from './constants';
 import { generateDrop } from './services/rngService';
 import { mineOre } from './services/miningService';
@@ -18,13 +18,12 @@ import { Achievements } from './components/Achievements';
 import { CoinToss } from './components/CoinToss';
 import { EntropyBar } from './components/EntropyBar';
 import { MiningPanel } from './components/MiningPanel';
-import { OreInventory } from './components/OreInventory';
 import { FishingPanel } from './components/FishingPanel';
-import { FishInventory } from './components/FishInventory';
 import { HarvestingPanel } from './components/HarvestingPanel';
-import { PlantInventory } from './components/PlantInventory';
 import { GachaTerminal } from './components/GachaTerminal';
 import { SignalInterceptor } from './components/SignalInterceptor';
+import { useSubGame } from './hooks/useSubGame';
+import { ResourceInventory } from './components/ResourceInventory';
 
 export default function App() {
   // State
@@ -106,27 +105,8 @@ export default function App() {
     return items.filter((i: any) => i.rarityId <= RarityId.THE_ONE);
   });
   
-  const [oreInventory, setOreInventory] = useState<OreInventoryItem[]>(() => {
-      const saved = localStorage.getItem('textbound_ore_inventory');
-      return saved ? JSON.parse(saved) : [];
-  });
-
-  const [fishInventory, setFishInventory] = useState<FishInventoryItem[]>(() => {
-      const saved = localStorage.getItem('textbound_fish_inventory');
-      return saved ? JSON.parse(saved) : [];
-  });
-
-  const [plantInventory, setPlantInventory] = useState<PlantInventoryItem[]>(() => {
-      const saved = localStorage.getItem('textbound_plant_inventory');
-      return saved ? JSON.parse(saved) : [];
-  });
-
   // UI State
   const [isAutoSpinning, setIsAutoSpinning] = useState(false);
-  const [isAutoMining, setIsAutoMining] = useState(false); 
-  const [isAutoFishing, setIsAutoFishing] = useState(false); 
-  const [isAutoHarvesting, setIsAutoHarvesting] = useState(false);
-  
   const [activeRightPanel, setActiveRightPanel] = useState<'MINING' | 'FISHING' | 'HARVESTING'>('MINING');
 
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
@@ -145,16 +125,11 @@ export default function App() {
   // Visualizer State
   const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId }) | null>(null);
 
-  // Visual States for Side Panels
-  const [lastMinedBatch, setLastMinedBatch] = useState<Ore[]>([]);
-  const [lastFishedBatch, setLastFishedBatch] = useState<Fish[]>([]);
-  const [lastHarvestedBatch, setLastHarvestedBatch] = useState<Plant[]>([]);
-
   // Settings State
   const [autoSpinSpeed, setAutoSpinSpeed] = useState(SPEED_TIERS[stats.speedLevel]?.ms || 250);
   const [luckMultiplier, setLuckMultiplier] = useState(1);
   
-  // Sub-game Settings
+  // Sub-game Settings (Debug)
   const [miningLuckMultiplier, setMiningLuckMultiplier] = useState(1);
   const [miningSpeed, setMiningSpeed] = useState(1000); 
 
@@ -181,9 +156,6 @@ export default function App() {
 
   // Refs
   const autoSpinRef = useRef<number | null>(null);
-  const autoMineRef = useRef<number | null>(null);
-  const autoFishRef = useRef<number | null>(null);
-  const autoHarvestRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
   
   // Persistence
@@ -196,18 +168,6 @@ export default function App() {
   }, [inventory]);
   
   useEffect(() => {
-    localStorage.setItem('textbound_ore_inventory', JSON.stringify(oreInventory));
-  }, [oreInventory]);
-
-  useEffect(() => {
-    localStorage.setItem('textbound_fish_inventory', JSON.stringify(fishInventory));
-  }, [fishInventory]);
-
-  useEffect(() => {
-    localStorage.setItem('textbound_plant_inventory', JSON.stringify(plantInventory));
-  }, [plantInventory]);
-
-  useEffect(() => {
     localStorage.setItem('textbound_settings_autostop', autoStopRarity.toString());
   }, [autoStopRarity]);
 
@@ -217,17 +177,10 @@ export default function App() {
 
   // Sync Speed with Stats
   useEffect(() => {
-      const speed = SPEED_TIERS[stats.speedLevel]?.ms || 250;
-      setAutoSpinSpeed(speed);
-      
-      const mSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
-      setMiningSpeed(mSpeed);
-
-      const fSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
-      setFishingSpeed(fSpeed);
-
-      const hSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100;
-      setHarvestingSpeed(hSpeed);
+      setAutoSpinSpeed(SPEED_TIERS[stats.speedLevel]?.ms || 250);
+      setMiningSpeed(MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000);
+      setFishingSpeed(FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200);
+      setHarvestingSpeed(HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100);
   }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel]);
 
   // Force update UI every second if there is a buff to update timer
@@ -237,7 +190,6 @@ export default function App() {
              if (stats.signalBuff && Date.now() > stats.signalBuff.endTime) {
                  setStats(prev => ({ ...prev, signalBuff: null }));
              } else {
-                 // Force re-render for timer
                  setStats(prev => ({...prev}));
              }
           }, 1000);
@@ -247,6 +199,68 @@ export default function App() {
       }
       return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [stats.signalBuff]);
+
+  // --- SUB-GAMES HOOKS ---
+
+  const miningGame = useSubGame<any, OreInventoryItem>({
+      storageKey: 'textbound_ore_inventory',
+      dropFn: mineOre,
+      playSound: audioService.playMineSound.bind(audioService),
+      speed: miningSpeed,
+      luck: miningLuckMultiplier * (1 + (stats.miningLuckLevel * 0.5)),
+      multi: stats.miningMultiLevel || 1,
+      thresholds: { boom: 30, rare: 10, boomDivisor: 6 }
+  }, {
+      onUpdate: (count, bestId, gacha) => setStats(prev => ({
+          ...prev,
+          totalMined: (prev.totalMined || 0) + count,
+          bestOreMined: Math.max(prev.bestOreMined || 0, bestId),
+          gachaCredits: prev.gachaCredits + gacha
+      })),
+      playBoom: audioService.playBoom.bind(audioService),
+      playRare: audioService.playRaritySound.bind(audioService),
+      playCoinWin: audioService.playCoinWin.bind(audioService)
+  });
+
+  const fishingGame = useSubGame<any, FishInventoryItem>({
+      storageKey: 'textbound_fish_inventory',
+      dropFn: catchFish,
+      playSound: audioService.playFishSound.bind(audioService),
+      speed: fishingSpeed,
+      luck: fishingLuckMultiplier * (1 + (stats.fishingLuckLevel * 0.5)),
+      multi: stats.fishingMultiLevel || 1,
+      thresholds: { boom: 25, rare: 15, boomDivisor: 3 }
+  }, {
+      onUpdate: (count, bestId, gacha) => setStats(prev => ({
+          ...prev,
+          totalFished: (prev.totalFished || 0) + count,
+          bestFishCaught: Math.max(prev.bestFishCaught || 0, bestId),
+          gachaCredits: prev.gachaCredits + gacha
+      })),
+      playBoom: audioService.playBoom.bind(audioService),
+      playRare: audioService.playRaritySound.bind(audioService),
+      playCoinWin: audioService.playCoinWin.bind(audioService)
+  });
+
+  const harvestingGame = useSubGame<any, PlantInventoryItem>({
+      storageKey: 'textbound_plant_inventory',
+      dropFn: harvestPlant,
+      playSound: audioService.playHarvestSound.bind(audioService),
+      speed: harvestingSpeed,
+      luck: harvestingLuckMultiplier * (1 + (stats.harvestingLuckLevel * 0.5)),
+      multi: stats.harvestingMultiLevel || 1,
+      thresholds: { boom: 25, rare: 15, boomDivisor: 3 }
+  }, {
+      onUpdate: (count, bestId, gacha) => setStats(prev => ({
+          ...prev,
+          totalHarvested: (prev.totalHarvested || 0) + count,
+          bestPlantHarvested: Math.max(prev.bestPlantHarvested || 0, bestId),
+          gachaCredits: prev.gachaCredits + gacha
+      })),
+      playBoom: audioService.playBoom.bind(audioService),
+      playRare: audioService.playRaritySound.bind(audioService),
+      playCoinWin: audioService.playCoinWin.bind(audioService)
+  });
 
   // Achievement Checker
   useEffect(() => {
@@ -260,13 +274,13 @@ export default function App() {
       });
 
       if (newUnlocks.length > 0) {
-          audioService.playRaritySound(RarityId.LEGENDARY); // Achievement unlock sound
+          audioService.playRaritySound(RarityId.LEGENDARY);
           setStats(prev => ({
               ...prev,
               unlockedAchievements: [...prev.unlockedAchievements, ...newUnlocks]
           }));
       }
-  }, [stats.totalRolls, stats.balance, stats.bestRarityFound, stats.totalMined, stats.bestOreMined, stats.totalFished, stats.bestFishCaught, stats.totalHarvested, stats.bestPlantHarvested, inventory]);
+  }, [stats, inventory]);
 
   // Handle Mute Toggle
   const toggleMute = () => {
@@ -281,268 +295,43 @@ export default function App() {
       return drops.reduce((prev, current) => (current.rarityId > prev.rarityId ? current : prev), drops[0]);
   };
 
-  // --- MINING LOGIC ---
-  const handleMine = useCallback(() => {
-      audioService.playMineSound();
-      const levelLuck = 1 + (stats.miningLuckLevel * 0.5); 
-      const totalLuck = miningLuckMultiplier * levelLuck;
-      const countToMine = stats.miningMultiLevel || 1;
-      
-      const currentBatch: Ore[] = [];
-      const inventoryUpdates = new Map<number, number>();
-
-      for(let i=0; i < countToMine; i++) {
-          const ore = mineOre(totalLuck);
-          currentBatch.push(ore);
-          inventoryUpdates.set(ore.id, (inventoryUpdates.get(ore.id) || 0) + 1);
-      }
-
-      let bestOreInBatch: Ore | null = null;
-      currentBatch.forEach(ore => {
-          if (!bestOreInBatch || ore.probability > bestOreInBatch.probability) {
-              bestOreInBatch = ore;
-          }
-      });
-
-      setLastMinedBatch(currentBatch);
-
-      setOreInventory(prev => {
-          const newInv = [...prev];
-          inventoryUpdates.forEach((count, id) => {
-              const existing = newInv.find(item => item.id === id);
-              if (existing) {
-                  existing.count += count;
-              } else {
-                  newInv.push({ id, count, discoveredAt: Date.now() });
-              }
-          });
-          return newInv;
-      });
-
-      const foundGacha = Math.random() < 0.002;
-
-      setStats(prev => ({
-          ...prev,
-          totalMined: (prev.totalMined || 0) + countToMine,
-          bestOreMined: Math.max(prev.bestOreMined || 0, bestOreInBatch?.id || 0),
-          gachaCredits: prev.gachaCredits + (foundGacha ? 1 : 0)
-      }));
-
-      if (bestOreInBatch) {
-          if (bestOreInBatch.id >= 30) {
-              const estimatedRarity = Math.min(15, Math.floor(bestOreInBatch.id / 6));
-              audioService.playBoom(estimatedRarity as RarityId);
-          } else if (bestOreInBatch.id >= 10) {
-              audioService.playRaritySound(RarityId.RARE);
-          }
-      }
-      
-      if (foundGacha) audioService.playCoinWin(3);
-
-  }, [miningLuckMultiplier, stats.miningLuckLevel, stats.miningMultiLevel]);
-
-  // --- FISHING LOGIC ---
-  const handleFish = useCallback(() => {
-      audioService.playFishSound();
-      const levelLuck = 1 + (stats.fishingLuckLevel * 0.5); 
-      const totalLuck = fishingLuckMultiplier * levelLuck;
-      const countToFish = stats.fishingMultiLevel || 1;
-      
-      const currentBatch: Fish[] = [];
-      const inventoryUpdates = new Map<number, number>();
-
-      for(let i=0; i < countToFish; i++) {
-          const fish = catchFish(totalLuck);
-          currentBatch.push(fish);
-          inventoryUpdates.set(fish.id, (inventoryUpdates.get(fish.id) || 0) + 1);
-      }
-
-      let bestFishInBatch: Fish | null = null;
-      currentBatch.forEach(fish => {
-          if (!bestFishInBatch || fish.probability > bestFishInBatch.probability) {
-              bestFishInBatch = fish;
-          }
-      });
-
-      setLastFishedBatch(currentBatch);
-
-      setFishInventory(prev => {
-          const newInv = [...prev];
-          inventoryUpdates.forEach((count, id) => {
-              const existing = newInv.find(item => item.id === id);
-              if (existing) {
-                  existing.count += count;
-              } else {
-                  newInv.push({ id, count, discoveredAt: Date.now() });
-              }
-          });
-          return newInv;
-      });
-
-      const foundGacha = Math.random() < 0.003;
-
-      setStats(prev => ({
-          ...prev,
-          totalFished: (prev.totalFished || 0) + countToFish,
-          bestFishCaught: Math.max(prev.bestFishCaught || 0, bestFishInBatch?.id || 0),
-          gachaCredits: prev.gachaCredits + (foundGacha ? 1 : 0)
-      }));
-
-      if (bestFishInBatch) {
-          if (bestFishInBatch.id >= 25) {
-               const estimatedRarity = Math.min(15, Math.floor(bestFishInBatch.id / 3));
-               audioService.playBoom(estimatedRarity as RarityId);
-          } else if (bestFishInBatch.id >= 15) {
-               audioService.playRaritySound(RarityId.RARE);
-          }
-      }
-      
-      if (foundGacha) audioService.playCoinWin(3);
-
-  }, [fishingLuckMultiplier, stats.fishingLuckLevel, stats.fishingMultiLevel]);
-
-  // --- HARVESTING LOGIC ---
-  const handleHarvest = useCallback(() => {
-      audioService.playHarvestSound();
-      
-      const levelLuck = 1 + (stats.harvestingLuckLevel * 0.5); 
-      const totalLuck = harvestingLuckMultiplier * levelLuck;
-      const countToHarvest = stats.harvestingMultiLevel || 1;
-      
-      const currentBatch: Plant[] = [];
-      const inventoryUpdates = new Map<number, number>();
-
-      for(let i=0; i < countToHarvest; i++) {
-          const plant = harvestPlant(totalLuck);
-          currentBatch.push(plant);
-          inventoryUpdates.set(plant.id, (inventoryUpdates.get(plant.id) || 0) + 1);
-      }
-
-      let bestPlantInBatch: Plant | null = null;
-      currentBatch.forEach(plant => {
-          if (!bestPlantInBatch || plant.probability > bestPlantInBatch.probability) {
-              bestPlantInBatch = plant;
-          }
-      });
-
-      setLastHarvestedBatch(currentBatch);
-
-      setPlantInventory(prev => {
-          const newInv = [...prev];
-          inventoryUpdates.forEach((count, id) => {
-              const existing = newInv.find(item => item.id === id);
-              if (existing) {
-                  existing.count += count;
-              } else {
-                  newInv.push({ id, count, discoveredAt: Date.now() });
-              }
-          });
-          return newInv;
-      });
-
-      const foundGacha = Math.random() < 0.0025;
-
-      setStats(prev => ({
-          ...prev,
-          totalHarvested: (prev.totalHarvested || 0) + countToHarvest,
-          bestPlantHarvested: Math.max(prev.bestPlantHarvested || 0, bestPlantInBatch?.id || 0),
-          gachaCredits: prev.gachaCredits + (foundGacha ? 1 : 0)
-      }));
-
-      if (bestPlantInBatch) {
-          if (bestPlantInBatch.id >= 25) {
-               const estimatedRarity = Math.min(15, Math.floor(bestPlantInBatch.id / 3));
-               audioService.playBoom(estimatedRarity as RarityId);
-          } else if (bestPlantInBatch.id >= 15) {
-               audioService.playRaritySound(RarityId.RARE);
-          }
-      }
-      
-      if (foundGacha) audioService.playCoinWin(3);
-
-  }, [harvestingLuckMultiplier, stats.harvestingLuckLevel, stats.harvestingMultiLevel]);
-
-  const handleSellOres = () => {
+  const handleSellResources = (type: 'ORES' | 'FISH' | 'PLANTS') => {
       let totalValue = 0;
-      oreInventory.forEach(item => {
-          const ore = ORES.find(o => o.id === item.id);
-          if (ore) {
-              const unitValue = Math.max(1, Math.floor(ore.probability / 5));
-              totalValue += unitValue * item.count;
+      let setInv: any;
+      let currentInv: any[];
+      let defs: any[];
+      let divisor: number;
+
+      if (type === 'ORES') {
+          currentInv = miningGame.inventory;
+          setInv = miningGame.setInventory;
+          defs = ORES;
+          divisor = 5;
+      } else if (type === 'FISH') {
+          currentInv = fishingGame.inventory;
+          setInv = fishingGame.setInventory;
+          defs = FISH;
+          divisor = 4;
+      } else {
+          currentInv = harvestingGame.inventory;
+          setInv = harvestingGame.setInventory;
+          defs = PLANTS;
+          divisor = 4.5;
+      }
+
+      currentInv.forEach(item => {
+          const def = defs.find(d => d.id === item.id);
+          if (def) {
+              totalValue += Math.max(1, Math.floor(def.probability / divisor)) * item.count;
           }
       });
 
       if (totalValue > 0) {
           audioService.playCoinWin(5);
           setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
-          setOreInventory([]);
+          setInv([]);
       }
   };
-
-  const handleSellFish = () => {
-      let totalValue = 0;
-      fishInventory.forEach(item => {
-          const fish = FISH.find(f => f.id === item.id);
-          if (fish) {
-              const unitValue = Math.max(1, Math.floor(fish.probability / 4));
-              totalValue += unitValue * item.count;
-          }
-      });
-
-      if (totalValue > 0) {
-          audioService.playCoinWin(5);
-          setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
-          setFishInventory([]);
-      }
-  };
-
-  const handleSellPlants = () => {
-      let totalValue = 0;
-      plantInventory.forEach(item => {
-          const plant = PLANTS.find(p => p.id === item.id);
-          if (plant) {
-              const unitValue = Math.max(1, Math.floor(plant.probability / 4.5));
-              totalValue += unitValue * item.count;
-          }
-      });
-
-      if (totalValue > 0) {
-          audioService.playCoinWin(5);
-          setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
-          setPlantInventory([]);
-      }
-  };
-
-  // Auto Loops
-  useEffect(() => {
-      if (isAutoMining) {
-          autoMineRef.current = window.setInterval(() => handleMine(), miningSpeed);
-      } else {
-          if (autoMineRef.current) clearInterval(autoMineRef.current);
-          autoMineRef.current = null;
-      }
-      return () => { if (autoMineRef.current) clearInterval(autoMineRef.current); };
-  }, [isAutoMining, handleMine, miningSpeed]);
-
-  useEffect(() => {
-      if (isAutoFishing) {
-          autoFishRef.current = window.setInterval(() => handleFish(), fishingSpeed);
-      } else {
-          if (autoFishRef.current) clearInterval(autoFishRef.current);
-          autoFishRef.current = null;
-      }
-      return () => { if (autoFishRef.current) clearInterval(autoFishRef.current); };
-  }, [isAutoFishing, handleFish, fishingSpeed]);
-
-  useEffect(() => {
-      if (isAutoHarvesting) {
-          autoHarvestRef.current = window.setInterval(() => handleHarvest(), harvestingSpeed);
-      } else {
-          if (autoHarvestRef.current) clearInterval(autoHarvestRef.current);
-          autoHarvestRef.current = null;
-      }
-      return () => { if (autoHarvestRef.current) clearInterval(autoHarvestRef.current); };
-  }, [isAutoHarvesting, handleHarvest, harvestingSpeed]);
 
   // --- SIGNAL LOGIC ---
   const handleSignalDecrypt = (multiplier: number, duration: number) => {
@@ -556,7 +345,7 @@ export default function App() {
       }));
   };
 
-  // --- MAIN GAME LOGIC (unchanged, but included for completeness) ---
+  // --- MAIN GAME LOGIC ---
   const handleRoll = useCallback((manualBatchSize?: number) => {
     if (!manualBatchSize) audioService.playRollSound();
     const rollsToPerform = manualBatchSize || stats.multiRollLevel;
@@ -694,7 +483,7 @@ export default function App() {
       }
   };
 
-  // Mining Buy Handlers
+  // Sub-game Buy Handlers
   const handleBuyMiningSpeed = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
@@ -713,8 +502,6 @@ export default function App() {
           setStats(prev => ({ ...prev, balance: prev.balance - cost, miningMultiLevel: (prev.miningMultiLevel || 1) + 1 }));
       }
   };
-
-  // Fishing Buy Handlers
   const handleBuyFishingSpeed = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
@@ -733,8 +520,6 @@ export default function App() {
           setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingMultiLevel: (prev.fishingMultiLevel || 1) + 1 }));
       }
   };
-
-  // Harvesting Buy Handlers
   const handleBuyHarvestingSpeed = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
@@ -790,18 +575,6 @@ export default function App() {
       setLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
   };
   
-  const handleMiningLuckSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setMiningLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
-  };
-
-  const handleFishingLuckSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFishingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
-  };
-
-  const handleHarvestingLuckSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setHarvestingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
-  };
-
   const getLogValue = (luck: number) => Math.log10(Math.max(1, luck));
 
   const activeRarityVFX = inspectedItem ? inspectedItem.rarityId : getBestDrop(currentDrops)?.rarityId;
@@ -834,9 +607,6 @@ export default function App() {
                 <p>{T.UI.BEST}: <span className={`${RARITY_TIERS[stats.bestRarityFound]?.textColor || 'text-white'}`}>{T.RARITY_NAMES[stats.bestRarityFound]}</span></p>
                 {stats.equippedTitle && (
                     <p>TITLE: <span className="text-yellow-400 font-bold border-b border-yellow-600">{stats.equippedTitle}</span></p>
-                )}
-                {luckMultiplier > 1.01 && (
-                    <p className="text-green-500 animate-pulse">LUCK: {Math.round(luckMultiplier).toLocaleString()}x</p>
                 )}
                 {hasSignalBuff && (
                     <p className="text-green-400 font-bold animate-pulse">SIGNAL BOOST: {stats.signalBuff!.multiplier}x ({timeLeft}s)</p>
@@ -965,7 +735,7 @@ export default function App() {
 
             <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
                 <div className="flex gap-4 items-center pointer-events-auto">
-                    <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.5.0</div>
+                    <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.6.0</div>
                     <button onClick={() => setIsChangelogOpen(true)} className="text-neutral-700 hover:text-white text-xs font-mono underline">CHANGELOG</button>
                 </div>
                 <button onClick={() => { audioService.playClick(); setIsAdminOpen(true); }} className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors">
@@ -1003,29 +773,29 @@ export default function App() {
              <div className="flex-1 relative">
                  {activeRightPanel === 'MINING' ? (
                     <MiningPanel 
-                        onMine={handleMine}
-                        lastBatch={lastMinedBatch}
+                        onMine={miningGame.performAction}
+                        lastBatch={miningGame.lastBatch}
                         totalMined={stats.totalMined || 0}
-                        isAutoMining={isAutoMining}
-                        onToggleAuto={() => { audioService.playClick(); setIsAutoMining(!isAutoMining); }}
+                        isAutoMining={miningGame.isAuto}
+                        onToggleAuto={() => { audioService.playClick(); miningGame.toggleAuto(); }}
                         onOpenInventory={() => { audioService.playClick(); setIsOreInventoryOpen(true); }}
                     />
                  ) : activeRightPanel === 'FISHING' ? (
                     <FishingPanel 
-                        onFish={handleFish}
-                        lastBatch={lastFishedBatch}
+                        onFish={fishingGame.performAction}
+                        lastBatch={fishingGame.lastBatch}
                         totalFished={stats.totalFished || 0}
-                        isAutoFishing={isAutoFishing}
-                        onToggleAuto={() => { audioService.playClick(); setIsAutoFishing(!isAutoFishing); }}
+                        isAutoFishing={fishingGame.isAuto}
+                        onToggleAuto={() => { audioService.playClick(); fishingGame.toggleAuto(); }}
                         onOpenInventory={() => { audioService.playClick(); setIsFishInventoryOpen(true); }}
                     />
                  ) : (
                     <HarvestingPanel 
-                        onHarvest={handleHarvest}
-                        lastBatch={lastHarvestedBatch}
+                        onHarvest={harvestingGame.performAction}
+                        lastBatch={harvestingGame.lastBatch}
                         totalHarvested={stats.totalHarvested || 0}
-                        isAutoHarvesting={isAutoHarvesting}
-                        onToggleAuto={() => { audioService.playClick(); setIsAutoHarvesting(!isAutoHarvesting); }}
+                        isAutoHarvesting={harvestingGame.isAuto}
+                        onToggleAuto={() => { audioService.playClick(); harvestingGame.toggleAuto(); }}
                         onOpenInventory={() => { audioService.playClick(); setIsPlantInventoryOpen(true); }}
                     />
                  )}
@@ -1036,23 +806,59 @@ export default function App() {
 
       {/* Modals */}
       <Inventory items={inventory} isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} onInspect={handleInspectItem} />
-      <OreInventory 
-        items={oreInventory} 
-        isOpen={isOreInventoryOpen} 
-        onClose={() => setIsOreInventoryOpen(false)} 
-        onSell={handleSellOres} 
+      
+      <ResourceInventory
+        items={miningGame.inventory}
+        definitions={ORES}
+        isOpen={isOreInventoryOpen}
+        onClose={() => setIsOreInventoryOpen(false)}
+        onSell={() => handleSellResources('ORES')}
+        config={{
+            title: "ORE SILO",
+            itemName: "RES",
+            valueDivisor: 5,
+            themeColor: "text-white",
+            borderColor: "border-neutral-700",
+            bgColor: "bg-neutral-900",
+            emptyIcon: "∅",
+            emptyText: "SILO EMPTY. START MINING."
+        }}
       />
-      <FishInventory 
-        items={fishInventory} 
-        isOpen={isFishInventoryOpen} 
-        onClose={() => setIsFishInventoryOpen(false)} 
-        onSell={handleSellFish} 
+
+      <ResourceInventory
+        items={fishingGame.inventory}
+        definitions={FISH}
+        isOpen={isFishInventoryOpen}
+        onClose={() => setIsFishInventoryOpen(false)}
+        onSell={() => handleSellResources('FISH')}
+        config={{
+            title: "CRYO TANK",
+            itemName: "SPECIMENS",
+            valueDivisor: 4,
+            themeColor: "text-cyan-400",
+            borderColor: "border-cyan-900",
+            bgColor: "bg-cyan-950/20",
+            emptyIcon: "~ ~ ~",
+            emptyText: "TANK EMPTY. CAST NET."
+        }}
       />
-      <PlantInventory 
-        items={plantInventory} 
-        isOpen={isPlantInventoryOpen} 
-        onClose={() => setIsPlantInventoryOpen(false)} 
-        onSell={handleSellPlants} 
+
+      <ResourceInventory
+        items={harvestingGame.inventory}
+        definitions={PLANTS}
+        isOpen={isPlantInventoryOpen}
+        onClose={() => setIsPlantInventoryOpen(false)}
+        onSell={() => handleSellResources('PLANTS')}
+        config={{
+            title: "GREENHOUSE",
+            itemName: "PLANTS",
+            valueDivisor: 4.5,
+            themeColor: "text-green-400",
+            borderColor: "border-green-900",
+            bgColor: "bg-green-950/20",
+            emptyIcon: "❀",
+            emptyText: "GREENHOUSE EMPTY. START HARVESTING."
+        }}
       />
       
       <Shop 
@@ -1086,9 +892,9 @@ export default function App() {
         isOpen={isIndexOpen} 
         onClose={() => setIsIndexOpen(false)} 
         inventory={inventory} 
-        oreInventory={oreInventory} 
-        fishInventory={fishInventory}
-        plantInventory={plantInventory}
+        oreInventory={miningGame.inventory} 
+        fishInventory={fishingGame.inventory}
+        plantInventory={harvestingGame.inventory}
         onSelectItem={handleIndexSelectItem} 
       />
       <Achievements isOpen={isAchievementsOpen} onClose={() => setIsAchievementsOpen(false)} stats={stats} onEquipTitle={(title) => setStats(prev => ({ ...prev, equippedTitle: title }))} />
@@ -1163,7 +969,7 @@ export default function App() {
                     <label>MINING LUCK (Log)</label>
                     <span className="text-orange-500 font-bold">{Math.round(miningLuckMultiplier).toLocaleString()}x</span>
                 </div>
-                <input type="range" min="0" max="9" step="0.1" value={getLogValue(miningLuckMultiplier)} onChange={handleMiningLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                <input type="range" min="0" max="9" step="0.1" value={getLogValue(miningLuckMultiplier)} onChange={(e) => setMiningLuckMultiplier(Math.pow(10, parseFloat(e.target.value)))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
               </div>
 
               {/* FISHING CONFIG */}
@@ -1179,7 +985,7 @@ export default function App() {
                     <label>FISHING LUCK (Log)</label>
                     <span className="text-teal-500 font-bold">{Math.round(fishingLuckMultiplier).toLocaleString()}x</span>
                 </div>
-                <input type="range" min="0" max="9" step="0.1" value={getLogValue(fishingLuckMultiplier)} onChange={handleFishingLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-teal-500" />
+                <input type="range" min="0" max="9" step="0.1" value={getLogValue(fishingLuckMultiplier)} onChange={(e) => setFishingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-teal-500" />
               </div>
 
               {/* HARVESTING CONFIG */}
@@ -1195,7 +1001,7 @@ export default function App() {
                     <label>HARVEST LUCK (Log)</label>
                     <span className="text-green-500 font-bold">{Math.round(harvestingLuckMultiplier).toLocaleString()}x</span>
                 </div>
-                <input type="range" min="0" max="9" step="0.1" value={getLogValue(harvestingLuckMultiplier)} onChange={handleHarvestingLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-green-500" />
+                <input type="range" min="0" max="9" step="0.1" value={getLogValue(harvestingLuckMultiplier)} onChange={(e) => setHarvestingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-green-500" />
               </div>
 
               {/* Quick Presets */}
@@ -1222,7 +1028,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Global Flash Effect for High Tiers (Replaces Cutscene Effect) */}
+      {/* Global Flash Effect for High Tiers */}
       {activeRarityVFX && activeRarityVFX >= RarityId.DIVINE && (
         <div key={Date.now()} className="absolute inset-0 bg-white pointer-events-none animate-flash z-40 mix-blend-overlay opacity-50" />
       )}
