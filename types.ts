@@ -113,6 +113,24 @@ export interface FishInventoryItem {
   discoveredAt: number;
 }
 
+// --- HARVESTING TYPES ---
+
+export interface Plant {
+  id: number;
+  name: string;
+  description: string;
+  probability: number; // 1 in X
+  color: string;
+  glowColor: string;
+  tierName: string;
+}
+
+export interface PlantInventoryItem {
+  id: number; // Reference to Plant ID
+  count: number;
+  discoveredAt: number;
+}
+
 export interface Achievement {
     id: string;
     title: string; // The reward title
@@ -155,6 +173,13 @@ export interface GameStats {
   fishingSpeedLevel: number;
   fishingLuckLevel: number;
   fishingMultiLevel: number;
+
+  // Harvesting Stats & Upgrades
+  totalHarvested: number;
+  bestPlantHarvested: number;
+  harvestingSpeedLevel: number;
+  harvestingLuckLevel: number;
+  harvestingMultiLevel: number;
 
   // Gacha
   gachaCredits: number;

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
-import { InventoryItem, RarityId, ItemData, OreInventoryItem, FishInventoryItem } from '../types';
-import { RARITY_TIERS, PHRASES, TRANSLATIONS, ORES, FISH } from '../constants';
+import { InventoryItem, RarityId, ItemData, OreInventoryItem, FishInventoryItem, PlantInventoryItem } from '../types';
+import { RARITY_TIERS, PHRASES, TRANSLATIONS, ORES, FISH, PLANTS } from '../constants';
 import { RarityBadge } from './RarityBadge';
 import { audioService } from '../services/audioService';
 
@@ -11,12 +11,13 @@ interface Props {
   inventory: InventoryItem[];
   oreInventory?: OreInventoryItem[];
   fishInventory?: FishInventoryItem[];
+  plantInventory?: PlantInventoryItem[];
   onSelectItem: (item: ItemData, rarityId: RarityId) => void;
 }
 
-type Tab = 'ITEMS' | 'ORES' | 'FISH';
+type Tab = 'ITEMS' | 'ORES' | 'FISH' | 'PLANTS';
 
-export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreInventory = [], fishInventory = [], onSelectItem }) => {
+export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreInventory = [], fishInventory = [], plantInventory = [], onSelectItem }) => {
   const [activeTab, setActiveTab] = useState<Tab>('ITEMS');
   const [selectedRarity, setSelectedRarity] = useState<RarityId>(RarityId.COMMON);
   const [showSpoilers, setShowSpoilers] = useState(false);
@@ -40,6 +41,12 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
       return set;
   }, [fishInventory]);
 
+  const discoveredPlantSet = useMemo(() => {
+      const set = new Set<number>();
+      plantInventory.forEach(i => set.add(i.id));
+      return set;
+  }, [plantInventory]);
+
   if (!isOpen) return null;
 
   const tiers = Object.values(RARITY_TIERS).sort((a, b) => a.id - b.id);
@@ -58,6 +65,10 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
   const foundFish = fishInventory.length;
   const fishPercent = Math.min(100, Math.floor((foundFish / totalFish) * 100));
 
+  const totalPlants = PLANTS.length;
+  const foundPlants = plantInventory.length;
+  const plantPercent = Math.min(100, Math.floor((foundPlants / totalPlants) * 100));
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4">
       <div className="w-full max-w-5xl h-[85vh] bg-neutral-900/50 border border-neutral-800 rounded-lg flex flex-col md:flex-row overflow-hidden shadow-2xl">
@@ -71,12 +82,13 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                         {activeTab === 'ITEMS' && `${percentComplete}%`}
                         {activeTab === 'ORES' && `${orePercent}%`}
                         {activeTab === 'FISH' && `${fishPercent}%`}
+                        {activeTab === 'PLANTS' && `${plantPercent}%`}
                      </div>
                 </div>
                 
                 {/* Tab Switcher */}
                 <div className="flex flex-col gap-1">
-                    <div className="flex p-1 bg-neutral-900 rounded border border-neutral-800 gap-1">
+                    <div className="flex p-1 bg-neutral-900 rounded border border-neutral-800 gap-1 overflow-x-auto">
                         <button 
                             onClick={() => { audioService.playClick(); setActiveTab('ITEMS'); }}
                             className={`flex-1 py-2 text-xs font-mono text-center rounded ${activeTab === 'ITEMS' ? 'bg-neutral-700 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
@@ -94,6 +106,12 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                             className={`flex-1 py-2 text-xs font-mono text-center rounded ${activeTab === 'FISH' ? 'bg-neutral-700 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
                         >
                             FISH
+                        </button>
+                        <button 
+                            onClick={() => { audioService.playClick(); setActiveTab('PLANTS'); }}
+                            className={`flex-1 py-2 text-xs font-mono text-center rounded ${activeTab === 'PLANTS' ? 'bg-neutral-700 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
+                        >
+                            PLANTS
                         </button>
                     </div>
                 </div>
@@ -153,6 +171,21 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                     </div>
                 </div>
             )}
+
+            {activeTab === 'PLANTS' && (
+                <div className="flex-1 overflow-y-auto p-4">
+                    <div className="text-xs text-green-400 font-mono mb-4">
+                        FLORA FROM THE HYDROPONICS BAY.
+                    </div>
+                    <div className="space-y-2">
+                        <div className="text-[10px] text-neutral-500 uppercase tracking-widest">Statistics</div>
+                        <div className="flex justify-between text-xs font-mono text-neutral-300">
+                             <span>Discovered</span>
+                             <span>{foundPlants} / {totalPlants}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             <div className="p-4 border-t border-neutral-800">
                 <label className="flex items-center gap-2 text-xs text-neutral-400 font-mono cursor-pointer hover:text-white">
@@ -180,8 +213,10 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                         </>
                     ) : activeTab === 'ORES' ? (
                         <span className="text-sm font-bold font-mono text-white">ORE DEPOSITS</span>
-                    ) : (
+                    ) : activeTab === 'FISH' ? (
                         <span className="text-sm font-bold font-mono text-cyan-400">AQUATIC DATABASE</span>
+                    ) : (
+                        <span className="text-sm font-bold font-mono text-green-400">BOTANICAL ARCHIVE</span>
                     )}
                 </div>
                 <button onClick={onClose} className="text-neutral-500 hover:text-white font-mono">[X]</button>
@@ -271,7 +306,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                              );
                          })}
                     </div>
-                ) : (
+                ) : activeTab === 'FISH' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                          {FISH.sort((a,b) => a.id - b.id).map((fish) => {
                              const isDiscovered = discoveredFishSet.has(fish.id);
@@ -302,6 +337,46 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                             </div>
                                             <div className="text-[10px] text-cyan-600 font-mono mt-2">
                                                 1 in {fish.probability.toLocaleString()}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-neutral-700 font-mono">LOCKED</div>
+                                    )}
+                                </div>
+                             );
+                         })}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                         {PLANTS.sort((a,b) => a.id - b.id).map((plant) => {
+                             const isDiscovered = discoveredPlantSet.has(plant.id);
+                             const isVisible = isDiscovered || showSpoilers;
+
+                             return (
+                                <div
+                                    key={plant.id}
+                                    className={`
+                                        relative p-4 border rounded-lg text-center transition-all h-40 flex flex-col items-center justify-center gap-2
+                                        ${isVisible 
+                                            ? 'border-green-900 bg-green-950/20' 
+                                            : 'border-neutral-800 bg-neutral-900/50 opacity-50'
+                                        }
+                                    `}
+                                    style={{
+                                        borderColor: isVisible && plant.id > 15 ? plant.glowColor : undefined,
+                                        boxShadow: isVisible && plant.id > 20 ? `0 0 15px ${plant.glowColor}22` : 'none'
+                                    }}
+                                >
+                                    {isVisible ? (
+                                        <>
+                                            <div className="text-[9px] font-mono uppercase text-green-700 tracking-widest mb-1">
+                                                {plant.tierName}
+                                            </div>
+                                            <div className={`text-lg font-bold ${plant.color} drop-shadow-sm`}>
+                                                {plant.name}
+                                            </div>
+                                            <div className="text-[10px] text-green-600 font-mono mt-2">
+                                                1 in {plant.probability.toLocaleString()}
                                             </div>
                                         </>
                                     ) : (

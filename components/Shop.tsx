@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { SPEED_TIERS, BURST_COST, UPGRADE_COSTS, MINING_SPEEDS, FISHING_SPEEDS } from '../constants';
+import { SPEED_TIERS, BURST_COST, UPGRADE_COSTS, MINING_SPEEDS, FISHING_SPEEDS, HARVESTING_SPEEDS } from '../constants';
 import { GameStats } from '../types';
 
 interface Props {
@@ -17,13 +17,17 @@ interface Props {
   onBuyFishingSpeed?: (cost: number) => void;
   onBuyFishingLuck?: (cost: number) => void;
   onBuyFishingMulti?: (cost: number) => void;
+  onBuyHarvestingSpeed?: (cost: number) => void;
+  onBuyHarvestingLuck?: (cost: number) => void;
+  onBuyHarvestingMulti?: (cost: number) => void;
 }
 
 export const Shop: React.FC<Props> = ({ 
     isOpen, onClose, stats,
     onBuyMultiRoll, onBuySpeed, onBuyBurst, onBuyLuck,
     onBuyMiningSpeed, onBuyMiningLuck, onBuyMiningMulti,
-    onBuyFishingSpeed, onBuyFishingLuck, onBuyFishingMulti
+    onBuyFishingSpeed, onBuyFishingLuck, onBuyFishingMulti,
+    onBuyHarvestingSpeed, onBuyHarvestingLuck, onBuyHarvestingMulti
 }) => {
   if (!isOpen) return null;
 
@@ -83,6 +87,25 @@ export const Shop: React.FC<Props> = ({
   const nextFishMultiLevel = (stats.fishingMultiLevel || 1) + 1;
   const fishMultiCost = Math.floor(UPGRADE_COSTS.FISHING_MULTI.base * Math.pow(UPGRADE_COSTS.FISHING_MULTI.multiplier, (stats.fishingMultiLevel || 1) - 1));
   const isFishMultiMaxed = nextFishMultiLevel > UPGRADE_COSTS.FISHING_MULTI.max;
+
+  // --- HARVESTING UPGRADES ---
+
+  // Harvesting Speed
+  const nextHarvestSpeedLevel = (stats.harvestingSpeedLevel || 0) + 1;
+  const harvestSpeedCost = Math.floor(UPGRADE_COSTS.HARVESTING_SPEED.base * Math.pow(UPGRADE_COSTS.HARVESTING_SPEED.multiplier, stats.harvestingSpeedLevel || 0));
+  const isHarvestSpeedMaxed = nextHarvestSpeedLevel >= HARVESTING_SPEEDS.length;
+  const currentHarvestSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length-1)];
+  const nextHarvestSpeed = HARVESTING_SPEEDS[Math.min(nextHarvestSpeedLevel, HARVESTING_SPEEDS.length-1)];
+
+  // Harvesting Luck
+  const nextHarvestLuckLevel = (stats.harvestingLuckLevel || 0) + 1;
+  const harvestLuckCost = Math.floor(UPGRADE_COSTS.HARVESTING_LUCK.base * Math.pow(UPGRADE_COSTS.HARVESTING_LUCK.multiplier, stats.harvestingLuckLevel || 0));
+  const isHarvestLuckMaxed = nextHarvestLuckLevel > UPGRADE_COSTS.HARVESTING_LUCK.max;
+
+  // Harvesting Multi
+  const nextHarvestMultiLevel = (stats.harvestingMultiLevel || 1) + 1;
+  const harvestMultiCost = Math.floor(UPGRADE_COSTS.HARVESTING_MULTI.base * Math.pow(UPGRADE_COSTS.HARVESTING_MULTI.multiplier, (stats.harvestingMultiLevel || 1) - 1));
+  const isHarvestMultiMaxed = nextHarvestMultiLevel > UPGRADE_COSTS.HARVESTING_MULTI.max;
 
   const UpgradeCard = ({ title, desc, current, next, cost, isMaxed, onBuy, colorClass, borderColor }: any) => (
       <div className={`p-4 bg-neutral-800/50 rounded border ${borderColor} flex flex-col justify-between h-full`}>
@@ -278,6 +301,48 @@ export const Shop: React.FC<Props> = ({
                             onBuy={() => onBuyFishingMulti && onBuyFishingMulti(fishMultiCost)}
                             colorClass="text-indigo-400"
                             borderColor="border-indigo-800"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* HARVESTING SECTION */}
+            {onBuyHarvestingSpeed && (
+                <div>
+                    <h3 className="text-sm font-bold text-white font-mono mb-4 border-b border-neutral-800 pb-2">HARVESTING MODULES</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <UpgradeCard 
+                            title="GROWTH RATE (SPEED)"
+                            desc="Reduces auto-harvest interval."
+                            current={`${currentHarvestSpeed}ms`}
+                            next={`${nextHarvestSpeed}ms`}
+                            cost={harvestSpeedCost}
+                            isMaxed={isHarvestSpeedMaxed}
+                            onBuy={() => onBuyHarvestingSpeed(harvestSpeedCost)}
+                            colorClass="text-green-400"
+                            borderColor="border-green-800"
+                        />
+                        <UpgradeCard 
+                            title="FERTILIZER (LUCK)"
+                            desc="Increases chance for rare plants."
+                            current={`${(1 + ((stats.harvestingLuckLevel||0) * 0.5)).toFixed(1)}x`}
+                            next={`${(1 + (nextHarvestLuckLevel * 0.5)).toFixed(1)}x`}
+                            cost={harvestLuckCost}
+                            isMaxed={isHarvestLuckMaxed}
+                            onBuy={() => onBuyHarvestingLuck && onBuyHarvestingLuck(harvestLuckCost)}
+                            colorClass="text-lime-400"
+                            borderColor="border-lime-800"
+                        />
+                        <UpgradeCard 
+                            title="SICKLE SIZE (MULTI)"
+                            desc="Harvests multiple plants per action."
+                            current={`${stats.harvestingMultiLevel||1}x`}
+                            next={`${nextHarvestMultiLevel}x`}
+                            cost={harvestMultiCost}
+                            isMaxed={isHarvestMultiMaxed}
+                            onBuy={() => onBuyHarvestingMulti && onBuyHarvestingMulti(harvestMultiCost)}
+                            colorClass="text-emerald-400"
+                            borderColor="border-emerald-800"
                         />
                     </div>
                 </div>

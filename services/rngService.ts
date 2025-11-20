@@ -1,6 +1,6 @@
 
 import { PHRASES, RARITY_TIERS, VARIANTS } from '../constants';
-import { Drop, RarityId, VariantId } from '../types';
+import { Drop, RarityId, VariantId, ItemData } from '../types';
 
 export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
   const rand = Math.random();
@@ -21,7 +21,7 @@ export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Dr
   }
 
   const potentialItems = PHRASES['en'][selectedTier.id];
-  const item = potentialItems[Math.floor(Math.random() * potentialItems.length)];
+  const item = potentialItems[Math.floor(Math.random() * potentialItems.length)] as ItemData;
 
   // Variant Logic (Only for EPIC+)
   let selectedVariantId = VariantId.NONE;

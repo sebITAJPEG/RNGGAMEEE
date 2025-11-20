@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, Ore, OreInventoryItem, SignalBuff, Fish, FishInventoryItem } from './types';
-import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, BURST_COST, MINING_SPEEDS, ORES, FISHING_SPEEDS, FISH } from './constants';
+import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, Ore, OreInventoryItem, SignalBuff, Fish, FishInventoryItem, Plant, PlantInventoryItem } from './types';
+import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, BURST_COST, MINING_SPEEDS, ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS } from './constants';
 import { generateDrop } from './services/rngService';
 import { mineOre } from './services/miningService';
 import { catchFish } from './services/fishingService';
+import { harvestPlant } from './services/harvestingService';
 import { audioService } from './services/audioService';
 import { RarityBadge } from './components/RarityBadge';
 import { Inventory } from './components/Inventory';
@@ -20,6 +21,8 @@ import { MiningPanel } from './components/MiningPanel';
 import { OreInventory } from './components/OreInventory';
 import { FishingPanel } from './components/FishingPanel';
 import { FishInventory } from './components/FishInventory';
+import { HarvestingPanel } from './components/HarvestingPanel';
+import { PlantInventory } from './components/PlantInventory';
 import { GachaTerminal } from './components/GachaTerminal';
 import { SignalInterceptor } from './components/SignalInterceptor';
 
@@ -31,7 +34,6 @@ export default function App() {
     const saved = localStorage.getItem('textbound_stats');
     if (saved) {
         const parsed = JSON.parse(saved);
-        // SAFEGUARD: If bestRarityFound is invalid (removed), cap it at THE_ONE
         let bestRarity = parsed.bestRarityFound || RarityId.COMMON;
         if (bestRarity > RarityId.THE_ONE) bestRarity = RarityId.THE_ONE;
 
@@ -57,6 +59,11 @@ export default function App() {
             fishingSpeedLevel: parsed.fishingSpeedLevel || 0,
             fishingLuckLevel: parsed.fishingLuckLevel || 0,
             fishingMultiLevel: parsed.fishingMultiLevel || 1,
+            totalHarvested: parsed.totalHarvested || 0,
+            bestPlantHarvested: parsed.bestPlantHarvested || 0,
+            harvestingSpeedLevel: parsed.harvestingSpeedLevel || 0,
+            harvestingLuckLevel: parsed.harvestingLuckLevel || 0,
+            harvestingMultiLevel: parsed.harvestingMultiLevel || 1,
             gachaCredits: parsed.gachaCredits || 0,
             signalBuff: parsed.signalBuff || null
         };
@@ -83,6 +90,11 @@ export default function App() {
         fishingSpeedLevel: 0,
         fishingLuckLevel: 0,
         fishingMultiLevel: 1,
+        totalHarvested: 0,
+        bestPlantHarvested: 0,
+        harvestingSpeedLevel: 0,
+        harvestingLuckLevel: 0,
+        harvestingMultiLevel: 1,
         gachaCredits: 0,
         signalBuff: null
     };
@@ -90,7 +102,6 @@ export default function App() {
 
   const [inventory, setInventory] = useState<InventoryItem[]>(() => {
     const saved = localStorage.getItem('textbound_inventory');
-    // Filter out items with rarity > THE_ONE just in case
     const items = saved ? JSON.parse(saved) : [];
     return items.filter((i: any) => i.rarityId <= RarityId.THE_ONE);
   });
@@ -105,16 +116,23 @@ export default function App() {
       return saved ? JSON.parse(saved) : [];
   });
 
+  const [plantInventory, setPlantInventory] = useState<PlantInventoryItem[]>(() => {
+      const saved = localStorage.getItem('textbound_plant_inventory');
+      return saved ? JSON.parse(saved) : [];
+  });
+
   // UI State
   const [isAutoSpinning, setIsAutoSpinning] = useState(false);
-  const [isAutoMining, setIsAutoMining] = useState(false); // Mining Auto State
-  const [isAutoFishing, setIsAutoFishing] = useState(false); // Fishing Auto State
+  const [isAutoMining, setIsAutoMining] = useState(false); 
+  const [isAutoFishing, setIsAutoFishing] = useState(false); 
+  const [isAutoHarvesting, setIsAutoHarvesting] = useState(false);
   
-  const [activeRightPanel, setActiveRightPanel] = useState<'MINING' | 'FISHING'>('MINING');
+  const [activeRightPanel, setActiveRightPanel] = useState<'MINING' | 'FISHING' | 'HARVESTING'>('MINING');
 
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isOreInventoryOpen, setIsOreInventoryOpen] = useState(false);
   const [isFishInventoryOpen, setIsFishInventoryOpen] = useState(false);
+  const [isPlantInventoryOpen, setIsPlantInventoryOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
@@ -127,22 +145,24 @@ export default function App() {
   // Visualizer State
   const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId }) | null>(null);
 
-  // Mining Visual State
+  // Visual States for Side Panels
   const [lastMinedBatch, setLastMinedBatch] = useState<Ore[]>([]);
-  // Fishing Visual State
   const [lastFishedBatch, setLastFishedBatch] = useState<Fish[]>([]);
+  const [lastHarvestedBatch, setLastHarvestedBatch] = useState<Plant[]>([]);
 
   // Settings State
   const [autoSpinSpeed, setAutoSpinSpeed] = useState(SPEED_TIERS[stats.speedLevel]?.ms || 250);
   const [luckMultiplier, setLuckMultiplier] = useState(1);
   
-  // Mining Settings
+  // Sub-game Settings
   const [miningLuckMultiplier, setMiningLuckMultiplier] = useState(1);
   const [miningSpeed, setMiningSpeed] = useState(1000); 
 
-  // Fishing Settings
   const [fishingSpeed, setFishingSpeed] = useState(1200);
   const [fishingLuckMultiplier, setFishingLuckMultiplier] = useState(1);
+
+  const [harvestingSpeed, setHarvestingSpeed] = useState(1100);
+  const [harvestingLuckMultiplier, setHarvestingLuckMultiplier] = useState(1);
 
   // Filters / Thresholds
   const [autoStopRarity, setAutoStopRarity] = useState<RarityId>(() => {
@@ -163,6 +183,7 @@ export default function App() {
   const autoSpinRef = useRef<number | null>(null);
   const autoMineRef = useRef<number | null>(null);
   const autoFishRef = useRef<number | null>(null);
+  const autoHarvestRef = useRef<number | null>(null);
   const timerRef = useRef<number | null>(null);
   
   // Persistence
@@ -183,6 +204,10 @@ export default function App() {
   }, [fishInventory]);
 
   useEffect(() => {
+    localStorage.setItem('textbound_plant_inventory', JSON.stringify(plantInventory));
+  }, [plantInventory]);
+
+  useEffect(() => {
     localStorage.setItem('textbound_settings_autostop', autoStopRarity.toString());
   }, [autoStopRarity]);
 
@@ -195,14 +220,15 @@ export default function App() {
       const speed = SPEED_TIERS[stats.speedLevel]?.ms || 250;
       setAutoSpinSpeed(speed);
       
-      // Sync Mining Speed
       const mSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
       setMiningSpeed(mSpeed);
 
-      // Sync Fishing Speed
       const fSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
       setFishingSpeed(fSpeed);
-  }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel]);
+
+      const hSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100;
+      setHarvestingSpeed(hSpeed);
+  }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel]);
 
   // Force update UI every second if there is a buff to update timer
   useEffect(() => {
@@ -240,7 +266,7 @@ export default function App() {
               unlockedAchievements: [...prev.unlockedAchievements, ...newUnlocks]
           }));
       }
-  }, [stats.totalRolls, stats.balance, stats.bestRarityFound, stats.totalMined, stats.bestOreMined, stats.totalFished, stats.bestFishCaught, inventory]);
+  }, [stats.totalRolls, stats.balance, stats.bestRarityFound, stats.totalMined, stats.bestOreMined, stats.totalFished, stats.bestFishCaught, stats.totalHarvested, stats.bestPlantHarvested, inventory]);
 
   // Handle Mute Toggle
   const toggleMute = () => {
@@ -258,10 +284,8 @@ export default function App() {
   // --- MINING LOGIC ---
   const handleMine = useCallback(() => {
       audioService.playMineSound();
-      
       const levelLuck = 1 + (stats.miningLuckLevel * 0.5); 
       const totalLuck = miningLuckMultiplier * levelLuck;
-
       const countToMine = stats.miningMultiLevel || 1;
       
       const currentBatch: Ore[] = [];
@@ -295,7 +319,6 @@ export default function App() {
           return newInv;
       });
 
-      // Chance to find Gacha Credit while mining
       const foundGacha = Math.random() < 0.002;
 
       setStats(prev => ({
@@ -306,13 +329,7 @@ export default function App() {
       }));
 
       if (bestOreInBatch) {
-          // Use Boom logic for rarer ores (id > 20 is roughly Precious/Epic tier)
           if (bestOreInBatch.id >= 30) {
-              // Map ore rarity to approximate drop rarity for sound impact
-              // Ore 30 (Platinum) ~ Epic
-              // Ore 50 (Void Metal) ~ Divine
-              // Ore 90 (Backrooms) ~ Chaos
-              // Simple scale: id / 6
               const estimatedRarity = Math.min(15, Math.floor(bestOreInBatch.id / 6));
               audioService.playBoom(estimatedRarity as RarityId);
           } else if (bestOreInBatch.id >= 10) {
@@ -327,10 +344,8 @@ export default function App() {
   // --- FISHING LOGIC ---
   const handleFish = useCallback(() => {
       audioService.playFishSound();
-      
       const levelLuck = 1 + (stats.fishingLuckLevel * 0.5); 
       const totalLuck = fishingLuckMultiplier * levelLuck;
-
       const countToFish = stats.fishingMultiLevel || 1;
       
       const currentBatch: Fish[] = [];
@@ -364,7 +379,6 @@ export default function App() {
           return newInv;
       });
 
-      // Higher chance for Gacha Credit in Fishing
       const foundGacha = Math.random() < 0.003;
 
       setStats(prev => ({
@@ -387,6 +401,67 @@ export default function App() {
 
   }, [fishingLuckMultiplier, stats.fishingLuckLevel, stats.fishingMultiLevel]);
 
+  // --- HARVESTING LOGIC ---
+  const handleHarvest = useCallback(() => {
+      audioService.playHarvestSound();
+      
+      const levelLuck = 1 + (stats.harvestingLuckLevel * 0.5); 
+      const totalLuck = harvestingLuckMultiplier * levelLuck;
+      const countToHarvest = stats.harvestingMultiLevel || 1;
+      
+      const currentBatch: Plant[] = [];
+      const inventoryUpdates = new Map<number, number>();
+
+      for(let i=0; i < countToHarvest; i++) {
+          const plant = harvestPlant(totalLuck);
+          currentBatch.push(plant);
+          inventoryUpdates.set(plant.id, (inventoryUpdates.get(plant.id) || 0) + 1);
+      }
+
+      let bestPlantInBatch: Plant | null = null;
+      currentBatch.forEach(plant => {
+          if (!bestPlantInBatch || plant.probability > bestPlantInBatch.probability) {
+              bestPlantInBatch = plant;
+          }
+      });
+
+      setLastHarvestedBatch(currentBatch);
+
+      setPlantInventory(prev => {
+          const newInv = [...prev];
+          inventoryUpdates.forEach((count, id) => {
+              const existing = newInv.find(item => item.id === id);
+              if (existing) {
+                  existing.count += count;
+              } else {
+                  newInv.push({ id, count, discoveredAt: Date.now() });
+              }
+          });
+          return newInv;
+      });
+
+      const foundGacha = Math.random() < 0.0025;
+
+      setStats(prev => ({
+          ...prev,
+          totalHarvested: (prev.totalHarvested || 0) + countToHarvest,
+          bestPlantHarvested: Math.max(prev.bestPlantHarvested || 0, bestPlantInBatch?.id || 0),
+          gachaCredits: prev.gachaCredits + (foundGacha ? 1 : 0)
+      }));
+
+      if (bestPlantInBatch) {
+          if (bestPlantInBatch.id >= 25) {
+               const estimatedRarity = Math.min(15, Math.floor(bestPlantInBatch.id / 3));
+               audioService.playBoom(estimatedRarity as RarityId);
+          } else if (bestPlantInBatch.id >= 15) {
+               audioService.playRaritySound(RarityId.RARE);
+          }
+      }
+      
+      if (foundGacha) audioService.playCoinWin(3);
+
+  }, [harvestingLuckMultiplier, stats.harvestingLuckLevel, stats.harvestingMultiLevel]);
+
   const handleSellOres = () => {
       let totalValue = 0;
       oreInventory.forEach(item => {
@@ -399,10 +474,7 @@ export default function App() {
 
       if (totalValue > 0) {
           audioService.playCoinWin(5);
-          setStats(prev => ({
-              ...prev,
-              balance: prev.balance + totalValue
-          }));
+          setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
           setOreInventory([]);
       }
   };
@@ -419,15 +491,29 @@ export default function App() {
 
       if (totalValue > 0) {
           audioService.playCoinWin(5);
-          setStats(prev => ({
-              ...prev,
-              balance: prev.balance + totalValue
-          }));
+          setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
           setFishInventory([]);
       }
   };
 
-  // Auto Mine Loop
+  const handleSellPlants = () => {
+      let totalValue = 0;
+      plantInventory.forEach(item => {
+          const plant = PLANTS.find(p => p.id === item.id);
+          if (plant) {
+              const unitValue = Math.max(1, Math.floor(plant.probability / 4.5));
+              totalValue += unitValue * item.count;
+          }
+      });
+
+      if (totalValue > 0) {
+          audioService.playCoinWin(5);
+          setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
+          setPlantInventory([]);
+      }
+  };
+
+  // Auto Loops
   useEffect(() => {
       if (isAutoMining) {
           autoMineRef.current = window.setInterval(() => handleMine(), miningSpeed);
@@ -435,12 +521,9 @@ export default function App() {
           if (autoMineRef.current) clearInterval(autoMineRef.current);
           autoMineRef.current = null;
       }
-      return () => {
-          if (autoMineRef.current) clearInterval(autoMineRef.current);
-      };
+      return () => { if (autoMineRef.current) clearInterval(autoMineRef.current); };
   }, [isAutoMining, handleMine, miningSpeed]);
 
-  // Auto Fish Loop
   useEffect(() => {
       if (isAutoFishing) {
           autoFishRef.current = window.setInterval(() => handleFish(), fishingSpeed);
@@ -448,10 +531,18 @@ export default function App() {
           if (autoFishRef.current) clearInterval(autoFishRef.current);
           autoFishRef.current = null;
       }
-      return () => {
-          if (autoFishRef.current) clearInterval(autoFishRef.current);
-      };
+      return () => { if (autoFishRef.current) clearInterval(autoFishRef.current); };
   }, [isAutoFishing, handleFish, fishingSpeed]);
+
+  useEffect(() => {
+      if (isAutoHarvesting) {
+          autoHarvestRef.current = window.setInterval(() => handleHarvest(), harvestingSpeed);
+      } else {
+          if (autoHarvestRef.current) clearInterval(autoHarvestRef.current);
+          autoHarvestRef.current = null;
+      }
+      return () => { if (autoHarvestRef.current) clearInterval(autoHarvestRef.current); };
+  }, [isAutoHarvesting, handleHarvest, harvestingSpeed]);
 
   // --- SIGNAL LOGIC ---
   const handleSignalDecrypt = (multiplier: number, duration: number) => {
@@ -465,13 +556,11 @@ export default function App() {
       }));
   };
 
-  // --- MAIN GAME LOGIC ---
+  // --- MAIN GAME LOGIC (unchanged, but included for completeness) ---
   const handleRoll = useCallback((manualBatchSize?: number) => {
     if (!manualBatchSize) audioService.playRollSound();
-
     const rollsToPerform = manualBatchSize || stats.multiRollLevel;
     const generatedDrops: Drop[] = [];
-    
     let currentEntropy = stats.entropy;
 
     const levelLuck = 1 + (stats.luckLevel * 0.2); 
@@ -501,20 +590,14 @@ export default function App() {
 
     const bestDrop = getBestDrop(generatedDrops);
     if (!bestDrop) return;
-
     setCurrentDrops(generatedDrops);
     batchUpdateStatsAndInventory(generatedDrops, rollsToPerform, currentEntropy);
-    
-    // Play BOOM sound based on rarity
     audioService.playBoom(bestDrop.rarityId);
-
   }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.signalBuff]);
 
   const batchUpdateStatsAndInventory = (drops: Drop[], rollsCount: number, finalEntropy: number) => {
      let creditsFound = 0;
-     if (Math.random() < (0.001 * rollsCount)) {
-         creditsFound = 1;
-     }
+     if (Math.random() < (0.001 * rollsCount)) creditsFound = 1;
 
      setStats(prev => {
          const maxRarityInBatch = Math.max(...drops.map(d => d.rarityId));
@@ -529,10 +612,7 @@ export default function App() {
      });
 
      if (creditsFound > 0) audioService.playCoinWin(3);
-
-     if (drops.some(d => d.rarityId >= autoStopRarity)) {
-         setIsAutoSpinning(false);
-     }
+     if (drops.some(d => d.rarityId >= autoStopRarity)) setIsAutoSpinning(false);
 
      setInventory(prev => {
         let newInv = [...prev];
@@ -543,7 +623,6 @@ export default function App() {
                     i.rarityId === drop.rarityId &&
                     i.variantId === drop.variantId
                 );
-                
                 if (existingIndex >= 0) {
                     newInv[existingIndex].count += 1;
                 } else {
@@ -615,20 +694,19 @@ export default function App() {
       }
   };
 
+  // Mining Buy Handlers
   const handleBuyMiningSpeed = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
           setStats(prev => ({ ...prev, balance: prev.balance - cost, miningSpeedLevel: (prev.miningSpeedLevel || 0) + 1 }));
       }
   };
-
   const handleBuyMiningLuck = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
           setStats(prev => ({ ...prev, balance: prev.balance - cost, miningLuckLevel: (prev.miningLuckLevel || 0) + 1 }));
       }
   };
-
   const handleBuyMiningMulti = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.LEGENDARY);
@@ -636,20 +714,19 @@ export default function App() {
       }
   };
 
+  // Fishing Buy Handlers
   const handleBuyFishingSpeed = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
           setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingSpeedLevel: (prev.fishingSpeedLevel || 0) + 1 }));
       }
   };
-
   const handleBuyFishingLuck = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.EPIC);
           setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingLuckLevel: (prev.fishingLuckLevel || 0) + 1 }));
       }
   };
-
   const handleBuyFishingMulti = (cost: number) => {
       if (stats.balance >= cost) {
           audioService.playRaritySound(RarityId.LEGENDARY);
@@ -657,9 +734,29 @@ export default function App() {
       }
   };
 
+  // Harvesting Buy Handlers
+  const handleBuyHarvestingSpeed = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, harvestingSpeedLevel: (prev.harvestingSpeedLevel || 0) + 1 }));
+      }
+  };
+  const handleBuyHarvestingLuck = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, harvestingLuckLevel: (prev.harvestingLuckLevel || 0) + 1 }));
+      }
+  };
+  const handleBuyHarvestingMulti = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.LEGENDARY);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, harvestingMultiLevel: (prev.harvestingMultiLevel || 1) + 1 }));
+      }
+  };
+
   const handleBurstClick = () => {
       audioService.playClick();
-      handleRoll(50); // Batch 50
+      handleRoll(50); 
   };
 
   // Auto Spin Effect
@@ -679,7 +776,6 @@ export default function App() {
     const levelLuck = 1 + (stats.luckLevel * 0.2);
     const signalLuck = (stats.signalBuff && Date.now() < stats.signalBuff.endTime) ? stats.signalBuff.multiplier : 1;
     const totalLuck = luckMultiplier * levelLuck * signalLuck;
-
     const adjustedP = (p / totalLuck) * variantMultiplier;
     
     if (adjustedP >= 1000000000000) return `1 in ${Math.round(adjustedP / 1000000000000)}T`;
@@ -702,14 +798,13 @@ export default function App() {
       setFishingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
   };
 
-  const getLogValue = (luck: number) => {
-      return Math.log10(Math.max(1, luck));
+  const handleHarvestingLuckSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setHarvestingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
   };
 
-  const activeRarityVFX = inspectedItem 
-            ? inspectedItem.rarityId 
-            : getBestDrop(currentDrops)?.rarityId;
+  const getLogValue = (luck: number) => Math.log10(Math.max(1, luck));
 
+  const activeRarityVFX = inspectedItem ? inspectedItem.rarityId : getBestDrop(currentDrops)?.rarityId;
   const tierOptions = Object.values(RARITY_TIERS).sort((a, b) => a.id - b.id);
   const hasSignalBuff = stats.signalBuff && Date.now() < stats.signalBuff.endTime;
   const timeLeft = hasSignalBuff ? Math.ceil((stats.signalBuff!.endTime - Date.now()) / 1000) : 0;
@@ -870,7 +965,7 @@ export default function App() {
 
             <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
                 <div className="flex gap-4 items-center pointer-events-auto">
-                    <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.4.1</div>
+                    <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.5.0</div>
                     <button onClick={() => setIsChangelogOpen(true)} className="text-neutral-700 hover:text-white text-xs font-mono underline">CHANGELOG</button>
                 </div>
                 <button onClick={() => { audioService.playClick(); setIsAdminOpen(true); }} className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors">
@@ -886,15 +981,21 @@ export default function App() {
              <div className="flex border-b border-neutral-800 bg-black">
                 <button 
                     onClick={() => setActiveRightPanel('MINING')}
-                    className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'MINING' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:bg-neutral-900'}`}
+                    className={`flex-1 py-3 text-[10px] font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'MINING' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:bg-neutral-900'}`}
                 >
                     MINING
                 </button>
                 <button 
                     onClick={() => setActiveRightPanel('FISHING')}
-                    className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'FISHING' ? 'bg-cyan-950/50 text-cyan-300' : 'text-neutral-500 hover:bg-neutral-900'}`}
+                    className={`flex-1 py-3 text-[10px] font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'FISHING' ? 'bg-cyan-950/50 text-cyan-300' : 'text-neutral-500 hover:bg-neutral-900'}`}
                 >
                     FISHING
+                </button>
+                <button 
+                    onClick={() => setActiveRightPanel('HARVESTING')}
+                    className={`flex-1 py-3 text-[10px] font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'HARVESTING' ? 'bg-green-950/50 text-green-400' : 'text-neutral-500 hover:bg-neutral-900'}`}
+                >
+                    HARVESTING
                 </button>
              </div>
 
@@ -909,7 +1010,7 @@ export default function App() {
                         onToggleAuto={() => { audioService.playClick(); setIsAutoMining(!isAutoMining); }}
                         onOpenInventory={() => { audioService.playClick(); setIsOreInventoryOpen(true); }}
                     />
-                 ) : (
+                 ) : activeRightPanel === 'FISHING' ? (
                     <FishingPanel 
                         onFish={handleFish}
                         lastBatch={lastFishedBatch}
@@ -917,6 +1018,15 @@ export default function App() {
                         isAutoFishing={isAutoFishing}
                         onToggleAuto={() => { audioService.playClick(); setIsAutoFishing(!isAutoFishing); }}
                         onOpenInventory={() => { audioService.playClick(); setIsFishInventoryOpen(true); }}
+                    />
+                 ) : (
+                    <HarvestingPanel 
+                        onHarvest={handleHarvest}
+                        lastBatch={lastHarvestedBatch}
+                        totalHarvested={stats.totalHarvested || 0}
+                        isAutoHarvesting={isAutoHarvesting}
+                        onToggleAuto={() => { audioService.playClick(); setIsAutoHarvesting(!isAutoHarvesting); }}
+                        onOpenInventory={() => { audioService.playClick(); setIsPlantInventoryOpen(true); }}
                     />
                  )}
              </div>
@@ -938,6 +1048,12 @@ export default function App() {
         onClose={() => setIsFishInventoryOpen(false)} 
         onSell={handleSellFish} 
       />
+      <PlantInventory 
+        items={plantInventory} 
+        isOpen={isPlantInventoryOpen} 
+        onClose={() => setIsPlantInventoryOpen(false)} 
+        onSell={handleSellPlants} 
+      />
       
       <Shop 
         isOpen={isShopOpen} 
@@ -953,6 +1069,9 @@ export default function App() {
         onBuyFishingSpeed={handleBuyFishingSpeed}
         onBuyFishingLuck={handleBuyFishingLuck}
         onBuyFishingMulti={handleBuyFishingMulti}
+        onBuyHarvestingSpeed={handleBuyHarvestingSpeed}
+        onBuyHarvestingLuck={handleBuyHarvestingLuck}
+        onBuyHarvestingMulti={handleBuyHarvestingMulti}
       />
       
       <GachaTerminal 
@@ -969,6 +1088,7 @@ export default function App() {
         inventory={inventory} 
         oreInventory={oreInventory} 
         fishInventory={fishInventory}
+        plantInventory={plantInventory}
         onSelectItem={handleIndexSelectItem} 
       />
       <Achievements isOpen={isAchievementsOpen} onClose={() => setIsAchievementsOpen(false)} stats={stats} onEquipTitle={(title) => setStats(prev => ({ ...prev, equippedTitle: title }))} />
@@ -1062,13 +1182,29 @@ export default function App() {
                 <input type="range" min="0" max="9" step="0.1" value={getLogValue(fishingLuckMultiplier)} onChange={handleFishingLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-teal-500" />
               </div>
 
+              {/* HARVESTING CONFIG */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                 <div className="text-sm font-mono text-white font-bold">HARVESTING CONFIG (DEBUG)</div>
+                 <div className="flex justify-between text-sm font-mono text-neutral-400">
+                    <label>AUTO-HARVEST SPEED</label>
+                    <span className="text-white">{harvestingSpeed}ms</span>
+                </div>
+                <input type="range" min="50" max="2000" step="50" value={harvestingSpeed} onChange={(e) => setHarvestingSpeed(Number(e.target.value))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-green-500" />
+                
+                <div className="flex justify-between text-sm font-mono text-neutral-400 mt-2">
+                    <label>HARVEST LUCK (Log)</label>
+                    <span className="text-green-500 font-bold">{Math.round(harvestingLuckMultiplier).toLocaleString()}x</span>
+                </div>
+                <input type="range" min="0" max="9" step="0.1" value={getLogValue(harvestingLuckMultiplier)} onChange={handleHarvestingLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-green-500" />
+              </div>
+
               {/* Quick Presets */}
               <div className="pt-4 border-t border-neutral-800">
                  <p className="text-xs text-neutral-500 mb-2">{T.UI.PRESETS}</p>
                  <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => { setAutoSpinSpeed(150); setLuckMultiplier(1); setMiningLuckMultiplier(1); setFishingLuckMultiplier(1); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.RESET}</button>
-                    <button onClick={() => { setAutoSpinSpeed(50); setLuckMultiplier(1000); setMiningLuckMultiplier(100); setFishingLuckMultiplier(100); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.LUCKY}</button>
-                    <button onClick={() => { setAutoSpinSpeed(20); setLuckMultiplier(1000000000); setMiningLuckMultiplier(1000000); setFishingLuckMultiplier(1000000); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-yellow-600 border-yellow-900">{T.UI.GOD_MODE}</button>
+                    <button onClick={() => { setAutoSpinSpeed(150); setLuckMultiplier(1); setMiningLuckMultiplier(1); setFishingLuckMultiplier(1); setHarvestingLuckMultiplier(1); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.RESET}</button>
+                    <button onClick={() => { setAutoSpinSpeed(50); setLuckMultiplier(1000); setMiningLuckMultiplier(100); setFishingLuckMultiplier(100); setHarvestingLuckMultiplier(100); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.LUCKY}</button>
+                    <button onClick={() => { setAutoSpinSpeed(20); setLuckMultiplier(1000000000); setMiningLuckMultiplier(1000000); setFishingLuckMultiplier(1000000); setHarvestingLuckMultiplier(1000000); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-yellow-600 border-yellow-900">{T.UI.GOD_MODE}</button>
                  </div>
               </div>
               
