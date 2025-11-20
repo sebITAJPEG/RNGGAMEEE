@@ -1,37 +1,64 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GameStats, Drop, InventoryItem, RarityId, Language, ItemData } from './types';
-import { RARITY_TIERS, TRANSLATIONS } from './constants';
+import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, Ore, OreInventoryItem, SignalBuff, Fish, FishInventoryItem } from './types';
+import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, BURST_COST, MINING_SPEEDS, ORES, FISHING_SPEEDS, FISH } from './constants';
 import { generateDrop } from './services/rngService';
+import { mineOre } from './services/miningService';
+import { catchFish } from './services/fishingService';
 import { audioService } from './services/audioService';
 import { RarityBadge } from './components/RarityBadge';
 import { Inventory } from './components/Inventory';
 import { SpecialEffects } from './components/SpecialEffects';
-import { Cutscene } from './components/Cutscene';
 import { Shop } from './components/Shop';
 import { Changelog } from './components/Changelog';
 import { ItemVisualizer } from './components/ItemVisualizer';
 import { IndexCatalog } from './components/IndexCatalog';
+import { Achievements } from './components/Achievements';
+import { CoinToss } from './components/CoinToss';
+import { EntropyBar } from './components/EntropyBar';
+import { MiningPanel } from './components/MiningPanel';
+import { OreInventory } from './components/OreInventory';
+import { FishingPanel } from './components/FishingPanel';
+import { FishInventory } from './components/FishInventory';
+import { GachaTerminal } from './components/GachaTerminal';
+import { SignalInterceptor } from './components/SignalInterceptor';
 
 export default function App() {
   // State
   const [currentDrops, setCurrentDrops] = useState<Drop[]>([]);
-  const [pendingDrops, setPendingDrops] = useState<Drop[]>([]); // For storing the batch during cutscene
-  const [isCutscenePlaying, setIsCutscenePlaying] = useState(false);
-  const [cutsceneDrop, setCutsceneDrop] = useState<Drop | null>(null); // The specific drop playing the cutscene
-  const [isPreviewCutscene, setIsPreviewCutscene] = useState(false); // True if triggered from Index/Visualizer
   
   const [stats, setStats] = useState<GameStats>(() => {
     const saved = localStorage.getItem('textbound_stats');
-    // Migration for older save versions
     if (saved) {
         const parsed = JSON.parse(saved);
+        // SAFEGUARD: If bestRarityFound is invalid (removed), cap it at THE_ONE
+        let bestRarity = parsed.bestRarityFound || RarityId.COMMON;
+        if (bestRarity > RarityId.THE_ONE) bestRarity = RarityId.THE_ONE;
+
         return {
             totalRolls: parsed.totalRolls || 0,
             balance: parsed.balance ?? parsed.totalRolls ?? 0,
             startTime: parsed.startTime || Date.now(),
-            bestRarityFound: parsed.bestRarityFound || RarityId.COMMON,
-            multiRollLevel: parsed.multiRollLevel || 1
+            bestRarityFound: bestRarity,
+            multiRollLevel: parsed.multiRollLevel || 1,
+            speedLevel: parsed.speedLevel || 0,
+            luckLevel: parsed.luckLevel || 0,
+            entropy: parsed.entropy || 0,
+            hasBurst: parsed.hasBurst || false,
+            unlockedAchievements: parsed.unlockedAchievements || [],
+            equippedTitle: parsed.equippedTitle || null,
+            totalMined: parsed.totalMined || 0,
+            bestOreMined: parsed.bestOreMined || 0,
+            miningSpeedLevel: parsed.miningSpeedLevel || 0,
+            miningLuckLevel: parsed.miningLuckLevel || 0,
+            miningMultiLevel: parsed.miningMultiLevel || 1,
+            totalFished: parsed.totalFished || 0,
+            bestFishCaught: parsed.bestFishCaught || 0,
+            fishingSpeedLevel: parsed.fishingSpeedLevel || 0,
+            fishingLuckLevel: parsed.fishingLuckLevel || 0,
+            fishingMultiLevel: parsed.fishingMultiLevel || 1,
+            gachaCredits: parsed.gachaCredits || 0,
+            signalBuff: parsed.signalBuff || null
         };
     }
     return { 
@@ -39,50 +66,104 @@ export default function App() {
         balance: 0, 
         startTime: Date.now(), 
         bestRarityFound: RarityId.COMMON, 
-        multiRollLevel: 1 
+        multiRollLevel: 1,
+        speedLevel: 0,
+        luckLevel: 0,
+        entropy: 0,
+        hasBurst: false,
+        unlockedAchievements: [],
+        equippedTitle: null,
+        totalMined: 0,
+        bestOreMined: 0,
+        miningSpeedLevel: 0,
+        miningLuckLevel: 0,
+        miningMultiLevel: 1,
+        totalFished: 0,
+        bestFishCaught: 0,
+        fishingSpeedLevel: 0,
+        fishingLuckLevel: 0,
+        fishingMultiLevel: 1,
+        gachaCredits: 0,
+        signalBuff: null
     };
   });
 
   const [inventory, setInventory] = useState<InventoryItem[]>(() => {
     const saved = localStorage.getItem('textbound_inventory');
-    return saved ? JSON.parse(saved) : [];
+    // Filter out items with rarity > THE_ONE just in case
+    const items = saved ? JSON.parse(saved) : [];
+    return items.filter((i: any) => i.rarityId <= RarityId.THE_ONE);
+  });
+  
+  const [oreInventory, setOreInventory] = useState<OreInventoryItem[]>(() => {
+      const saved = localStorage.getItem('textbound_ore_inventory');
+      return saved ? JSON.parse(saved) : [];
+  });
+
+  const [fishInventory, setFishInventory] = useState<FishInventoryItem[]>(() => {
+      const saved = localStorage.getItem('textbound_fish_inventory');
+      return saved ? JSON.parse(saved) : [];
   });
 
   // UI State
   const [isAutoSpinning, setIsAutoSpinning] = useState(false);
+  const [isAutoMining, setIsAutoMining] = useState(false); // Mining Auto State
+  const [isAutoFishing, setIsAutoFishing] = useState(false); // Fishing Auto State
+  
+  const [activeRightPanel, setActiveRightPanel] = useState<'MINING' | 'FISHING'>('MINING');
+
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isOreInventoryOpen, setIsOreInventoryOpen] = useState(false);
+  const [isFishInventoryOpen, setIsFishInventoryOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [isIndexOpen, setIsIndexOpen] = useState(false);
+  const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
+  const [isCoinTossOpen, setIsCoinTossOpen] = useState(false);
+  const [isGachaOpen, setIsGachaOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   
   // Visualizer State
-  const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId }) | null>(null);
+  const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId }) | null>(null);
+
+  // Mining Visual State
+  const [lastMinedBatch, setLastMinedBatch] = useState<Ore[]>([]);
+  // Fishing Visual State
+  const [lastFishedBatch, setLastFishedBatch] = useState<Fish[]>([]);
 
   // Settings State
-  const [autoSpinSpeed, setAutoSpinSpeed] = useState(150);
+  const [autoSpinSpeed, setAutoSpinSpeed] = useState(SPEED_TIERS[stats.speedLevel]?.ms || 250);
   const [luckMultiplier, setLuckMultiplier] = useState(1);
-  const [language, setLanguage] = useState<Language>(() => {
-     return (localStorage.getItem('textbound_lang') as Language) || 'en';
-  });
+  
+  // Mining Settings
+  const [miningLuckMultiplier, setMiningLuckMultiplier] = useState(1);
+  const [miningSpeed, setMiningSpeed] = useState(1000); 
+
+  // Fishing Settings
+  const [fishingSpeed, setFishingSpeed] = useState(1200);
+  const [fishingLuckMultiplier, setFishingLuckMultiplier] = useState(1);
 
   // Filters / Thresholds
   const [autoStopRarity, setAutoStopRarity] = useState<RarityId>(() => {
     const saved = localStorage.getItem('textbound_settings_autostop');
-    return saved ? parseInt(saved) : RarityId.DIVINE;
-  });
-
-  const [minCutsceneRarity, setMinCutsceneRarity] = useState<RarityId>(() => {
-    const saved = localStorage.getItem('textbound_settings_cutscene');
-    return saved ? parseInt(saved) : RarityId.PRIMORDIAL;
+    const val = saved ? parseInt(saved) : RarityId.DIVINE;
+    return val > RarityId.THE_ONE ? RarityId.THE_ONE : val;
   });
   
+  const [showSignalInterceptor, setShowSignalInterceptor] = useState(() => {
+      const saved = localStorage.getItem('textbound_settings_signal');
+      return saved !== null ? JSON.parse(saved) : true;
+  });
+
   // Derived Translations
-  const T = TRANSLATIONS[language];
+  const T = TRANSLATIONS['en'];
 
   // Refs
   const autoSpinRef = useRef<number | null>(null);
+  const autoMineRef = useRef<number | null>(null);
+  const autoFishRef = useRef<number | null>(null);
+  const timerRef = useRef<number | null>(null);
   
   // Persistence
   useEffect(() => {
@@ -92,18 +173,74 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('textbound_inventory', JSON.stringify(inventory));
   }, [inventory]);
+  
+  useEffect(() => {
+    localStorage.setItem('textbound_ore_inventory', JSON.stringify(oreInventory));
+  }, [oreInventory]);
 
   useEffect(() => {
-    localStorage.setItem('textbound_lang', language);
-  }, [language]);
+    localStorage.setItem('textbound_fish_inventory', JSON.stringify(fishInventory));
+  }, [fishInventory]);
 
   useEffect(() => {
     localStorage.setItem('textbound_settings_autostop', autoStopRarity.toString());
   }, [autoStopRarity]);
 
   useEffect(() => {
-    localStorage.setItem('textbound_settings_cutscene', minCutsceneRarity.toString());
-  }, [minCutsceneRarity]);
+    localStorage.setItem('textbound_settings_signal', JSON.stringify(showSignalInterceptor));
+  }, [showSignalInterceptor]);
+
+  // Sync Speed with Stats
+  useEffect(() => {
+      const speed = SPEED_TIERS[stats.speedLevel]?.ms || 250;
+      setAutoSpinSpeed(speed);
+      
+      // Sync Mining Speed
+      const mSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
+      setMiningSpeed(mSpeed);
+
+      // Sync Fishing Speed
+      const fSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
+      setFishingSpeed(fSpeed);
+  }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel]);
+
+  // Force update UI every second if there is a buff to update timer
+  useEffect(() => {
+      if (stats.signalBuff) {
+          timerRef.current = window.setInterval(() => {
+             if (stats.signalBuff && Date.now() > stats.signalBuff.endTime) {
+                 setStats(prev => ({ ...prev, signalBuff: null }));
+             } else {
+                 // Force re-render for timer
+                 setStats(prev => ({...prev}));
+             }
+          }, 1000);
+      } else if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+      }
+      return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [stats.signalBuff]);
+
+  // Achievement Checker
+  useEffect(() => {
+      const newUnlocks: string[] = [];
+      ACHIEVEMENTS.forEach(ach => {
+          if (!stats.unlockedAchievements.includes(ach.id)) {
+              if (ach.condition(stats, inventory)) {
+                  newUnlocks.push(ach.id);
+              }
+          }
+      });
+
+      if (newUnlocks.length > 0) {
+          audioService.playRaritySound(RarityId.LEGENDARY); // Achievement unlock sound
+          setStats(prev => ({
+              ...prev,
+              unlockedAchievements: [...prev.unlockedAchievements, ...newUnlocks]
+          }));
+      }
+  }, [stats.totalRolls, stats.balance, stats.bestRarityFound, stats.totalMined, stats.bestOreMined, stats.totalFished, stats.bestFishCaught, inventory]);
 
   // Handle Mute Toggle
   const toggleMute = () => {
@@ -118,63 +255,295 @@ export default function App() {
       return drops.reduce((prev, current) => (current.rarityId > prev.rarityId ? current : prev), drops[0]);
   };
 
-  // Core Game Logic
-  const handleRoll = useCallback(() => {
-    audioService.playRollSound(); // Sound Effect
+  // --- MINING LOGIC ---
+  const handleMine = useCallback(() => {
+      audioService.playMineSound();
+      
+      const levelLuck = 1 + (stats.miningLuckLevel * 0.5); 
+      const totalLuck = miningLuckMultiplier * levelLuck;
 
-    // Multi-roll Loop
-    const rollsToPerform = stats.multiRollLevel;
+      const countToMine = stats.miningMultiLevel || 1;
+      
+      const currentBatch: Ore[] = [];
+      const inventoryUpdates = new Map<number, number>();
+
+      for(let i=0; i < countToMine; i++) {
+          const ore = mineOre(totalLuck);
+          currentBatch.push(ore);
+          inventoryUpdates.set(ore.id, (inventoryUpdates.get(ore.id) || 0) + 1);
+      }
+
+      let bestOreInBatch: Ore | null = null;
+      currentBatch.forEach(ore => {
+          if (!bestOreInBatch || ore.probability > bestOreInBatch.probability) {
+              bestOreInBatch = ore;
+          }
+      });
+
+      setLastMinedBatch(currentBatch);
+
+      setOreInventory(prev => {
+          const newInv = [...prev];
+          inventoryUpdates.forEach((count, id) => {
+              const existing = newInv.find(item => item.id === id);
+              if (existing) {
+                  existing.count += count;
+              } else {
+                  newInv.push({ id, count, discoveredAt: Date.now() });
+              }
+          });
+          return newInv;
+      });
+
+      // Chance to find Gacha Credit while mining
+      const foundGacha = Math.random() < 0.002;
+
+      setStats(prev => ({
+          ...prev,
+          totalMined: (prev.totalMined || 0) + countToMine,
+          bestOreMined: Math.max(prev.bestOreMined || 0, bestOreInBatch?.id || 0),
+          gachaCredits: prev.gachaCredits + (foundGacha ? 1 : 0)
+      }));
+
+      if (bestOreInBatch) {
+          // Use Boom logic for rarer ores (id > 20 is roughly Precious/Epic tier)
+          if (bestOreInBatch.id >= 30) {
+              // Map ore rarity to approximate drop rarity for sound impact
+              // Ore 30 (Platinum) ~ Epic
+              // Ore 50 (Void Metal) ~ Divine
+              // Ore 90 (Backrooms) ~ Chaos
+              // Simple scale: id / 6
+              const estimatedRarity = Math.min(15, Math.floor(bestOreInBatch.id / 6));
+              audioService.playBoom(estimatedRarity as RarityId);
+          } else if (bestOreInBatch.id >= 10) {
+              audioService.playRaritySound(RarityId.RARE);
+          }
+      }
+      
+      if (foundGacha) audioService.playCoinWin(3);
+
+  }, [miningLuckMultiplier, stats.miningLuckLevel, stats.miningMultiLevel]);
+
+  // --- FISHING LOGIC ---
+  const handleFish = useCallback(() => {
+      audioService.playFishSound();
+      
+      const levelLuck = 1 + (stats.fishingLuckLevel * 0.5); 
+      const totalLuck = fishingLuckMultiplier * levelLuck;
+
+      const countToFish = stats.fishingMultiLevel || 1;
+      
+      const currentBatch: Fish[] = [];
+      const inventoryUpdates = new Map<number, number>();
+
+      for(let i=0; i < countToFish; i++) {
+          const fish = catchFish(totalLuck);
+          currentBatch.push(fish);
+          inventoryUpdates.set(fish.id, (inventoryUpdates.get(fish.id) || 0) + 1);
+      }
+
+      let bestFishInBatch: Fish | null = null;
+      currentBatch.forEach(fish => {
+          if (!bestFishInBatch || fish.probability > bestFishInBatch.probability) {
+              bestFishInBatch = fish;
+          }
+      });
+
+      setLastFishedBatch(currentBatch);
+
+      setFishInventory(prev => {
+          const newInv = [...prev];
+          inventoryUpdates.forEach((count, id) => {
+              const existing = newInv.find(item => item.id === id);
+              if (existing) {
+                  existing.count += count;
+              } else {
+                  newInv.push({ id, count, discoveredAt: Date.now() });
+              }
+          });
+          return newInv;
+      });
+
+      // Higher chance for Gacha Credit in Fishing
+      const foundGacha = Math.random() < 0.003;
+
+      setStats(prev => ({
+          ...prev,
+          totalFished: (prev.totalFished || 0) + countToFish,
+          bestFishCaught: Math.max(prev.bestFishCaught || 0, bestFishInBatch?.id || 0),
+          gachaCredits: prev.gachaCredits + (foundGacha ? 1 : 0)
+      }));
+
+      if (bestFishInBatch) {
+          if (bestFishInBatch.id >= 25) {
+               const estimatedRarity = Math.min(15, Math.floor(bestFishInBatch.id / 3));
+               audioService.playBoom(estimatedRarity as RarityId);
+          } else if (bestFishInBatch.id >= 15) {
+               audioService.playRaritySound(RarityId.RARE);
+          }
+      }
+      
+      if (foundGacha) audioService.playCoinWin(3);
+
+  }, [fishingLuckMultiplier, stats.fishingLuckLevel, stats.fishingMultiLevel]);
+
+  const handleSellOres = () => {
+      let totalValue = 0;
+      oreInventory.forEach(item => {
+          const ore = ORES.find(o => o.id === item.id);
+          if (ore) {
+              const unitValue = Math.max(1, Math.floor(ore.probability / 5));
+              totalValue += unitValue * item.count;
+          }
+      });
+
+      if (totalValue > 0) {
+          audioService.playCoinWin(5);
+          setStats(prev => ({
+              ...prev,
+              balance: prev.balance + totalValue
+          }));
+          setOreInventory([]);
+      }
+  };
+
+  const handleSellFish = () => {
+      let totalValue = 0;
+      fishInventory.forEach(item => {
+          const fish = FISH.find(f => f.id === item.id);
+          if (fish) {
+              const unitValue = Math.max(1, Math.floor(fish.probability / 4));
+              totalValue += unitValue * item.count;
+          }
+      });
+
+      if (totalValue > 0) {
+          audioService.playCoinWin(5);
+          setStats(prev => ({
+              ...prev,
+              balance: prev.balance + totalValue
+          }));
+          setFishInventory([]);
+      }
+  };
+
+  // Auto Mine Loop
+  useEffect(() => {
+      if (isAutoMining) {
+          autoMineRef.current = window.setInterval(() => handleMine(), miningSpeed);
+      } else {
+          if (autoMineRef.current) clearInterval(autoMineRef.current);
+          autoMineRef.current = null;
+      }
+      return () => {
+          if (autoMineRef.current) clearInterval(autoMineRef.current);
+      };
+  }, [isAutoMining, handleMine, miningSpeed]);
+
+  // Auto Fish Loop
+  useEffect(() => {
+      if (isAutoFishing) {
+          autoFishRef.current = window.setInterval(() => handleFish(), fishingSpeed);
+      } else {
+          if (autoFishRef.current) clearInterval(autoFishRef.current);
+          autoFishRef.current = null;
+      }
+      return () => {
+          if (autoFishRef.current) clearInterval(autoFishRef.current);
+      };
+  }, [isAutoFishing, handleFish, fishingSpeed]);
+
+  // --- SIGNAL LOGIC ---
+  const handleSignalDecrypt = (multiplier: number, duration: number) => {
+      setStats(prev => ({
+          ...prev,
+          signalBuff: {
+              multiplier,
+              endTime: Date.now() + duration,
+              id: Date.now()
+          }
+      }));
+  };
+
+  // --- MAIN GAME LOGIC ---
+  const handleRoll = useCallback((manualBatchSize?: number) => {
+    if (!manualBatchSize) audioService.playRollSound();
+
+    const rollsToPerform = manualBatchSize || stats.multiRollLevel;
     const generatedDrops: Drop[] = [];
     
-    for(let i = 0; i < rollsToPerform; i++) {
-        generatedDrops.push(generateDrop(stats.totalRolls + i, luckMultiplier, language));
+    let currentEntropy = stats.entropy;
+
+    const levelLuck = 1 + (stats.luckLevel * 0.2); 
+    const signalLuck = (stats.signalBuff && Date.now() < stats.signalBuff.endTime) ? stats.signalBuff.multiplier : 1;
+    const effectiveBaseLuck = luckMultiplier * levelLuck * signalLuck;
+    let effectiveLuck = effectiveBaseLuck;
+
+    let consumedPity = false;
+    if (currentEntropy >= ENTROPY_THRESHOLD) {
+        effectiveLuck = effectiveBaseLuck * 500;
+        consumedPity = true;
     }
 
-    // Find the best drop to check for cutscenes
+    for(let i = 0; i < rollsToPerform; i++) {
+        const useLuck = (i === 0 && consumedPity) ? effectiveLuck : effectiveBaseLuck;
+        const drop = generateDrop(stats.totalRolls + i, useLuck);
+        generatedDrops.push(drop);
+
+        if (drop.rarityId >= RarityId.LEGENDARY) {
+            currentEntropy = 0;
+            consumedPity = false;
+        } else {
+            if (!consumedPity) currentEntropy++; 
+            else currentEntropy = 0;
+        }
+    }
+
     const bestDrop = getBestDrop(generatedDrops);
     if (!bestDrop) return;
 
-    // Process Cutsene Logic only for the best item using user defined threshold
-    if (bestDrop.rarityId >= minCutsceneRarity) {
-        setIsAutoSpinning(false);
-        setPendingDrops(generatedDrops); // Store the whole batch
-        setCutsceneDrop(bestDrop);
-        setIsPreviewCutscene(false);
-        setIsCutscenePlaying(true);
-        setInspectedItem(null); // Close visualizer if open
-    } else {
-        setCurrentDrops(generatedDrops);
-        // If cutscene plays, stats update after. If not, update here.
-        batchUpdateStatsAndInventory(generatedDrops, rollsToPerform);
-        
-        // Play Rarity Sound for best item
-        audioService.playRaritySound(bestDrop.rarityId);
-    }
+    setCurrentDrops(generatedDrops);
+    batchUpdateStatsAndInventory(generatedDrops, rollsToPerform, currentEntropy);
+    
+    // Play BOOM sound based on rarity
+    audioService.playBoom(bestDrop.rarityId);
 
-  }, [stats.totalRolls, stats.multiRollLevel, luckMultiplier, language, minCutsceneRarity]);
+  }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.signalBuff]);
 
-  const batchUpdateStatsAndInventory = (drops: Drop[], rollsCount: number) => {
+  const batchUpdateStatsAndInventory = (drops: Drop[], rollsCount: number, finalEntropy: number) => {
+     let creditsFound = 0;
+     if (Math.random() < (0.001 * rollsCount)) {
+         creditsFound = 1;
+     }
+
      setStats(prev => {
          const maxRarityInBatch = Math.max(...drops.map(d => d.rarityId));
          return {
             ...prev,
             totalRolls: prev.totalRolls + rollsCount,
-            balance: prev.balance + rollsCount, // Earn 1 point per roll
-            bestRarityFound: Math.max(prev.bestRarityFound, maxRarityInBatch)
+            balance: prev.balance + rollsCount, 
+            bestRarityFound: Math.max(prev.bestRarityFound, maxRarityInBatch),
+            entropy: finalEntropy,
+            gachaCredits: prev.gachaCredits + creditsFound
          };
      });
 
-     // Check for auto-stop condition using user defined threshold
+     if (creditsFound > 0) audioService.playCoinWin(3);
+
      if (drops.some(d => d.rarityId >= autoStopRarity)) {
          setIsAutoSpinning(false);
      }
 
-     // Update Inventory
      setInventory(prev => {
         let newInv = [...prev];
         drops.forEach(drop => {
             if (drop.rarityId >= RarityId.RARE) {
-                const existingIndex = newInv.findIndex(i => i.text === drop.text && i.rarityId === drop.rarityId);
+                const existingIndex = newInv.findIndex(i => 
+                    i.text === drop.text && 
+                    i.rarityId === drop.rarityId &&
+                    i.variantId === drop.variantId
+                );
+                
                 if (existingIndex >= 0) {
                     newInv[existingIndex].count += 1;
                 } else {
@@ -182,6 +551,7 @@ export default function App() {
                         text: drop.text,
                         description: drop.description,
                         rarityId: drop.rarityId,
+                        variantId: drop.variantId,
                         count: 1,
                         discoveredAt: Date.now()
                     });
@@ -192,30 +562,6 @@ export default function App() {
      });
   };
 
-  const handleCutsceneComplete = () => {
-      // If it was a preview (from Index), just stop playing and return to visualizer
-      if (isPreviewCutscene) {
-          setIsCutscenePlaying(false);
-          setCutsceneDrop(null);
-          // Visualizer remains open via state
-          return;
-      }
-
-      // Actual game drop logic
-      if (pendingDrops.length > 0) {
-          setCurrentDrops(pendingDrops);
-          batchUpdateStatsAndInventory(pendingDrops, stats.multiRollLevel);
-          
-          // Play impact sound after cutscene reveal
-          const best = getBestDrop(pendingDrops);
-          if(best) audioService.playRaritySound(best.rarityId);
-
-          setPendingDrops([]);
-      }
-      setIsCutscenePlaying(false);
-      setCutsceneDrop(null);
-  };
-
   const handleInspectItem = (item: InventoryItem) => {
       audioService.playClick();
       setIsAutoSpinning(false);
@@ -223,7 +569,8 @@ export default function App() {
           text: item.text,
           description: item.description,
           rarityId: item.rarityId,
-          cutscenePhrase: '' // Inventory items don't strictly need this for visualizer, but index passes it
+          variantId: item.variantId,
+          cutscenePhrase: '' 
       });
       setIsInventoryOpen(false);
   };
@@ -239,37 +586,86 @@ export default function App() {
       });
   };
 
-  const handlePlayCutsceneFromVisualizer = () => {
-      if (!inspectedItem) return;
-      
-      // Setup a mock drop for the cutscene
-      setCutsceneDrop({
-          text: inspectedItem.text,
-          description: inspectedItem.description,
-          rarityId: inspectedItem.rarityId,
-          cutscenePhrase: inspectedItem.cutscenePhrase,
-          timestamp: Date.now(),
-          rollNumber: 0
-      });
-      setIsPreviewCutscene(true);
-      setIsCutscenePlaying(true);
+  // Shop Actions
+  const handleBuyMultiRoll = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, multiRollLevel: prev.multiRollLevel + 1 }));
+      }
   };
 
-  const handleBuyUpgrade = (level: number, cost: number) => {
+  const handleBuySpeed = (cost: number) => {
       if (stats.balance >= cost) {
-          audioService.playRaritySound(RarityId.EPIC); // Success sound
-          setStats(prev => ({
-              ...prev,
-              balance: prev.balance - cost,
-              multiRollLevel: level
-          }));
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, speedLevel: prev.speedLevel + 1 }));
       }
+  };
+
+  const handleBuyBurst = () => {
+      if (stats.balance >= BURST_COST) {
+          audioService.playRaritySound(RarityId.LEGENDARY);
+          setStats(prev => ({ ...prev, balance: prev.balance - BURST_COST, hasBurst: true }));
+      }
+  };
+
+  const handleBuyLuck = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, luckLevel: prev.luckLevel + 1 }));
+      }
+  };
+
+  const handleBuyMiningSpeed = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, miningSpeedLevel: (prev.miningSpeedLevel || 0) + 1 }));
+      }
+  };
+
+  const handleBuyMiningLuck = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, miningLuckLevel: (prev.miningLuckLevel || 0) + 1 }));
+      }
+  };
+
+  const handleBuyMiningMulti = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.LEGENDARY);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, miningMultiLevel: (prev.miningMultiLevel || 1) + 1 }));
+      }
+  };
+
+  const handleBuyFishingSpeed = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingSpeedLevel: (prev.fishingSpeedLevel || 0) + 1 }));
+      }
+  };
+
+  const handleBuyFishingLuck = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.EPIC);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingLuckLevel: (prev.fishingLuckLevel || 0) + 1 }));
+      }
+  };
+
+  const handleBuyFishingMulti = (cost: number) => {
+      if (stats.balance >= cost) {
+          audioService.playRaritySound(RarityId.LEGENDARY);
+          setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingMultiLevel: (prev.fishingMultiLevel || 1) + 1 }));
+      }
+  };
+
+  const handleBurstClick = () => {
+      audioService.playClick();
+      handleRoll(50); // Batch 50
   };
 
   // Auto Spin Effect
   useEffect(() => {
-    if (isAutoSpinning && !isCutscenePlaying && !inspectedItem) {
-      autoSpinRef.current = window.setInterval(handleRoll, autoSpinSpeed);
+    if (isAutoSpinning && !inspectedItem) {
+      autoSpinRef.current = window.setInterval(() => handleRoll(), autoSpinSpeed);
     } else {
       if (autoSpinRef.current) clearInterval(autoSpinRef.current);
       autoSpinRef.current = null;
@@ -277,10 +673,15 @@ export default function App() {
     return () => {
       if (autoSpinRef.current) clearInterval(autoSpinRef.current);
     };
-  }, [isAutoSpinning, handleRoll, autoSpinSpeed, isCutscenePlaying, inspectedItem]);
+  }, [isAutoSpinning, handleRoll, autoSpinSpeed, inspectedItem]);
 
-  const formatProb = (p: number) => {
-    const adjustedP = p / luckMultiplier;
+  const formatProb = (p: number, variantMultiplier: number = 1) => {
+    const levelLuck = 1 + (stats.luckLevel * 0.2);
+    const signalLuck = (stats.signalBuff && Date.now() < stats.signalBuff.endTime) ? stats.signalBuff.multiplier : 1;
+    const totalLuck = luckMultiplier * levelLuck * signalLuck;
+
+    const adjustedP = (p / totalLuck) * variantMultiplier;
+    
     if (adjustedP >= 1000000000000) return `1 in ${Math.round(adjustedP / 1000000000000)}T`;
     if (adjustedP >= 1000000000) return `1 in ${Math.round(adjustedP / 1000000000 * 10) / 10}B`;
     if (adjustedP >= 1000000) return `1 in ${Math.round(adjustedP / 1000000 * 10) / 10}M`;
@@ -289,261 +690,289 @@ export default function App() {
     return `1 in ${Math.round(adjustedP)}`;
   };
 
-  // Logarithmic Slider Logic
   const handleLogSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = parseFloat(e.target.value);
-      const actualValue = Math.pow(10, val);
-      setLuckMultiplier(actualValue);
+      setLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
+  };
+  
+  const handleMiningLuckSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setMiningLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
+  };
+
+  const handleFishingLuckSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setFishingLuckMultiplier(Math.pow(10, parseFloat(e.target.value)));
   };
 
   const getLogValue = (luck: number) => {
       return Math.log10(Math.max(1, luck));
   };
 
-  // Get best drop for global effects/header
-  // If we are inspecting an item, that determines the VFX
-  // If not, the current drop on board
-  const activeRarityVFX = isCutscenePlaying && cutsceneDrop 
-        ? cutsceneDrop.rarityId 
-        : inspectedItem 
+  const activeRarityVFX = inspectedItem 
             ? inspectedItem.rarityId 
             : getBestDrop(currentDrops)?.rarityId;
 
   const tierOptions = Object.values(RARITY_TIERS).sort((a, b) => a.id - b.id);
+  const hasSignalBuff = stats.signalBuff && Date.now() < stats.signalBuff.endTime;
+  const timeLeft = hasSignalBuff ? Math.ceil((stats.signalBuff!.endTime - Date.now()) / 1000) : 0;
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-black text-white selection:bg-white selection:text-black overflow-hidden">
+    <div className="relative min-h-screen bg-black text-white selection:bg-white selection:text-black overflow-hidden flex">
       
-      {/* Cutscene Overlay */}
-      {isCutscenePlaying && cutsceneDrop && (
-          <Cutscene 
-            text={cutsceneDrop.text} 
-            rarityId={cutsceneDrop.rarityId} 
-            cutscenePhrase={cutsceneDrop.cutscenePhrase}
-            onComplete={handleCutsceneComplete} 
-          />
-      )}
-
-      {/* VFX Layer */}
       {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
 
-      {/* Item Visualizer Overlay */}
-      {inspectedItem && !isCutscenePlaying && (
+      {inspectedItem && (
           <ItemVisualizer 
             item={inspectedItem} 
             onClose={() => setInspectedItem(null)}
-            onPlayCutscene={handlePlayCutsceneFromVisualizer}
           />
       )}
 
-      {/* Header Stats */}
-      <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-20 font-mono text-xs md:text-sm text-neutral-500 pointer-events-none">
-        <div className="space-y-1 pointer-events-auto">
-          <p>{T.UI.ROLLS}: <span className="text-white">{stats.totalRolls.toLocaleString()}</span></p>
-          <p>BALANCE: <span className="text-yellow-500">{stats.balance.toLocaleString()}</span></p>
-          <p>{T.UI.BEST}: <span className={`${RARITY_TIERS[stats.bestRarityFound].textColor}`}>{T.RARITY_NAMES[stats.bestRarityFound]}</span></p>
-          {luckMultiplier > 1.01 && (
-             <p className="text-green-500 animate-pulse">LUCK: {Math.round(luckMultiplier).toLocaleString()}x</p>
-          )}
-        </div>
-        
-        <div className="flex gap-2 pointer-events-auto">
-            <button 
-                onClick={toggleMute}
-                className="border border-neutral-700 hover:border-white hover:text-white px-3 py-2 transition-all uppercase bg-black/50 backdrop-blur min-w-[40px]"
-            >
-                {isMuted ? '🔇' : '🔊'}
-            </button>
-            <button 
-                onClick={() => {
-                    audioService.playClick();
-                    setIsIndexOpen(true);
-                }}
-                className="border border-indigo-900 text-indigo-400 hover:bg-indigo-900/30 hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur"
-            >
-                INDEX
-            </button>
-            <button 
-                onClick={() => {
-                    audioService.playClick();
-                    setIsShopOpen(true);
-                }}
-                className="border border-yellow-700 text-yellow-500 hover:bg-yellow-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur"
-            >
-                SHOP
-            </button>
-            <button 
-                onClick={() => {
-                    audioService.playClick();
-                    setIsInventoryOpen(true);
-                }}
-                className="border border-neutral-700 hover:border-white hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur"
-            >
-                {T.UI.INVENTORY} [{inventory.length}]
-            </button>
-        </div>
-      </div>
-
-      {/* Main Display Area */}
-      <div className="z-10 w-full max-w-6xl px-6 flex flex-col items-center justify-center space-y-8">
-        
-        {/* Content Area */}
-        <div className="min-h-[300px] w-full flex items-center justify-center perspective-1000">
-          {currentDrops.length > 0 ? (
-            <div className={`
-                w-full grid gap-8 items-center justify-center
-                ${currentDrops.length === 1 ? 'grid-cols-1' : ''}
-                ${currentDrops.length === 2 ? 'grid-cols-1 md:grid-cols-2' : ''}
-                ${currentDrops.length === 3 ? 'grid-cols-1 md:grid-cols-3' : ''}
-            `}>
-                {currentDrops.map((drop, idx) => {
-                    const tier = RARITY_TIERS[drop.rarityId];
-                    const isTheOne = drop.rarityId === RarityId.THE_ONE;
-                    const textColorClass = isTheOne ? "text-black drop-shadow-none" : tier.textColor;
-                    const descColorClass = isTheOne ? "text-neutral-600" : "text-neutral-400";
-                    
-                    return (
-                        <div key={`${drop.rollNumber}-${idx}`} className="flex flex-col items-center text-center animate-fade-in-up relative z-10">
-                            <div className="mb-4">
-                                <RarityBadge rarityId={drop.rarityId} size="md" label={T.RARITY_NAMES[drop.rarityId]} />
-                                <p className={`text-[10px] mt-1 font-mono tracking-widest mix-blend-difference ${isTheOne ? 'text-black' : 'text-neutral-500'}`}>
-                                    {formatProb(tier.probability)}
-                                </p>
-                            </div>
-
-                            <h1 
-                                className={`
-                                    font-bold tracking-tight leading-tight transition-all duration-75 mb-4
-                                    ${textColorClass}
-                                    ${currentDrops.length > 1 ? 'text-2xl md:text-3xl' : 'text-3xl md:text-5xl lg:text-6xl'}
-                                `}
-                                style={{
-                                    textShadow: !isTheOne && tier.id >= RarityId.MYTHICAL ? `0 0 20px ${tier.shadowColor}` : 'none',
-                                    transform: tier.id >= RarityId.DIVINE ? 'scale(1.05)' : 'scale(1)'
-                                }}
-                            >
-                                "{drop.text}"
-                            </h1>
-
-                            {drop.description && (
-                                <p className={`
-                                    font-mono
-                                    ${descColorClass}
-                                    ${currentDrops.length > 1 ? 'text-xs max-w-[200px]' : 'text-sm md:text-base max-w-lg'}
-                                `}>
-                                    {drop.description}
-                                </p>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-          ) : (
-            <h1 className="text-4xl text-neutral-800 animate-pulse">{T.UI.READY}</h1>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-col md:flex-row gap-6 items-center mt-12 w-full justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_300px] xl:grid-cols-[1fr_2fr_350px] w-full h-screen">
           
-          <button
-            onClick={() => {
-                if(isAutoSpinning) setIsAutoSpinning(false);
-                handleRoll();
-            }}
-            disabled={isCutscenePlaying || inspectedItem !== null}
-            className="
-              group relative px-12 py-6 bg-neutral-900 border border-neutral-700 
-              hover:border-white hover:bg-neutral-800 transition-all active:scale-95
-              w-64 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed
-            "
-          >
-            <span className="relative z-10 text-xl font-bold tracking-[0.2em] group-hover:text-white text-neutral-300">{T.UI.GENERATE}</span>
-            <div className="absolute bottom-0 left-0 h-1 bg-white w-0 group-hover:w-full transition-all duration-300" />
-          </button>
-
-          <button
-            onClick={() => {
-                audioService.playClick();
-                setIsAutoSpinning(!isAutoSpinning);
-            }}
-            disabled={isCutscenePlaying || inspectedItem !== null}
-            className={`
-              group relative px-8 py-6 border transition-all w-64 disabled:opacity-50 disabled:cursor-not-allowed
-              ${isAutoSpinning 
-                ? 'bg-red-900/20 border-red-500 text-red-500' 
-                : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:border-green-500 hover:text-green-500'
-              }
-            `}
-          >
-            <span className="text-xl font-bold tracking-[0.2em]">
-              {isAutoSpinning ? T.UI.STOP_AUTO : T.UI.AUTO_SPIN}
-            </span>
-            <span className="absolute bottom-2 right-2 text-[10px] opacity-50">
-              {autoSpinSpeed}ms
-            </span>
-            {isAutoSpinning && (
-                <span className="absolute top-2 right-2 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-            )}
-          </button>
-
-        </div>
-      </div>
-
-      {/* Footer Decor & Admin Toggle */}
-      <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
-        <div className="flex gap-4 items-center pointer-events-auto">
-             <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">
-                v1.5.0
+          {/* CENTER: RNG Game */}
+          <div className="relative flex flex-col items-center justify-center col-span-1 lg:col-span-2 lg:border-r border-neutral-800 h-full">
+             
+            <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-20 font-mono text-xs md:text-sm text-neutral-500 pointer-events-none">
+                <div className="space-y-1 pointer-events-auto">
+                <p>{T.UI.ROLLS}: <span className="text-white">{stats.totalRolls.toLocaleString()}</span></p>
+                <p>BALANCE: <span className="text-yellow-500">{stats.balance.toLocaleString()}</span></p>
+                <p>CREDITS: <span className="text-purple-400">{stats.gachaCredits}</span></p>
+                <p>{T.UI.BEST}: <span className={`${RARITY_TIERS[stats.bestRarityFound]?.textColor || 'text-white'}`}>{T.RARITY_NAMES[stats.bestRarityFound]}</span></p>
+                {stats.equippedTitle && (
+                    <p>TITLE: <span className="text-yellow-400 font-bold border-b border-yellow-600">{stats.equippedTitle}</span></p>
+                )}
+                {luckMultiplier > 1.01 && (
+                    <p className="text-green-500 animate-pulse">LUCK: {Math.round(luckMultiplier).toLocaleString()}x</p>
+                )}
+                {hasSignalBuff && (
+                    <p className="text-green-400 font-bold animate-pulse">SIGNAL BOOST: {stats.signalBuff!.multiplier}x ({timeLeft}s)</p>
+                )}
+                </div>
+                
+                <div className="flex flex-wrap justify-end gap-2 pointer-events-auto">
+                    <button onClick={toggleMute} className="border border-neutral-700 hover:border-white hover:text-white px-3 py-2 transition-all uppercase bg-black/50 backdrop-blur min-w-[40px]">
+                        {isMuted ? '🔇' : '🔊'}
+                    </button>
+                    <button onClick={() => { audioService.playClick(); setIsGachaOpen(true); }} className="border border-purple-700 text-purple-400 hover:bg-purple-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
+                        GACHA
+                    </button>
+                    <button onClick={() => { audioService.playClick(); setIsCoinTossOpen(true); }} className="border border-yellow-700 text-yellow-500 hover:bg-yellow-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur animate-pulse">
+                        FLIP
+                    </button>
+                    <button onClick={() => { audioService.playClick(); setIsAchievementsOpen(true); }} className="border border-amber-700 text-amber-500 hover:bg-amber-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
+                        TITLES
+                    </button>
+                    <button onClick={() => { audioService.playClick(); setIsIndexOpen(true); }} className="border border-indigo-900 text-indigo-400 hover:bg-indigo-900/30 hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
+                        INDEX
+                    </button>
+                    <button onClick={() => { audioService.playClick(); setIsShopOpen(true); }} className="border border-yellow-700 text-yellow-500 hover:bg-yellow-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
+                        SHOP
+                    </button>
+                    <button onClick={() => { audioService.playClick(); setIsInventoryOpen(true); }} className="border border-neutral-700 hover:border-white hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
+                        {T.UI.INVENTORY} [{inventory.length}]
+                    </button>
+                </div>
             </div>
-            <button onClick={() => setIsChangelogOpen(true)} className="text-neutral-700 hover:text-white text-xs font-mono underline">
-                CHANGELOG
-            </button>
-        </div>
-        
-        <button 
-            onClick={() => {
-                audioService.playClick();
-                setIsAdminOpen(true);
-            }}
-            className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors"
-        >
-            [ {T.UI.SYSTEM_CONFIG} ]
-        </button>
+
+            <div className="z-10 w-full max-w-4xl px-6 flex flex-col items-center justify-center space-y-8 mt-8">
+                
+                <div className="w-full flex justify-center">
+                    <EntropyBar value={stats.entropy} />
+                </div>
+
+                <div className="min-h-[300px] w-full flex items-center justify-center perspective-1000">
+                    {currentDrops.length > 0 ? (
+                        <div className={`
+                            w-full grid gap-8 items-center justify-center
+                            ${currentDrops.length === 1 ? 'grid-cols-1' : ''}
+                            ${currentDrops.length >= 2 && currentDrops.length <= 4 ? 'grid-cols-1 md:grid-cols-2' : ''}
+                            ${currentDrops.length > 4 && currentDrops.length <= 6 ? 'grid-cols-2 md:grid-cols-3' : ''}
+                            ${currentDrops.length > 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5' : ''}
+                        `}>
+                            {currentDrops.map((drop, idx) => {
+                                const tier = RARITY_TIERS[drop.rarityId];
+                                const variant = VARIANTS[drop.variantId || VariantId.NONE];
+                                const isTheOne = drop.rarityId === RarityId.THE_ONE;
+                                const textColorClass = isTheOne ? "text-black drop-shadow-none" : tier.textColor;
+                                const descColorClass = isTheOne ? "text-neutral-600" : "text-neutral-400";
+                                const hasVariant = (drop.variantId ?? VariantId.NONE) !== VariantId.NONE;
+                                const isLargeBatch = currentDrops.length > 6;
+
+                                return (
+                                    <div key={`${drop.rollNumber}-${idx}`} className="flex flex-col items-center text-center animate-fade-in-up relative z-10">
+                                        <div className="mb-2 md:mb-4">
+                                            <RarityBadge rarityId={drop.rarityId} variantId={drop.variantId} size="sm" label={T.RARITY_NAMES[drop.rarityId]} />
+                                            <p className={`text-[10px] mt-1 font-mono tracking-widest mix-blend-difference ${isTheOne ? 'text-black' : 'text-neutral-500'}`}>
+                                                {formatProb(tier.probability, variant.multiplier)}
+                                            </p>
+                                        </div>
+
+                                        <h1 className={`
+                                            font-bold tracking-tight leading-tight transition-all duration-75 mb-2 md:mb-4
+                                            ${textColorClass} ${hasVariant ? variant.styleClass : ''}
+                                            ${currentDrops.length === 1 ? 'text-3xl md:text-5xl lg:text-6xl' : ''}
+                                            ${currentDrops.length > 1 && !isLargeBatch ? 'text-xl md:text-2xl' : ''}
+                                            ${isLargeBatch ? 'text-sm md:text-base lg:text-lg' : ''}
+                                        `}
+                                        style={{
+                                            textShadow: !isTheOne && !hasVariant && tier.id >= RarityId.MYTHICAL ? `0 0 20px ${tier.shadowColor}` : undefined,
+                                            transform: tier.id >= RarityId.DIVINE ? 'scale(1.05)' : 'scale(1)'
+                                        }}>
+                                            "{hasVariant ? variant.prefix : ''} {drop.text}"
+                                        </h1>
+
+                                        {drop.description && (
+                                            <p className={`font-mono ${descColorClass} ${currentDrops.length === 1 ? 'text-sm md:text-base max-w-lg' : ''} ${currentDrops.length > 1 && !isLargeBatch ? 'text-[10px] max-w-[150px]' : ''} ${isLargeBatch ? 'text-[9px] hidden md:block max-w-[120px]' : ''}`}>
+                                                {drop.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <h1 className="text-4xl text-neutral-800 animate-pulse">{T.UI.READY}</h1>
+                    )}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-6 items-center w-full justify-center">
+                    <button onClick={() => { if(isAutoSpinning) setIsAutoSpinning(false); handleRoll(); }} disabled={inspectedItem !== null}
+                        className="group relative px-12 py-6 bg-neutral-900 border border-neutral-700 hover:border-white hover:bg-neutral-800 transition-all active:scale-95 w-64 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span className="relative z-10 text-xl font-bold tracking-[0.2em] group-hover:text-white text-neutral-300">{T.UI.GENERATE}</span>
+                        <div className="absolute bottom-0 left-0 h-1 bg-white w-0 group-hover:w-full transition-all duration-300" />
+                        {stats.multiRollLevel > 1 && <span className="absolute top-2 right-2 text-[10px] text-neutral-500">x{stats.multiRollLevel}</span>}
+                    </button>
+                    {stats.hasBurst && (
+                        <button onClick={handleBurstClick} disabled={inspectedItem !== null || isAutoSpinning}
+                            className="group relative px-6 py-6 bg-purple-900/20 border border-purple-900 hover:border-purple-400 hover:bg-purple-900/40 transition-all active:scale-95 w-32 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span className="relative z-10 text-sm font-bold tracking-widest text-purple-400 group-hover:text-white">BURST</span>
+                            <span className="absolute bottom-1 right-2 text-[9px] text-purple-500 group-hover:text-white">50x</span>
+                        </button>
+                    )}
+                    <button onClick={() => { audioService.playClick(); setIsAutoSpinning(!isAutoSpinning); }} disabled={inspectedItem !== null}
+                        className={`group relative px-8 py-6 border transition-all w-64 disabled:opacity-50 disabled:cursor-not-allowed ${isAutoSpinning ? 'bg-red-900/20 border-red-500 text-red-500' : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:border-green-500 hover:text-green-500'}`}>
+                        <span className="text-xl font-bold tracking-[0.2em]">{isAutoSpinning ? T.UI.STOP_AUTO : T.UI.AUTO_SPIN}</span>
+                        <span className="absolute bottom-2 right-2 text-[10px] opacity-50">{autoSpinSpeed}ms</span>
+                        {isAutoSpinning && (
+                            <span className="absolute top-2 right-2 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                            </span>
+                        )}
+                    </button>
+                </div>
+                
+                {showSignalInterceptor && (
+                    <div className="w-full max-w-2xl pb-24">
+                        <SignalInterceptor onDecrypt={handleSignalDecrypt} />
+                    </div>
+                )}
+            </div>
+
+            <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
+                <div className="flex gap-4 items-center pointer-events-auto">
+                    <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.4.1</div>
+                    <button onClick={() => setIsChangelogOpen(true)} className="text-neutral-700 hover:text-white text-xs font-mono underline">CHANGELOG</button>
+                </div>
+                <button onClick={() => { audioService.playClick(); setIsAdminOpen(true); }} className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors">
+                    [ {T.UI.SYSTEM_CONFIG} ]
+                </button>
+            </div>
+
+          </div>
+
+          {/* RIGHT: Activity Panel */}
+          <div className="border-t lg:border-t-0 lg:border-l border-neutral-800 min-h-[300px] lg:min-h-screen relative z-30 flex flex-col">
+             {/* Panel Switcher */}
+             <div className="flex border-b border-neutral-800 bg-black">
+                <button 
+                    onClick={() => setActiveRightPanel('MINING')}
+                    className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'MINING' ? 'bg-neutral-800 text-white' : 'text-neutral-500 hover:bg-neutral-900'}`}
+                >
+                    MINING
+                </button>
+                <button 
+                    onClick={() => setActiveRightPanel('FISHING')}
+                    className={`flex-1 py-3 text-xs font-mono font-bold tracking-widest transition-colors ${activeRightPanel === 'FISHING' ? 'bg-cyan-950/50 text-cyan-300' : 'text-neutral-500 hover:bg-neutral-900'}`}
+                >
+                    FISHING
+                </button>
+             </div>
+
+             {/* Active Component */}
+             <div className="flex-1 relative">
+                 {activeRightPanel === 'MINING' ? (
+                    <MiningPanel 
+                        onMine={handleMine}
+                        lastBatch={lastMinedBatch}
+                        totalMined={stats.totalMined || 0}
+                        isAutoMining={isAutoMining}
+                        onToggleAuto={() => { audioService.playClick(); setIsAutoMining(!isAutoMining); }}
+                        onOpenInventory={() => { audioService.playClick(); setIsOreInventoryOpen(true); }}
+                    />
+                 ) : (
+                    <FishingPanel 
+                        onFish={handleFish}
+                        lastBatch={lastFishedBatch}
+                        totalFished={stats.totalFished || 0}
+                        isAutoFishing={isAutoFishing}
+                        onToggleAuto={() => { audioService.playClick(); setIsAutoFishing(!isAutoFishing); }}
+                        onOpenInventory={() => { audioService.playClick(); setIsFishInventoryOpen(true); }}
+                    />
+                 )}
+             </div>
+          </div>
+
       </div>
 
       {/* Modals */}
-      <Inventory 
-        items={inventory} 
-        isOpen={isInventoryOpen} 
-        onClose={() => setIsInventoryOpen(false)}
-        language={language}
-        onInspect={handleInspectItem}
+      <Inventory items={inventory} isOpen={isInventoryOpen} onClose={() => setIsInventoryOpen(false)} onInspect={handleInspectItem} />
+      <OreInventory 
+        items={oreInventory} 
+        isOpen={isOreInventoryOpen} 
+        onClose={() => setIsOreInventoryOpen(false)} 
+        onSell={handleSellOres} 
       />
-
+      <FishInventory 
+        items={fishInventory} 
+        isOpen={isFishInventoryOpen} 
+        onClose={() => setIsFishInventoryOpen(false)} 
+        onSell={handleSellFish} 
+      />
+      
       <Shop 
-        isOpen={isShopOpen}
-        onClose={() => setIsShopOpen(false)}
-        balance={stats.balance}
-        multiRollLevel={stats.multiRollLevel}
-        onBuyUpgrade={handleBuyUpgrade}
+        isOpen={isShopOpen} 
+        onClose={() => setIsShopOpen(false)} 
+        stats={stats}
+        onBuyMultiRoll={handleBuyMultiRoll}
+        onBuySpeed={handleBuySpeed}
+        onBuyBurst={handleBuyBurst}
+        onBuyLuck={handleBuyLuck}
+        onBuyMiningSpeed={handleBuyMiningSpeed}
+        onBuyMiningLuck={handleBuyMiningLuck}
+        onBuyMiningMulti={handleBuyMiningMulti}
+        onBuyFishingSpeed={handleBuyFishingSpeed}
+        onBuyFishingLuck={handleBuyFishingLuck}
+        onBuyFishingMulti={handleBuyFishingMulti}
       />
-
-      <Changelog 
-        isOpen={isChangelogOpen}
-        onClose={() => setIsChangelogOpen(false)}
+      
+      <GachaTerminal 
+        isOpen={isGachaOpen} 
+        onClose={() => setIsGachaOpen(false)} 
+        stats={stats}
+        onUpdateStats={(newStats) => setStats(prev => ({ ...prev, ...newStats }))}
       />
-
+      
+      <Changelog isOpen={isChangelogOpen} onClose={() => setIsChangelogOpen(false)} />
       <IndexCatalog 
-         isOpen={isIndexOpen}
-         onClose={() => setIsIndexOpen(false)}
-         language={language}
-         inventory={inventory}
-         onSelectItem={handleIndexSelectItem}
+        isOpen={isIndexOpen} 
+        onClose={() => setIsIndexOpen(false)} 
+        inventory={inventory} 
+        oreInventory={oreInventory} 
+        fishInventory={fishInventory}
+        onSelectItem={handleIndexSelectItem} 
       />
+      <Achievements isOpen={isAchievementsOpen} onClose={() => setIsAchievementsOpen(false)} stats={stats} onEquipTitle={(title) => setStats(prev => ({ ...prev, equippedTitle: title }))} />
+      <CoinToss isOpen={isCoinTossOpen} onClose={() => setIsCoinTossOpen(false)} balance={stats.balance} onUpdateBalance={(newBal) => setStats(prev => ({ ...prev, balance: newBal }))} />
 
       {/* Admin Panel Modal */}
       {isAdminOpen && (
@@ -556,140 +985,110 @@ export default function App() {
 
             <div className="space-y-8">
 
-               {/* Language Selection */}
-               <div className="space-y-2">
-                <div className="text-sm font-mono text-neutral-400">LANGUAGE / LINGUA</div>
-                <div className="grid grid-cols-2 gap-2">
-                    <button 
-                        onClick={() => setLanguage('en')}
-                        className={`py-2 px-4 border font-mono text-xs ${language === 'en' ? 'bg-white text-black border-white' : 'bg-transparent text-neutral-500 border-neutral-700 hover:border-neutral-500'}`}
-                    >
-                        ENGLISH
-                    </button>
-                    <button 
-                        onClick={() => setLanguage('it')}
-                        className={`py-2 px-4 border font-mono text-xs ${language === 'it' ? 'bg-white text-black border-white' : 'bg-transparent text-neutral-500 border-neutral-700 hover:border-neutral-500'}`}
-                    >
-                        ITALIANO
-                    </button>
-                </div>
-              </div>
-
               {/* Filters Section */}
-              <div className="space-y-4 border-t border-neutral-800 pt-4">
+              <div className="space-y-4 pt-2">
                  <div className="text-sm font-mono text-white font-bold">FILTERS</div>
-                 
-                 {/* Auto Stop Filter */}
                  <div className="space-y-2">
                     <div className="flex justify-between text-sm font-mono text-neutral-400">
                         <label>AUTO-STOP AT RARITY</label>
                     </div>
-                    <select 
-                        value={autoStopRarity} 
-                        onChange={(e) => setAutoStopRarity(Number(e.target.value))}
-                        className="w-full bg-neutral-800 border border-neutral-600 text-white text-xs p-2 rounded font-mono"
-                    >
-                        {tierOptions.map(tier => (
-                            <option key={tier.id} value={tier.id}>{T.RARITY_NAMES[tier.id]}</option>
-                        ))}
-                    </select>
-                 </div>
-
-                 {/* Cutscene Filter */}
-                 <div className="space-y-2">
-                    <div className="flex justify-between text-sm font-mono text-neutral-400">
-                        <label>PLAY CUTSCENE MINIMUM</label>
-                    </div>
-                    <select 
-                        value={minCutsceneRarity} 
-                        onChange={(e) => setMinCutsceneRarity(Number(e.target.value))}
-                        className="w-full bg-neutral-800 border border-neutral-600 text-white text-xs p-2 rounded font-mono"
-                    >
+                    <select value={autoStopRarity} onChange={(e) => setAutoStopRarity(Number(e.target.value))} className="w-full bg-neutral-800 border border-neutral-600 text-white text-xs p-2 rounded font-mono">
                         {tierOptions.map(tier => (
                             <option key={tier.id} value={tier.id}>{T.RARITY_NAMES[tier.id]}</option>
                         ))}
                     </select>
                  </div>
               </div>
-              
-              {/* Auto Spin Speed Control */}
+
+              {/* UI Settings */}
               <div className="space-y-2 border-t border-neutral-800 pt-4">
-                <div className="flex justify-between text-sm font-mono text-neutral-400">
+                  <div className="text-sm font-mono text-white font-bold">UI SETTINGS</div>
+                  <label className="flex items-center justify-between text-sm font-mono text-neutral-400 cursor-pointer hover:bg-neutral-800/50 p-2 rounded transition-colors">
+                      <span>SIGNAL INTERCEPTOR</span>
+                      <input 
+                          type="checkbox" 
+                          checked={showSignalInterceptor} 
+                          onChange={(e) => setShowSignalInterceptor(e.target.checked)}
+                          className="w-4 h-4 rounded bg-neutral-800 border-neutral-600 accent-green-500"
+                      />
+                  </label>
+              </div>
+              
+              {/* DEBUG TOOLS */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                 <div className="text-sm font-mono text-white font-bold">TEXT RNG CONFIG (DEBUG)</div>
+                 <div className="flex justify-between text-sm font-mono text-neutral-400">
                     <label>{T.UI.SPEED}</label>
                     <span className="text-white">{autoSpinSpeed}ms</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="20" 
-                  max="1000" 
-                  step="10"
-                  value={autoSpinSpeed}
-                  onChange={(e) => setAutoSpinSpeed(Number(e.target.value))}
-                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-white"
-                />
+                <input type="range" min="5" max="1000" step="5" value={autoSpinSpeed} onChange={(e) => setAutoSpinSpeed(Number(e.target.value))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-white" />
+                
+                <div className="flex justify-between text-sm font-mono text-neutral-400 mt-2">
+                    <label>LUCK (Log Scale)</label>
+                    <span className="text-yellow-500 font-bold">{Math.round(luckMultiplier).toLocaleString()}x</span>
+                </div>
+                <input type="range" min="0" max="12" step="0.1" value={getLogValue(luckMultiplier)} onChange={handleLogSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-yellow-500" />
+              </div>
+              
+              {/* MINING CONFIG */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                 <div className="text-sm font-mono text-white font-bold">MINING CONFIG (DEBUG)</div>
+                 <div className="flex justify-between text-sm font-mono text-neutral-400">
+                    <label>AUTO-MINE SPEED</label>
+                    <span className="text-white">{miningSpeed}ms</span>
+                </div>
+                <input type="range" min="50" max="2000" step="50" value={miningSpeed} onChange={(e) => setMiningSpeed(Number(e.target.value))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
+                
+                <div className="flex justify-between text-sm font-mono text-neutral-400 mt-2">
+                    <label>MINING LUCK (Log)</label>
+                    <span className="text-orange-500 font-bold">{Math.round(miningLuckMultiplier).toLocaleString()}x</span>
+                </div>
+                <input type="range" min="0" max="9" step="0.1" value={getLogValue(miningLuckMultiplier)} onChange={handleMiningLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-orange-500" />
               </div>
 
-              {/* Luck Boost Control (Logarithmic) */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-end text-sm font-mono text-neutral-400 mb-1">
-                    <label>{T.UI.LUCK_MULT} (Log Scale)</label>
-                    <div className="text-right">
-                         <span className="text-yellow-500 font-bold">{Math.round(luckMultiplier).toLocaleString()}x</span>
-                    </div>
+              {/* FISHING CONFIG */}
+              <div className="space-y-2 border-t border-neutral-800 pt-4">
+                 <div className="text-sm font-mono text-white font-bold">FISHING CONFIG (DEBUG)</div>
+                 <div className="flex justify-between text-sm font-mono text-neutral-400">
+                    <label>AUTO-FISH SPEED</label>
+                    <span className="text-white">{fishingSpeed}ms</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="12" 
-                  step="0.1"
-                  value={getLogValue(luckMultiplier)}
-                  onChange={handleLogSliderChange}
-                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-yellow-500"
-                />
-                <div className="flex justify-between text-[10px] text-neutral-600 font-mono">
-                    <span>1x</span>
-                    <span>1Mx</span>
-                    <span>1Bx</span>
-                    <span>1Tx</span>
+                <input type="range" min="50" max="2000" step="50" value={fishingSpeed} onChange={(e) => setFishingSpeed(Number(e.target.value))} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-teal-500" />
+                
+                <div className="flex justify-between text-sm font-mono text-neutral-400 mt-2">
+                    <label>FISHING LUCK (Log)</label>
+                    <span className="text-teal-500 font-bold">{Math.round(fishingLuckMultiplier).toLocaleString()}x</span>
                 </div>
+                <input type="range" min="0" max="9" step="0.1" value={getLogValue(fishingLuckMultiplier)} onChange={handleFishingLuckSliderChange} className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-teal-500" />
               </div>
 
               {/* Quick Presets */}
               <div className="pt-4 border-t border-neutral-800">
                  <p className="text-xs text-neutral-500 mb-2">{T.UI.PRESETS}</p>
                  <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => { setAutoSpinSpeed(150); setLuckMultiplier(1); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.RESET}</button>
-                    <button onClick={() => { setAutoSpinSpeed(50); setLuckMultiplier(1000); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.LUCKY}</button>
-                    <button onClick={() => { setAutoSpinSpeed(20); setLuckMultiplier(1000000000); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-yellow-600 border-yellow-900">{T.UI.GOD_MODE}</button>
+                    <button onClick={() => { setAutoSpinSpeed(150); setLuckMultiplier(1); setMiningLuckMultiplier(1); setFishingLuckMultiplier(1); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.RESET}</button>
+                    <button onClick={() => { setAutoSpinSpeed(50); setLuckMultiplier(1000); setMiningLuckMultiplier(100); setFishingLuckMultiplier(100); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-neutral-400">{T.UI.LUCKY}</button>
+                    <button onClick={() => { setAutoSpinSpeed(20); setLuckMultiplier(1000000000); setMiningLuckMultiplier(1000000); setFishingLuckMultiplier(1000000); }} className="text-xs border border-neutral-700 p-2 hover:bg-neutral-800 text-yellow-600 border-yellow-900">{T.UI.GOD_MODE}</button>
                  </div>
               </div>
               
               {/* Data Management */}
-              <div className="pt-4 border-t border-neutral-800">
-                 <button 
-                    onClick={() => {
-                        if(confirm("Clear all save data? This cannot be undone.")) {
-                            localStorage.clear();
-                            window.location.reload();
-                        }
-                    }}
-                    className="w-full text-xs text-red-800 hover:text-red-500 p-2 border border-red-900/30 hover:border-red-600 transition-colors"
-                >
+              <div className="pt-4 border-t border-neutral-800 space-y-2">
+                 <button onClick={() => { setStats(prev => ({ ...prev, unlockedAchievements: ACHIEVEMENTS.map(a => a.id) })); audioService.playRaritySound(RarityId.LEGENDARY); }} className="w-full text-xs text-green-800 hover:text-green-500 p-2 border border-green-900/30 hover:border-green-600 transition-colors">
+                    UNLOCK ALL TITLES
+                 </button>
+                 <button onClick={() => { if(confirm("Clear all save data?")) { localStorage.clear(); window.location.reload(); } }} className="w-full text-xs text-red-800 hover:text-red-500 p-2 border border-red-900/30 hover:border-red-600 transition-colors">
                     WIPE DATA
                  </button>
               </div>
-
             </div>
           </div>
         </div>
       )}
 
-      {/* Flash Overlay - Triggers on best drop */}
-      {activeRarityVFX && activeRarityVFX >= RarityId.DIVINE && !isCutscenePlaying && (
-        <div 
-            key={Date.now()} // Simple force re-render on change
-            className="absolute inset-0 bg-white pointer-events-none animate-flash z-40 mix-blend-overlay opacity-50"
-        />
+      {/* Global Flash Effect for High Tiers (Replaces Cutscene Effect) */}
+      {activeRarityVFX && activeRarityVFX >= RarityId.DIVINE && (
+        <div key={Date.now()} className="absolute inset-0 bg-white pointer-events-none animate-flash z-40 mix-blend-overlay opacity-50" />
       )}
       
       <style>{`
@@ -707,8 +1106,11 @@ export default function App() {
         .animate-fade-in-up {
             animation: fadeInUp 0.2s ease-out forwards;
         }
+        .cloud-texture {
+            text-shadow: 2px 2px 10px rgba(255,255,255,0.5);
+            filter: blur(0.5px);
+        }
       `}</style>
     </div>
   );
 }
-    

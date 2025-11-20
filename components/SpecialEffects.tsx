@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { RarityId } from '../types';
 
@@ -141,6 +142,29 @@ export const SpecialEffects: React.FC<Props> = ({ rarityId }) => {
         }
         .animate-scan {
             animation: scan 1.5s linear infinite;
+        }
+        @keyframes glitch-bar {
+            0% { top: 10%; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 90%; opacity: 0; }
+        }
+        .animate-glitch-bar {
+             animation: glitch-bar 0.2s linear infinite;
+        }
+        @keyframes noise {
+            0%, 100% { transform: translate(0, 0); }
+            10% { transform: translate(-5%, -5%); }
+            20% { transform: translate(-10%, 5%); }
+            30% { transform: translate(5%, -10%); }
+            40% { transform: translate(-5%, 15%); }
+            50% { transform: translate(-10%, 5%); }
+            60% { transform: translate(15%, 0); }
+            70% { transform: translate(0, 10%); }
+            80% { transform: translate(-15%, 0); }
+            90% { transform: translate(10%, 5%); }
+        }
+        .animate-noise {
+            animation: noise 0.5s steps(5) infinite;
         }
         @keyframes ascension-fade {
             0% { opacity: 0; }

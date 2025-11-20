@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface Props {
@@ -10,33 +11,54 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const updates = [
     {
-      version: "1.3.0",
+      version: "2.1.0",
       date: "Current",
       changes: [
-        "Added Shop System: Buy Multi-Roll upgrades.",
-        "Added Changelog.",
-        "Fixed Luck Slider (Logarithmic Scale).",
-        "Revamped Cutscenes: Unique animations for Primordial, Infinite, Chaos, and The One.",
-        "Added Item Inspection from Inventory."
+        "ECONOMY UPDATE: You can now SELL mined ores in the Ore Silo to earn Balance.",
+        "NEW UPGRADES: Added Global Luck, Mining Speed, Mining Luck, and Multi-Mining upgrades to the Shop.",
+        "VISUALS: Added floating text feedback and particle effects when mining manually.",
+        "LORE: Added unique descriptions to all 100 ore types.",
+        "UI: Improved shop layout to accommodate new modules."
       ]
     },
     {
-      version: "1.2.0",
+      version: "2.0.0",
       date: "Previous",
       changes: [
-        "Added Inventory System.",
-        "Added Localization (EN/IT).",
-        "Implemented LocalStorage persistence.",
-        "Added 'God Mode' presets."
+        "SYSTEM UPGRADE: Shop is now open! Buy faster speeds and larger multi-roll batches.",
+        "PITY SYSTEM: Added 'Entropy' bar. Filling it guarantees a massive luck boost.",
+        "BURST MODE: Unlockable module to simulate 50 rolls instantly.",
+        "CONTENT EXPANSION: Added 150+ new items across all rarity tiers.",
+        "UI: Visuals now support displaying 10+ items at once without hiding them."
       ]
     },
     {
-      version: "1.0.0",
-      date: "Initial",
+      version: "1.6.1",
+      date: "Legacy",
       changes: [
-        "Core RNG Engine.",
-        "Basic Rarity Tiers.",
-        "Visual Effects."
+        "INVENTORY OVERHAUL: Added a dedicated storage section for every Variant type.",
+        "Added Sidebar Navigation to the Inventory for filtering by Normal, Gilded, Holographic, etc.",
+        "Inventory layout is now wider and uses a grid system for better visibility.",
+      ]
+    },
+    {
+      version: "1.6.0",
+      date: "Legacy",
+      changes: [
+        "ADDED VARIANT SYSTEM: Items of Epic rarity and above can now roll with 10 unique variants (e.g., Gilded, Volcanic, Quantum).",
+        "ADDED RARITY MULTIPLIERS: Variants multiply the base rarity of an item (up to x10,000 for 'Pure').",
+        "VISUAL OVERHAUL: Variants have unique text effects, glows, and borders in the main view and inventory.",
+        "Inventory sorting now prioritizes variants."
+      ]
+    },
+    {
+      version: "1.5.0",
+      date: "Legacy",
+      changes: [
+        "Added Index Catalog: View all discoverable items.",
+        "Added Item Visualizer: 3D Holographic card view for items.",
+        "Replay Cutscenes: You can now replay cutscenes from the Visualizer.",
+        "Audio Overhaul: Added cinematic procedural audio engines for cutscenes."
       ]
     }
   ];

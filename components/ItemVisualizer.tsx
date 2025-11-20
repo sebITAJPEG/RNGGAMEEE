@@ -1,17 +1,19 @@
 
 import React, { useRef } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { RarityId, ItemData } from '../types';
-import { RARITY_TIERS } from '../constants';
+import { RarityId, ItemData, VariantId } from '../types';
+import { RARITY_TIERS, VARIANTS } from '../constants';
 
 interface Props {
-  item: ItemData & { rarityId: RarityId };
+  item: ItemData & { rarityId: RarityId, variantId?: VariantId };
   onClose: () => void;
-  onPlayCutscene?: () => void;
 }
 
-export const ItemVisualizer: React.FC<Props> = ({ item, onClose, onPlayCutscene }) => {
+export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const tier = RARITY_TIERS[item.rarityId];
+  const variant = VARIANTS[item.variantId || VariantId.NONE];
+  const hasVariant = (item.variantId ?? VariantId.NONE) !== VariantId.NONE;
+  
   const ref = useRef<HTMLDivElement>(null);
 
   const x = useMotionValue(0);
@@ -41,6 +43,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, onPlayCutscene 
     y.set(0);
   };
 
+  const borderClass = hasVariant ? variant.borderClass : tier.color;
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md perspective-1000" onClick={onClose}>
       <motion.div
@@ -54,7 +58,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, onPlayCutscene 
         onMouseLeave={handleMouseLeave}
         onClick={(e) => e.stopPropagation()}
         className={`
-            relative w-full max-w-md p-8 rounded-xl border-2 ${tier.color} bg-neutral-900 
+            relative w-full max-w-md p-8 rounded-xl border-2 ${borderClass} bg-neutral-900 
             shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group cursor-default
         `}
       >
@@ -64,20 +68,39 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, onPlayCutscene 
         {/* Scanline Texture */}
         <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] filter contrast-150 brightness-1000" />
 
+        {/* Variant Glow */}
+        {hasVariant && (
+            <div className={`absolute inset-0 opacity-20 pointer-events-none ${variant.styleClass} blur-3xl`} />
+        )}
+
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center text-center space-y-6 transform translate-z-10">
            <div className="w-full flex justify-between items-start border-b border-white/10 pb-4">
-                <div className={`text-xs font-mono uppercase tracking-widest ${tier.textColor}`}>
-                    {tier.name} // NO.{item.rarityId}
+                <div className="text-left">
+                    <div className={`text-xs font-mono uppercase tracking-widest ${tier.textColor}`}>
+                        {tier.name} // NO.{item.rarityId}
+                    </div>
+                    {hasVariant && (
+                        <div className={`text-xs font-mono uppercase tracking-widest mt-1 ${variant.styleClass.split(' ')[0]}`}>
+                            VARIANT: {variant.name}
+                        </div>
+                    )}
                 </div>
-                <div className="text-[10px] text-neutral-500 font-mono">
-                    SECURE ITEM
+                <div className="text-right">
+                    <div className="text-[10px] text-neutral-500 font-mono">
+                        SECURE ITEM
+                    </div>
+                    {hasVariant && (
+                        <div className="text-[10px] text-neutral-500 font-mono mt-1">
+                            x{variant.multiplier} RARITY
+                        </div>
+                    )}
                 </div>
            </div>
 
            <div className="py-8">
-                <h1 className={`text-3xl md:text-4xl font-bold ${tier.textColor} drop-shadow-md mb-4`}>
-                    {item.text}
+                <h1 className={`text-3xl md:text-4xl font-bold ${tier.textColor} drop-shadow-md mb-4 ${hasVariant ? variant.styleClass : ''}`}>
+                    {hasVariant ? variant.prefix : ''} {item.text}
                 </h1>
                 <p className="text-sm font-mono text-neutral-400 leading-relaxed max-w-xs mx-auto">
                     {item.description}
@@ -85,14 +108,6 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, onPlayCutscene 
            </div>
 
            <div className="w-full pt-4 border-t border-white/10 flex flex-col gap-3">
-                {onPlayCutscene && item.rarityId >= RarityId.PRIMORDIAL && (
-                    <button 
-                        onClick={onPlayCutscene}
-                        className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/20 hover:border-white/50 text-white font-mono text-xs tracking-widest uppercase transition-all flex items-center justify-center gap-2"
-                    >
-                        <span>▶ REPLAY SEQUENCE</span>
-                    </button>
-                )}
                 <button 
                     onClick={onClose}
                     className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white font-mono text-xs tracking-widest uppercase transition-all"
@@ -105,4 +120,3 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, onPlayCutscene 
     </div>
   );
 };
-    

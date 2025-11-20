@@ -1,18 +1,16 @@
-import { PHRASES, RARITY_TIERS } from '../constants';
-import { Drop, RarityId, Language } from '../types';
 
-export const generateDrop = (totalRolls: number, luckMultiplier: number = 1, language: Language = 'en'): Drop => {
+import { PHRASES, RARITY_TIERS, VARIANTS } from '../constants';
+import { Drop, RarityId, VariantId } from '../types';
+
+export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
   const rand = Math.random();
   
   // Iterate from highest rarity to lowest
-  // This ensures that if a 1/1T chance occurs, it is caught before the 1/5 chance
   const tiers = Object.values(RARITY_TIERS).sort((a, b) => b.id - a.id);
 
   let selectedTier = RARITY_TIERS[RarityId.COMMON];
 
   for (const tier of tiers) {
-    // Calculate threshold: (1 / probability) * luck
-    // Example: Rare is 1/100 = 0.01. With 2x luck, threshold becomes 0.02 (1/50).
     const baseThreshold = 1 / tier.probability;
     const threshold = baseThreshold * luckMultiplier;
     
@@ -22,14 +20,36 @@ export const generateDrop = (totalRolls: number, luckMultiplier: number = 1, lan
     }
   }
 
-  const potentialItems = PHRASES[language][selectedTier.id];
+  const potentialItems = PHRASES['en'][selectedTier.id];
   const item = potentialItems[Math.floor(Math.random() * potentialItems.length)];
+
+  // Variant Logic (Only for EPIC+)
+  let selectedVariantId = VariantId.NONE;
+  if (selectedTier.id >= RarityId.EPIC) {
+      const variantRand = Math.random();
+      // Sort variants by multiplier (highest first -> rarest)
+      const variants = Object.values(VARIANTS)
+        .filter(v => v.id !== VariantId.NONE)
+        .sort((a, b) => b.multiplier - a.multiplier);
+
+      for (const variant of variants) {
+          // 1 in X chance based on multiplier
+          // e.g. if Multiplier is 10, chance is 0.1
+          // We don't apply luck multiplier to variants to keep them purely RNG prestige
+          const chance = 1 / variant.multiplier; 
+          if (variantRand < chance) {
+              selectedVariantId = variant.id;
+              break;
+          }
+      }
+  }
 
   return {
     text: item.text,
     description: item.description,
     cutscenePhrase: item.cutscenePhrase,
     rarityId: selectedTier.id,
+    variantId: selectedVariantId,
     timestamp: Date.now(),
     rollNumber: totalRolls + 1
   };

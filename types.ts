@@ -1,3 +1,4 @@
+
 export enum RarityId {
   COMMON = 1,
   UNCOMMON,
@@ -16,22 +17,45 @@ export enum RarityId {
   THE_ONE
 }
 
-export type Language = 'en' | 'it';
+export enum VariantId {
+  NONE = 0,
+  GILDED,      // x2
+  HOLOGRAPHIC, // x5
+  RADIOACTIVE, // x10
+  VOLCANIC,    // x25
+  GLACIAL,     // x50
+  ABYSSAL,     // x100
+  CELESTIAL,   // x250
+  QUANTUM,     // x500
+  NEGATIVE,    // x1000
+  PURE         // x10000
+}
+
+export type Language = 'en';
 
 export interface RarityTier {
   id: RarityId;
-  name: string; // Fallback/Internal name
-  probability: number; // 1 in X
+  name: string;
+  probability: number;
   color: string;
   textColor: string;
   shadowColor: string;
   animate?: boolean;
 }
 
+export interface VariantTier {
+  id: VariantId;
+  name: string;
+  prefix: string;
+  multiplier: number; // Multiplies base rarity probability
+  styleClass: string; // Tailwind classes for text effects
+  borderClass: string; // For visualizer borders
+}
+
 export interface ItemData {
   text: string;
   description: string;
-  cutscenePhrase?: string; // New field for epic reveal text
+  cutscenePhrase?: string;
 }
 
 export interface Drop {
@@ -39,6 +63,7 @@ export interface Drop {
   description: string;
   cutscenePhrase?: string;
   rarityId: RarityId;
+  variantId?: VariantId; // New optional field
   timestamp: number;
   rollNumber: number;
 }
@@ -47,14 +72,93 @@ export interface InventoryItem {
   text: string;
   description: string;
   rarityId: RarityId;
+  variantId?: VariantId;
   count: number;
   discoveredAt: number;
 }
 
+// --- MINING TYPES ---
+
+export interface Ore {
+  id: number;
+  name: string;
+  description: string; // Added description
+  probability: number; // 1 in X
+  color: string; // Text color class
+  glowColor: string; // CSS color for shadows
+  tierName: string;
+}
+
+export interface OreInventoryItem {
+  id: number; // Reference to Ore ID
+  count: number;
+  discoveredAt: number;
+}
+
+// --- FISHING TYPES ---
+
+export interface Fish {
+  id: number;
+  name: string;
+  description: string;
+  probability: number; // 1 in X
+  color: string;
+  glowColor: string;
+  tierName: string;
+}
+
+export interface FishInventoryItem {
+  id: number; // Reference to Fish ID
+  count: number;
+  discoveredAt: number;
+}
+
+export interface Achievement {
+    id: string;
+    title: string; // The reward title
+    description: string;
+    condition: (stats: GameStats, inventory: InventoryItem[]) => boolean;
+}
+
+export interface SignalBuff {
+  multiplier: number;
+  endTime: number;
+  id: number; // Unique ID to trigger updates/effects
+}
+
 export interface GameStats {
   totalRolls: number;
-  balance: number; // Spendable rolls
+  balance: number;
   startTime: number;
   bestRarityFound: RarityId;
-  multiRollLevel: number; // 1 = single, 2 = double, 3 = triple
+  
+  // Main Upgrades
+  multiRollLevel: number; // 1 to 10 (or higher via Admin)
+  speedLevel: number; // Index for SPEED_TIERS
+  luckLevel: number; // New: Global Luck Multiplier Level
+  
+  entropy: number; // Pity counter
+  hasBurst: boolean; // Unlock status
+  unlockedAchievements: string[]; // Array of achievement IDs
+  equippedTitle: string | null;
+  
+  // Mining Stats & Upgrades
+  totalMined: number;
+  bestOreMined: number; // ID of best ore
+  miningSpeedLevel: number; // New
+  miningLuckLevel: number; // New
+  miningMultiLevel: number; // New: How many ores mined at once
+  
+  // Fishing Stats & Upgrades
+  totalFished: number;
+  bestFishCaught: number;
+  fishingSpeedLevel: number;
+  fishingLuckLevel: number;
+  fishingMultiLevel: number;
+
+  // Gacha
+  gachaCredits: number;
+
+  // Signal Interceptor
+  signalBuff: SignalBuff | null;
 }
