@@ -75,6 +75,7 @@ export interface InventoryItem {
   variantId?: VariantId;
   count: number;
   discoveredAt: number;
+  locked?: boolean;
 }
 
 // --- MINING TYPES ---
@@ -82,7 +83,7 @@ export interface InventoryItem {
 export interface Ore {
   id: number;
   name: string;
-  description: string; // Added description
+  description: string;
   probability: number; // 1 in X
   color: string; // Text color class
   glowColor: string; // CSS color for shadows
@@ -93,6 +94,7 @@ export interface OreInventoryItem {
   id: number; // Reference to Ore ID
   count: number;
   discoveredAt: number;
+  locked?: boolean;
 }
 
 // --- FISHING TYPES ---
@@ -111,6 +113,7 @@ export interface FishInventoryItem {
   id: number; // Reference to Fish ID
   count: number;
   discoveredAt: number;
+  locked?: boolean;
 }
 
 // --- HARVESTING TYPES ---
@@ -129,13 +132,14 @@ export interface PlantInventoryItem {
   id: number; // Reference to Plant ID
   count: number;
   discoveredAt: number;
+  locked?: boolean;
 }
 
 export interface Achievement {
-    id: string;
-    title: string; // The reward title
-    description: string;
-    condition: (stats: GameStats, inventory: InventoryItem[]) => boolean;
+  id: string;
+  title: string; // The reward title
+  description: string;
+  condition: (stats: GameStats, inventory: InventoryItem[]) => boolean;
 }
 
 export interface SignalBuff {
@@ -149,24 +153,24 @@ export interface GameStats {
   balance: number;
   startTime: number;
   bestRarityFound: RarityId;
-  
+
   // Main Upgrades
   multiRollLevel: number; // 1 to 10 (or higher via Admin)
   speedLevel: number; // Index for SPEED_TIERS
   luckLevel: number; // New: Global Luck Multiplier Level
-  
+
   entropy: number; // Pity counter
   hasBurst: boolean; // Unlock status
   unlockedAchievements: string[]; // Array of achievement IDs
   equippedTitle: string | null;
-  
+
   // Mining Stats & Upgrades
   totalMined: number;
   bestOreMined: number; // ID of best ore
   miningSpeedLevel: number; // New
   miningLuckLevel: number; // New
   miningMultiLevel: number; // New: How many ores mined at once
-  
+
   // Fishing Stats & Upgrades
   totalFished: number;
   bestFishCaught: number;

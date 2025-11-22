@@ -11,8 +11,18 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const updates = [
     {
-      version: "2.1.0",
+      version: "2.2.0",
       date: "Current",
+      changes: [
+        "NEW FEATURE: Customizable Themes - Switch between 4 visual styles (Default, Matrix, Cyberpunk, Paper).",
+        "THEMES: Access theme switcher in Admin Panel to change the entire UI color scheme.",
+        "PERSISTENCE: Your theme choice is saved and remembered across sessions.",
+        "ITEM LOCKING: Lock items in your inventory to prevent accidental selling or deletion."
+      ]
+    },
+    {
+      version: "2.1.0",
+      date: "Previous",
       changes: [
         "ECONOMY UPDATE: You can now SELL mined ores in the Ore Silo to earn Balance.",
         "NEW UPGRADES: Added Global Luck, Mining Speed, Mining Luck, and Multi-Mining upgrades to the Shop.",
@@ -70,7 +80,7 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
           <h2 className="text-xl font-bold text-white tracking-wider font-mono">SYSTEM LOGS</h2>
           <button onClick={onClose} className="text-neutral-500 hover:text-white font-mono">[X]</button>
         </div>
-        
+
         <div className="overflow-y-auto p-6 space-y-8">
           {updates.map((update, idx) => (
             <div key={idx} className="space-y-2">
