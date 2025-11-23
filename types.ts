@@ -1,4 +1,3 @@
-
 export enum RarityId {
   COMMON = 1,
   UNCOMMON,
@@ -148,6 +147,36 @@ export interface SignalBuff {
   id: number; // Unique ID to trigger updates/effects
 }
 
+// --- CRAFTING TYPES ---
+
+export type CraftingCategory = 'GENERAL' | 'MINING' | 'FISHING' | 'HARVESTING';
+export type CraftingType = 'BOOST' | 'MULTI'; // New field to distinguish slot type
+
+export interface CraftingMaterial {
+  type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM'; // ITEM represents main game drops if needed, currently simplified to resources
+  id: number | string; // ID of the resource
+  count: number;
+}
+
+export interface CraftableItem {
+  id: string;
+  name: string;
+  description: string;
+  tier: number; // 1 to 15
+  category: CraftingCategory;
+  type: CraftingType; // New: Determines which slot it occupies
+  bonuses: {
+    luck?: number; // Multiplier add (e.g. 0.1 for +10%)
+    speed?: number; // ms reduction
+    yield?: number; // deprecated/unused for now, using multi
+    multi?: number; // Additive to multi-roll
+  };
+  recipe: {
+    materials: CraftingMaterial[];
+    cost: number;
+  };
+}
+
 export interface GameStats {
   totalRolls: number;
   balance: number;
@@ -163,6 +192,14 @@ export interface GameStats {
   hasBurst: boolean; // Unlock status
   unlockedAchievements: string[]; // Array of achievement IDs
   equippedTitle: string | null;
+
+  // Crafting
+  craftedItems: Record<string, boolean>; // ID -> owned status
+  equippedItems: {
+    // Format: "CATEGORY_TYPE": "itemId"
+    // e.g. "GENERAL_BOOST": "gen_1", "GENERAL_MULTI": "gen_multi_1"
+    [key: string]: string | null;
+  };
 
   // Mining Stats & Upgrades
   totalMined: number;
@@ -191,35 +228,3 @@ export interface GameStats {
   // Signal Interceptor
   signalBuff: SignalBuff | null;
 }
-
-// --- CRAFTING TYPES ---
-
-export type CraftingCategory = 'GENERAL' | 'MINING' | 'FISHING' | 'HARVESTING';
-
-export interface CraftingMaterial {
-  type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM';
-  id: number | string; // ID of the resource or item
-  count: number;
-}
-
-export interface CraftingRecipe {
-  materials: CraftingMaterial[];
-  cost: number;
-}
-
-export interface CraftableItem {
-  id: string;
-  name: string;
-  description: string;
-  tier: RarityId;
-  category: CraftingCategory;
-  bonuses: {
-    luck?: number; // Flat luck bonus
-    speed?: number; // Percentage speed reduction (0.1 = 10%)
-    yield?: number; // Extra resource chance
-    multi?: number; // Multi-roll/mine/fish bonus
-  };
-  recipe: CraftingRecipe;
-}
-
-export type CraftedItemsState = Record<string, boolean>; // ItemID -> Owned

@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, OreInventoryItem, FishInventoryItem, PlantInventoryItem } from './types';
+import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, OreInventoryItem, FishInventoryItem, PlantInventoryItem, CraftableItem } from './types';
 import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, BURST_COST, MINING_SPEEDS, ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS } from './constants';
+import { CRAFTABLE_ITEMS } from './craftingData';
 import { generateDrop } from './services/rngService';
 import { mineOre } from './services/miningService';
 import { catchFish } from './services/fishingService';
@@ -10,7 +10,6 @@ import { audioService } from './services/audioService';
 import { RarityBadge } from './components/RarityBadge';
 import { Inventory } from './components/Inventory';
 import { SpecialEffects } from './components/SpecialEffects';
-import { Shop } from './components/Shop';
 import { Changelog } from './components/Changelog';
 import { ItemVisualizer } from './components/ItemVisualizer';
 import { IndexCatalog } from './components/IndexCatalog';
@@ -24,12 +23,14 @@ import { GachaTerminal } from './components/GachaTerminal';
 import { SignalInterceptor } from './components/SignalInterceptor';
 import { useSubGame } from './hooks/useSubGame';
 import { ResourceInventory } from './components/ResourceInventory';
+import { CraftingPanel } from './components/CraftingPanel';
 import { THEMES, applyTheme } from './themes';
 
 export default function App() {
     // State
     const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('textbound_theme') || 'default');
     const [currentDrops, setCurrentDrops] = useState<Drop[]>([]);
+    const [showExtendedStats, setShowExtendedStats] = useState(false); // Toggle for the new stats block
 
     const [stats, setStats] = useState<GameStats>(() => {
         const saved = localStorage.getItem('textbound_stats');
@@ -50,6 +51,10 @@ export default function App() {
                 hasBurst: parsed.hasBurst || false,
                 unlockedAchievements: parsed.unlockedAchievements || [],
                 equippedTitle: parsed.equippedTitle || null,
+                // Crafting
+                craftedItems: parsed.craftedItems || {},
+                equippedItems: parsed.equippedItems || {},
+                // Subgames
                 totalMined: parsed.totalMined || 0,
                 bestOreMined: parsed.bestOreMined || 0,
                 miningSpeedLevel: parsed.miningSpeedLevel || 0,
@@ -81,6 +86,8 @@ export default function App() {
             hasBurst: false,
             unlockedAchievements: [],
             equippedTitle: null,
+            craftedItems: {},
+            equippedItems: {},
             totalMined: 0,
             bestOreMined: 0,
             miningSpeedLevel: 0,
@@ -116,12 +123,12 @@ export default function App() {
     const [isFishInventoryOpen, setIsFishInventoryOpen] = useState(false);
     const [isPlantInventoryOpen, setIsPlantInventoryOpen] = useState(false);
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const [isShopOpen, setIsShopOpen] = useState(false);
     const [isChangelogOpen, setIsChangelogOpen] = useState(false);
     const [isIndexOpen, setIsIndexOpen] = useState(false);
     const [isAchievementsOpen, setIsAchievementsOpen] = useState(false);
     const [isCoinTossOpen, setIsCoinTossOpen] = useState(false);
     const [isGachaOpen, setIsGachaOpen] = useState(false);
+    const [isCraftingOpen, setIsCraftingOpen] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
 
     // Visualizer State
@@ -183,13 +190,66 @@ export default function App() {
         localStorage.setItem('textbound_theme', currentTheme);
     }, [currentTheme]);
 
-    // Sync Speed with Stats
+    // --- CRAFTING BONUSES HELPER ---
+    const getCraftingBonuses = useCallback((category: string) => {
+        let bonusSpeed = 0;
+        let bonusLuck = 0;
+        let bonusMulti = 0;
+
+        const equipped = stats.equippedItems || {};
+
+        // Check both slots for this category: BOOST and MULTI
+        const boostId = equipped[`${category}_BOOST`];
+        const multiId = equipped[`${category}_MULTI`];
+
+        const idsToCheck = [boostId, multiId].filter(id => id) as string[];
+
+        idsToCheck.forEach(id => {
+            const item = CRAFTABLE_ITEMS.find(i => i.id === id);
+            if (item) {
+                if (item.bonuses.speed) bonusSpeed += item.bonuses.speed;
+                if (item.bonuses.luck) bonusLuck += item.bonuses.luck;
+                if (item.bonuses.multi) bonusMulti += item.bonuses.multi;
+            }
+        });
+
+        return { bonusSpeed, bonusLuck, bonusMulti };
+    }, [stats.equippedItems]);
+
+    // Helpers for UI Stats (Updated for Equipped Items)
+    const getEquippedItemName = (category: string, type: 'BOOST' | 'MULTI') => {
+        const id = stats.equippedItems?.[`${category}_${type}`];
+        if (!id) return "None";
+        const item = CRAFTABLE_ITEMS.find(i => i.id === id);
+        return item ? item.name : "None";
+    };
+
+    const getBestResourceName = (type: 'ORE' | 'FISH' | 'PLANT', id: number) => {
+        if (id === 0) return "None";
+        if (type === 'ORE') return ORES.find(o => o.id === id)?.name || `Ore #${id}`;
+        if (type === 'FISH') return FISH.find(f => f.id === id)?.name || `Fish #${id}`;
+        if (type === 'PLANT') return PLANTS.find(p => p.id === id)?.name || `Plant #${id}`;
+        return "None";
+    };
+
+    // Sync Speed with Stats and Crafting Bonuses
     useEffect(() => {
+        // Base Shop Upgrades
+        const baseMineSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
+        const baseFishSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
+        const baseHarvSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100;
+
+        // Apply Crafting Reductions
+        const mineBonuses = getCraftingBonuses('MINING');
+        const fishBonuses = getCraftingBonuses('FISHING');
+        const harvBonuses = getCraftingBonuses('HARVESTING');
+
         setAutoSpinSpeed(SPEED_TIERS[stats.speedLevel]?.ms || 250);
-        setMiningSpeed(MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000);
-        setFishingSpeed(FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200);
-        setHarvestingSpeed(HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100);
-    }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel]);
+        setMiningSpeed(Math.max(10, baseMineSpeed - mineBonuses.bonusSpeed));
+        setFishingSpeed(Math.max(25, baseFishSpeed - fishBonuses.bonusSpeed));
+        setHarvestingSpeed(Math.max(15, baseHarvSpeed - harvBonuses.bonusSpeed));
+
+    }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel, getCraftingBonuses]);
 
     // Force update UI every second if there is a buff to update timer
     useEffect(() => {
@@ -210,13 +270,15 @@ export default function App() {
 
     // --- SUB-GAMES HOOKS ---
 
+    // Mining
+    const mineBonuses = getCraftingBonuses('MINING');
     const miningGame = useSubGame<any, OreInventoryItem>({
         storageKey: 'textbound_ore_inventory',
         dropFn: mineOre,
         playSound: audioService.playMineSound.bind(audioService),
         speed: miningSpeed,
-        luck: miningLuckMultiplier * (1 + (stats.miningLuckLevel * 0.5)),
-        multi: stats.miningMultiLevel || 1,
+        luck: (miningLuckMultiplier * (1 + (stats.miningLuckLevel * 0.5))) + mineBonuses.bonusLuck,
+        multi: (stats.miningMultiLevel || 1) + mineBonuses.bonusMulti,
         thresholds: { boom: 30, rare: 10, boomDivisor: 6 }
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({
@@ -230,13 +292,15 @@ export default function App() {
         playCoinWin: audioService.playCoinWin.bind(audioService)
     });
 
+    // Fishing
+    const fishBonuses = getCraftingBonuses('FISHING');
     const fishingGame = useSubGame<any, FishInventoryItem>({
         storageKey: 'textbound_fish_inventory',
         dropFn: catchFish,
         playSound: audioService.playFishSound.bind(audioService),
         speed: fishingSpeed,
-        luck: fishingLuckMultiplier * (1 + (stats.fishingLuckLevel * 0.5)),
-        multi: stats.fishingMultiLevel || 1,
+        luck: (fishingLuckMultiplier * (1 + (stats.fishingLuckLevel * 0.5))) + fishBonuses.bonusLuck,
+        multi: (stats.fishingMultiLevel || 1) + fishBonuses.bonusMulti,
         thresholds: { boom: 25, rare: 15, boomDivisor: 3 }
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({
@@ -250,13 +314,15 @@ export default function App() {
         playCoinWin: audioService.playCoinWin.bind(audioService)
     });
 
+    // Harvesting
+    const harvBonuses = getCraftingBonuses('HARVESTING');
     const harvestingGame = useSubGame<any, PlantInventoryItem>({
         storageKey: 'textbound_plant_inventory',
         dropFn: harvestPlant,
         playSound: audioService.playHarvestSound.bind(audioService),
         speed: harvestingSpeed,
-        luck: harvestingLuckMultiplier * (1 + (stats.harvestingLuckLevel * 0.5)),
-        multi: stats.harvestingMultiLevel || 1,
+        luck: (harvestingLuckMultiplier * (1 + (stats.harvestingLuckLevel * 0.5))) + harvBonuses.bonusLuck,
+        multi: (stats.harvestingMultiLevel || 1) + harvBonuses.bonusMulti,
         thresholds: { boom: 25, rare: 15, boomDivisor: 3 }
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({
@@ -353,6 +419,59 @@ export default function App() {
         }
     };
 
+    // --- CRAFTING LOGIC ---
+    const handleCraftItem = (item: CraftableItem) => {
+        if (stats.balance < item.recipe.cost) return;
+
+        const missingMaterial = item.recipe.materials.find(mat => {
+            if (mat.type === 'ORE') return (miningGame.inventory.find(i => i.id === mat.id)?.count || 0) < mat.count;
+            if (mat.type === 'FISH') return (fishingGame.inventory.find(i => i.id === mat.id)?.count || 0) < mat.count;
+            if (mat.type === 'PLANT') return (harvestingGame.inventory.find(i => i.id === mat.id)?.count || 0) < mat.count;
+            return true;
+        });
+
+        if (missingMaterial) return;
+
+        setStats(prev => ({
+            ...prev,
+            balance: prev.balance - item.recipe.cost,
+            craftedItems: { ...prev.craftedItems, [item.id]: true }
+        }));
+
+        item.recipe.materials.forEach(mat => {
+            if (mat.type === 'ORE') {
+                miningGame.setInventory(prev => prev.map(i => i.id === mat.id ? { ...i, count: i.count - mat.count } : i).filter(i => i.count > 0));
+            } else if (mat.type === 'FISH') {
+                fishingGame.setInventory(prev => prev.map(i => i.id === mat.id ? { ...i, count: i.count - mat.count } : i).filter(i => i.count > 0));
+            } else if (mat.type === 'PLANT') {
+                harvestingGame.setInventory(prev => prev.map(i => i.id === mat.id ? { ...i, count: i.count - mat.count } : i).filter(i => i.count > 0));
+            }
+        });
+
+        audioService.playRaritySound(RarityId.MYTHICAL);
+    };
+
+    // --- EQUIPPING LOGIC ---
+    const handleEquipItem = (item: CraftableItem) => {
+        audioService.playClick();
+        setStats(prev => ({
+            ...prev,
+            equippedItems: {
+                ...prev.equippedItems,
+                [`${item.category}_${item.type}`]: item.id
+            }
+        }));
+    };
+
+    const handleUnequipItem = (item: CraftableItem) => {
+        audioService.playClick();
+        setStats(prev => {
+            const newEquipped = { ...prev.equippedItems };
+            newEquipped[`${item.category}_${item.type}`] = null;
+            return { ...prev, equippedItems: newEquipped };
+        });
+    };
+
     // --- SIGNAL LOGIC ---
     const handleSignalDecrypt = (multiplier: number, duration: number) => {
         setStats(prev => ({
@@ -368,23 +487,29 @@ export default function App() {
     // --- MAIN GAME LOGIC ---
     const handleRoll = useCallback((manualBatchSize?: number) => {
         if (!manualBatchSize) audioService.playRollSound();
-        const rollsToPerform = manualBatchSize || stats.multiRollLevel;
+
+        // Calc Multiplier (Base + Crafted)
+        const genBonuses = getCraftingBonuses('GENERAL');
+        const rollsToPerform = manualBatchSize || (stats.multiRollLevel + genBonuses.bonusMulti);
+
         const generatedDrops: Drop[] = [];
         let currentEntropy = stats.entropy;
 
         const levelLuck = 1 + (stats.luckLevel * 0.2);
         const signalLuck = (stats.signalBuff && Date.now() < stats.signalBuff.endTime) ? stats.signalBuff.multiplier : 1;
-        const effectiveBaseLuck = luckMultiplier * levelLuck * signalLuck;
-        let effectiveLuck = effectiveBaseLuck;
+
+        const totalLuckMult = luckMultiplier * (levelLuck + genBonuses.bonusLuck) * signalLuck;
+
+        let effectiveLuck = totalLuckMult;
 
         let consumedPity = false;
         if (currentEntropy >= ENTROPY_THRESHOLD) {
-            effectiveLuck = effectiveBaseLuck * 500;
+            effectiveLuck = totalLuckMult * 500;
             consumedPity = true;
         }
 
         for (let i = 0; i < rollsToPerform; i++) {
-            const useLuck = (i === 0 && consumedPity) ? effectiveLuck : effectiveBaseLuck;
+            const useLuck = (i === 0 && consumedPity) ? effectiveLuck : totalLuckMult;
             const drop = generateDrop(stats.totalRolls + i, useLuck);
             generatedDrops.push(drop);
 
@@ -402,7 +527,7 @@ export default function App() {
         setCurrentDrops(generatedDrops);
         batchUpdateStatsAndInventory(generatedDrops, rollsToPerform, currentEntropy);
         audioService.playBoom(bestDrop.rarityId);
-    }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.signalBuff]);
+    }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.signalBuff, stats.equippedItems, getCraftingBonuses]);
 
     const batchUpdateStatsAndInventory = (drops: Drop[], rollsCount: number, finalEntropy: number) => {
         let creditsFound = 0;
@@ -426,23 +551,24 @@ export default function App() {
         setInventory(prev => {
             let newInv = [...prev];
             drops.forEach(drop => {
-                // Save all items (Common, Uncommon, Rare, and above)
-                const existingIndex = newInv.findIndex(i =>
-                    i.text === drop.text &&
-                    i.rarityId === drop.rarityId &&
-                    i.variantId === drop.variantId
-                );
-                if (existingIndex >= 0) {
-                    newInv[existingIndex].count += 1;
-                } else {
-                    newInv.push({
-                        text: drop.text,
-                        description: drop.description,
-                        rarityId: drop.rarityId,
-                        variantId: drop.variantId,
-                        count: 1,
-                        discoveredAt: Date.now()
-                    });
+                if (drop.rarityId >= RarityId.RARE) {
+                    const existingIndex = newInv.findIndex(i =>
+                        i.text === drop.text &&
+                        i.rarityId === drop.rarityId &&
+                        i.variantId === drop.variantId
+                    );
+                    if (existingIndex >= 0) {
+                        newInv[existingIndex].count += 1;
+                    } else {
+                        newInv.push({
+                            text: drop.text,
+                            description: drop.description,
+                            rarityId: drop.rarityId,
+                            variantId: drop.variantId,
+                            count: 1,
+                            discoveredAt: Date.now()
+                        });
+                    }
                 }
             });
             return newInv;
@@ -473,91 +599,6 @@ export default function App() {
         });
     };
 
-    // Shop Actions
-    const handleBuyMultiRoll = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, multiRollLevel: prev.multiRollLevel + 1 }));
-        }
-    };
-
-    const handleBuySpeed = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, speedLevel: prev.speedLevel + 1 }));
-        }
-    };
-
-    const handleBuyBurst = () => {
-        if (stats.balance >= BURST_COST) {
-            audioService.playRaritySound(RarityId.LEGENDARY);
-            setStats(prev => ({ ...prev, balance: prev.balance - BURST_COST, hasBurst: true }));
-        }
-    };
-
-    const handleBuyLuck = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, luckLevel: prev.luckLevel + 1 }));
-        }
-    };
-
-    // Sub-game Buy Handlers
-    const handleBuyMiningSpeed = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, miningSpeedLevel: (prev.miningSpeedLevel || 0) + 1 }));
-        }
-    };
-    const handleBuyMiningLuck = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, miningLuckLevel: (prev.miningLuckLevel || 0) + 1 }));
-        }
-    };
-    const handleBuyMiningMulti = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.LEGENDARY);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, miningMultiLevel: (prev.miningMultiLevel || 1) + 1 }));
-        }
-    };
-    const handleBuyFishingSpeed = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingSpeedLevel: (prev.fishingSpeedLevel || 0) + 1 }));
-        }
-    };
-    const handleBuyFishingLuck = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingLuckLevel: (prev.fishingLuckLevel || 0) + 1 }));
-        }
-    };
-    const handleBuyFishingMulti = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.LEGENDARY);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, fishingMultiLevel: (prev.fishingMultiLevel || 1) + 1 }));
-        }
-    };
-    const handleBuyHarvestingSpeed = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, harvestingSpeedLevel: (prev.harvestingSpeedLevel || 0) + 1 }));
-        }
-    };
-    const handleBuyHarvestingLuck = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.EPIC);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, harvestingLuckLevel: (prev.harvestingLuckLevel || 0) + 1 }));
-        }
-    };
-    const handleBuyHarvestingMulti = (cost: number) => {
-        if (stats.balance >= cost) {
-            audioService.playRaritySound(RarityId.LEGENDARY);
-            setStats(prev => ({ ...prev, balance: prev.balance - cost, harvestingMultiLevel: (prev.harvestingMultiLevel || 1) + 1 }));
-        }
-    };
-
     const handleBurstClick = () => {
         audioService.playClick();
         handleRoll(50);
@@ -579,7 +620,10 @@ export default function App() {
     const formatProb = (p: number, variantMultiplier: number = 1) => {
         const levelLuck = 1 + (stats.luckLevel * 0.2);
         const signalLuck = (stats.signalBuff && Date.now() < stats.signalBuff.endTime) ? stats.signalBuff.multiplier : 1;
-        const totalLuck = luckMultiplier * levelLuck * signalLuck;
+        // Include General Crafting Luck
+        const genBonuses = getCraftingBonuses('GENERAL');
+        const totalLuck = luckMultiplier * (levelLuck + genBonuses.bonusLuck) * signalLuck;
+
         const adjustedP = (p / totalLuck) * variantMultiplier;
 
         if (adjustedP >= 1000000000000) return `1 in ${Math.round(adjustedP / 1000000000000)}T`;
@@ -611,6 +655,15 @@ export default function App() {
         audioService.playClick();
     };
 
+    // Calc current displayed Lucks for UI
+    const currentGlobalLuck = (1 + (stats.luckLevel * 0.2) + getCraftingBonuses('GENERAL').bonusLuck) * (hasSignalBuff ? stats.signalBuff!.multiplier : 1) * luckMultiplier;
+    const currentMineLuck = (1 + (stats.miningLuckLevel * 0.5)) + getCraftingBonuses('MINING').bonusLuck;
+    const currentFishLuck = (1 + (stats.fishingLuckLevel * 0.5)) + getCraftingBonuses('FISHING').bonusLuck;
+    const currentHarvLuck = (1 + (stats.harvestingLuckLevel * 0.5)) + getCraftingBonuses('HARVESTING').bonusLuck;
+
+    // Display Logic for Stats
+    const getGeneralMulti = () => (stats.multiRollLevel || 1) + getCraftingBonuses('GENERAL').bonusMulti;
+
     return (
         <div className="relative min-h-screen bg-background text-text selection:bg-text selection:text-background overflow-hidden flex">
 
@@ -628,26 +681,90 @@ export default function App() {
                 {/* CENTER: RNG Game */}
                 <div className="relative flex flex-col items-center justify-center col-span-1 lg:col-span-2 lg:border-r border-surface-highlight h-full">
 
-                    <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-20 font-mono text-xs md:text-sm text-text-dim pointer-events-none">
-                        <div className="space-y-1 pointer-events-auto">
-                            <p>{T.UI.ROLLS}: <span className="text-text">{stats.totalRolls.toLocaleString()}</span></p>
-                            <p>BALANCE: <span className="text-yellow-500">{stats.balance.toLocaleString()}</span></p>
-                            <p>CREDITS: <span className="text-purple-400">{stats.gachaCredits}</span></p>
-                            <p>{T.UI.BEST}: <span className={`${RARITY_TIERS[stats.bestRarityFound]?.textColor || 'text-text'}`}>{T.RARITY_NAMES[stats.bestRarityFound]}</span></p>
-                            {stats.equippedTitle && (
-                                <p>TITLE: <span className="text-yellow-400 font-bold border-b border-yellow-600">{stats.equippedTitle}</span></p>
-                            )}
-                            {hasSignalBuff && (
-                                <p className="text-green-400 font-bold animate-pulse">SIGNAL BOOST: {stats.signalBuff!.multiplier}x ({timeLeft}s)</p>
+                    <div className="absolute top-0 left-0 w-full p-6 z-20 pointer-events-none flex flex-col md:flex-row justify-between items-start gap-4">
+
+                        {/* Stats Block (Left) */}
+                        <div className="flex flex-col gap-4 pointer-events-auto max-h-[80vh] overflow-y-auto no-scrollbar">
+                            {/* Main Economy Stats */}
+                            <div className="space-y-1 font-mono text-xs md:text-sm text-text-dim bg-black/60 backdrop-blur p-3 rounded border border-white/10">
+                                <p>{T.UI.ROLLS}: <span className="text-text">{stats.totalRolls.toLocaleString()}</span></p>
+                                <p>BALANCE: <span className="text-yellow-500">{stats.balance.toLocaleString()}</span></p>
+                                <p>CREDITS: <span className="text-purple-400">{stats.gachaCredits}</span></p>
+                                <p>{T.UI.BEST}: <span className={`${RARITY_TIERS[stats.bestRarityFound]?.textColor || 'text-text'}`}>{T.RARITY_NAMES[stats.bestRarityFound]}</span></p>
+
+                                {/* NEW: Always visible Player Stats */}
+                                <div className="my-2 border-t border-white/10 pt-2">
+                                    <p>LUCK: <span className="text-green-400">{currentGlobalLuck.toFixed(2)}x</span></p>
+                                    <p>SPEED: <span className="text-cyan-400">{autoSpinSpeed}ms</span></p>
+                                    <p>BATCH: <span className="text-purple-300">x{getGeneralMulti()}</span></p>
+                                </div>
+
+                                {stats.equippedTitle && (
+                                    <p>TITLE: <span className="text-yellow-400 font-bold border-b border-yellow-600">{stats.equippedTitle}</span></p>
+                                )}
+                                {hasSignalBuff && (
+                                    <p className="text-green-400 font-bold animate-pulse">SIGNAL BOOST: {stats.signalBuff!.multiplier}x ({timeLeft}s)</p>
+                                )}
+                                <button
+                                    onClick={() => setShowExtendedStats(!showExtendedStats)}
+                                    className="text-[10px] text-text-dim hover:text-white underline mt-2 uppercase"
+                                >
+                                    {showExtendedStats ? '[-] HIDE SUB-GAMES' : '[+] SHOW SUB-GAMES'}
+                                </button>
+                            </div>
+
+                            {/* Extended Stats Panel */}
+                            {showExtendedStats && (
+                                <div className="flex flex-col gap-2 font-mono text-[10px] text-text-dim animate-fade-in-up">
+
+                                    {/* GENERAL EQUIP */}
+                                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-white/10 space-y-1">
+                                        <div className="text-white font-bold border-b border-white/10 mb-1 pb-1">GENERAL GEAR</div>
+                                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName('GENERAL', 'BOOST')}</span></p>
+                                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName('GENERAL', 'MULTI')}</span></p>
+                                    </div>
+
+                                    {/* MINING */}
+                                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-orange-900/30 space-y-1">
+                                        <div className="text-orange-400 font-bold border-b border-orange-900/30 mb-1 pb-1">MINING</div>
+                                        <p>LUCK: <span className="text-orange-300">{currentMineLuck.toFixed(2)}x</span></p>
+                                        <p>SPEED: <span className="text-orange-300">{miningSpeed}ms</span></p>
+                                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName('MINING', 'BOOST')}</span></p>
+                                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName('MINING', 'MULTI')}</span></p>
+                                    </div>
+
+                                    {/* FISHING */}
+                                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-cyan-900/30 space-y-1">
+                                        <div className="text-cyan-400 font-bold border-b border-cyan-900/30 mb-1 pb-1">FISHING</div>
+                                        <p>LUCK: <span className="text-cyan-300">{currentFishLuck.toFixed(2)}x</span></p>
+                                        <p>SPEED: <span className="text-cyan-300">{fishingSpeed}ms</span></p>
+                                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName('FISHING', 'BOOST')}</span></p>
+                                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName('FISHING', 'MULTI')}</span></p>
+                                    </div>
+
+                                    {/* HARVESTING */}
+                                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-green-900/30 space-y-1">
+                                        <div className="text-green-400 font-bold border-b border-green-900/30 mb-1 pb-1">HARVESTING</div>
+                                        <p>LUCK: <span className="text-green-300">{currentHarvLuck.toFixed(2)}x</span></p>
+                                        <p>SPEED: <span className="text-green-300">{harvestingSpeed}ms</span></p>
+                                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName('HARVESTING', 'BOOST')}</span></p>
+                                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName('HARVESTING', 'MULTI')}</span></p>
+                                    </div>
+
+                                </div>
                             )}
                         </div>
 
-                        <div className="flex flex-wrap justify-end gap-2 pointer-events-auto">
+                        {/* Top Right Buttons */}
+                        <div className="flex flex-wrap justify-end gap-2 pointer-events-auto ml-auto">
                             <button onClick={toggleMute} className="border border-neutral-700 hover:border-white hover:text-white px-3 py-2 transition-all uppercase bg-black/50 backdrop-blur min-w-[40px]">
                                 {isMuted ? '🔇' : '🔊'}
                             </button>
                             <button onClick={() => { audioService.playClick(); setIsGachaOpen(true); }} className="border border-purple-700 text-purple-400 hover:bg-purple-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
                                 GACHA
+                            </button>
+                            <button onClick={() => { audioService.playClick(); setIsCraftingOpen(true); }} className="border border-green-700 text-green-500 hover:bg-green-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
+                                CRAFT
                             </button>
                             <button onClick={() => { audioService.playClick(); setIsCoinTossOpen(true); }} className="border border-yellow-700 text-yellow-500 hover:bg-yellow-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur animate-pulse">
                                 FLIP
@@ -657,9 +774,6 @@ export default function App() {
                             </button>
                             <button onClick={() => { audioService.playClick(); setIsIndexOpen(true); }} className="border border-indigo-900 text-indigo-400 hover:bg-indigo-900/30 hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
                                 INDEX
-                            </button>
-                            <button onClick={() => { audioService.playClick(); setIsShopOpen(true); }} className="border border-yellow-700 text-yellow-500 hover:bg-yellow-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
-                                SHOP
                             </button>
                             <button onClick={() => { audioService.playClick(); setIsInventoryOpen(true); }} className="border border-neutral-700 hover:border-white hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">
                                 {T.UI.INVENTORY} [{inventory.length}]
@@ -733,7 +847,7 @@ export default function App() {
                                 className="group relative px-12 py-6 bg-surface border border-border hover:border-text hover:bg-surface-highlight transition-all active:scale-95 w-64 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span className="relative z-10 text-xl font-bold tracking-[0.2em] group-hover:text-text text-text-dim">{T.UI.GENERATE}</span>
                                 <div className="absolute bottom-0 left-0 h-1 bg-text w-0 group-hover:w-full transition-all duration-300" />
-                                {stats.multiRollLevel > 1 && <span className="absolute top-2 right-2 text-[10px] text-neutral-500">x{stats.multiRollLevel}</span>}
+                                {getGeneralMulti() > 1 && <span className="absolute top-2 right-2 text-[10px] text-neutral-500">x{getGeneralMulti()}</span>}
                             </button>
                             {stats.hasBurst && (
                                 <button onClick={handleBurstClick} disabled={inspectedItem !== null || isAutoSpinning}
@@ -764,7 +878,7 @@ export default function App() {
 
                     <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
                         <div className="flex gap-4 items-center pointer-events-auto">
-                            <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.6.0</div>
+                            <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v2.7.0</div>
                             <button onClick={() => setIsChangelogOpen(true)} className="text-neutral-700 hover:text-white text-xs font-mono underline">CHANGELOG</button>
                         </div>
                         <button onClick={() => { audioService.playClick(); setIsAdminOpen(true); }} className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors">
@@ -892,23 +1006,16 @@ export default function App() {
                 }}
             />
 
-            <Shop
-                isOpen={isShopOpen}
-                onClose={() => setIsShopOpen(false)}
+            <CraftingPanel
+                isOpen={isCraftingOpen}
+                onClose={() => setIsCraftingOpen(false)}
                 stats={stats}
-                onBuyMultiRoll={handleBuyMultiRoll}
-                onBuySpeed={handleBuySpeed}
-                onBuyBurst={handleBuyBurst}
-                onBuyLuck={handleBuyLuck}
-                onBuyMiningSpeed={handleBuyMiningSpeed}
-                onBuyMiningLuck={handleBuyMiningLuck}
-                onBuyMiningMulti={handleBuyMiningMulti}
-                onBuyFishingSpeed={handleBuyFishingSpeed}
-                onBuyFishingLuck={handleBuyFishingLuck}
-                onBuyFishingMulti={handleBuyFishingMulti}
-                onBuyHarvestingSpeed={handleBuyHarvestingSpeed}
-                onBuyHarvestingLuck={handleBuyHarvestingLuck}
-                onBuyHarvestingMulti={handleBuyHarvestingMulti}
+                oreInventory={miningGame.inventory}
+                fishInventory={fishingGame.inventory}
+                plantInventory={harvestingGame.inventory}
+                onCraft={handleCraftItem}
+                onEquip={handleEquipItem}
+                onUnequip={handleUnequipItem}
             />
 
             <GachaTerminal
@@ -1098,6 +1205,13 @@ export default function App() {
         .cloud-texture {
             text-shadow: 2px 2px 10px rgba(255,255,255,0.5);
             filter: blur(0.5px);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
       `}</style>
         </div>

@@ -1,96 +1,90 @@
-import React, { useState } from 'react';
-import { CraftableItem, CraftingCategory, GameStats, InventoryItem, OreInventoryItem, FishInventoryItem, PlantInventoryItem, RarityId } from '../types';
+import React, { useState, useMemo } from 'react';
+import { CraftableItem, CraftingCategory, GameStats, OreInventoryItem, FishInventoryItem, PlantInventoryItem } from '../types';
+import { ORES, FISH, PLANTS } from '../constants';
 import { CRAFTABLE_ITEMS } from '../craftingData';
-import { RARITY_TIERS, ORES, FISH, PLANTS } from '../constants';
+import { audioService } from '../services/audioService';
 
-interface CraftingPanelProps {
+interface Props {
+    isOpen: boolean;
+    onClose: () => void;
     stats: GameStats;
-    inventory: InventoryItem[];
     oreInventory: OreInventoryItem[];
     fishInventory: FishInventoryItem[];
     plantInventory: PlantInventoryItem[];
-    craftedItems: Record<string, boolean>;
     onCraft: (item: CraftableItem) => void;
-    onClose: () => void;
+    onEquip: (item: CraftableItem) => void;
+    onUnequip: (item: CraftableItem) => void;
 }
 
-export const CraftingPanel: React.FC<CraftingPanelProps> = ({
-    stats,
-    inventory,
-    oreInventory,
-    fishInventory,
-    plantInventory,
-    craftedItems,
-    onCraft,
-    onClose
+export const CraftingPanel: React.FC<Props> = ({
+    isOpen, onClose, stats, oreInventory, fishInventory, plantInventory, onCraft, onEquip, onUnequip
 }) => {
     const [activeCategory, setActiveCategory] = useState<CraftingCategory>('GENERAL');
 
-    const categories: CraftingCategory[] = ['GENERAL', 'MINING', 'FISHING', 'HARVESTING'];
+    if (!isOpen) return null;
 
-    const getMaterialCount = (type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM', id: number | string): number => {
-        switch (type) {
-            case 'ORE':
-                return oreInventory.find(i => i.id === id)?.count || 0;
-            case 'FISH':
-                return fishInventory.find(i => i.id === id)?.count || 0;
-            case 'PLANT':
-                return plantInventory.find(i => i.id === id)?.count || 0;
-            case 'ITEM':
-                return inventory.find(i => i.text === id)?.count || 0;
-            default:
-                return 0;
-        }
+    // Filter items by category
+    const categoryItems = CRAFTABLE_ITEMS.filter(i => i.category === activeCategory);
+
+    // Sort: Multi items first, then Boost items by tier
+    categoryItems.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'MULTI' ? -1 : 1;
+        return a.tier - b.tier;
+    });
+
+    const getMaterialCount = (type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM', id: number | string) => {
+        if (type === 'ORE') return oreInventory.find(i => i.id === Number(id))?.count || 0;
+        if (type === 'FISH') return fishInventory.find(i => i.id === Number(id))?.count || 0;
+        if (type === 'PLANT') return plantInventory.find(i => i.id === Number(id))?.count || 0;
+        return 0;
     };
 
-    const getMaterialName = (type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM', id: number | string): string => {
-        switch (type) {
-            case 'ORE':
-                return ORES.find(o => o.id === id)?.name || `Ore #${id}`;
-            case 'FISH':
-                return FISH.find(f => f.id === id)?.name || `Fish #${id}`;
-            case 'PLANT':
-                return PLANTS.find(p => p.id === id)?.name || `Plant #${id}`;
-            case 'ITEM':
-                return String(id);
-            default:
-                return 'Unknown';
-        }
+    const getMaterialName = (type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM', id: number | string) => {
+        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.name || `Ore #${id}`;
+        if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.name || `Fish #${id}`;
+        if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.name || `Plant #${id}`;
+        return `Item #${id}`;
     };
 
-    const canCraft = (item: CraftableItem): boolean => {
-        if (stats.balance < item.recipe.cost) return false;
-        if (craftedItems[item.id]) return false; // Already owned
-
-        return item.recipe.materials.every(mat => getMaterialCount(mat.type, mat.id) >= mat.count);
+    const getMaterialColor = (type: 'ORE' | 'FISH' | 'PLANT' | 'ITEM', id: number | string) => {
+        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.color || 'text-gray-500';
+        if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.color || 'text-gray-500';
+        if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.color || 'text-gray-500';
+        return 'text-gray-500';
     };
 
-    const filteredItems = CRAFTABLE_ITEMS.filter(item => item.category === activeCategory);
+    // Helper to check if item is equipped in its slot
+    const isItemEquipped = (item: CraftableItem) => {
+        const slotKey = `${item.category}_${item.type}`;
+        return stats.equippedItems?.[slotKey] === item.id;
+    };
 
     return (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-neutral-900 border border-neutral-700 w-full max-w-4xl h-[80vh] flex flex-col rounded-lg shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4">
+            <div className="w-full max-w-6xl h-[85vh] bg-neutral-900 border border-neutral-700 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+
                 {/* Header */}
-                <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950">
-                    <h2 className="text-xl font-bold text-amber-500 font-mono tracking-wider">WORKBENCH</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-neutral-500 hover:text-white transition-colors"
-                    >
-                        [CLOSE]
-                    </button>
+                <div className="flex justify-between items-center p-6 border-b border-neutral-800 bg-black/40">
+                    <div>
+                        <h2 className="text-xl font-bold text-white tracking-wider font-mono">WORKBENCH</h2>
+                        <span className="text-xs font-mono text-neutral-500">CRAFT & EQUIP GEAR</span>
+                    </div>
+                    <button onClick={onClose} className="text-neutral-500 hover:text-white font-mono">[CLOSE]</button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-neutral-800 bg-neutral-900">
-                    {categories.map(cat => (
+                {/* Category Tabs */}
+                <div className="flex border-b border-neutral-800 bg-neutral-950/50">
+                    {(['GENERAL', 'MINING', 'FISHING', 'HARVESTING'] as CraftingCategory[]).map(cat => (
                         <button
                             key={cat}
-                            onClick={() => setActiveCategory(cat)}
-                            className={`flex-1 py-3 font-mono text-sm transition-colors ${activeCategory === cat
-                                    ? 'bg-neutral-800 text-amber-500 border-b-2 border-amber-500'
-                                    : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/50'
-                                }`}
+                            onClick={() => { setActiveCategory(cat); audioService.playClick(); }}
+                            className={`
+                flex-1 py-4 text-xs font-mono font-bold tracking-widest transition-all border-b-2
+                ${activeCategory === cat
+                                    ? 'border-white text-white bg-neutral-800'
+                                    : 'border-transparent text-neutral-500 hover:bg-neutral-900 hover:text-neutral-300'
+                                }
+              `}
                         >
                             {cat}
                         </button>
@@ -98,83 +92,115 @@ export const CraftingPanel: React.FC<CraftingPanelProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-neutral-900">
-                    {filteredItems.map(item => {
-                        const rarityColor = RARITY_TIERS[item.tier].color;
-                        const isOwned = craftedItems[item.id];
-                        const craftable = canCraft(item);
+                <div className="flex-1 overflow-y-auto p-6 bg-neutral-900/50">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {categoryItems.map(item => {
+                            const isOwned = stats.craftedItems?.[item.id];
+                            const equipped = isItemEquipped(item);
+                            const isMulti = item.type === 'MULTI';
 
-                        return (
-                            <div
-                                key={item.id}
-                                className={`border rounded p-4 flex flex-col gap-3 transition-all ${isOwned
-                                        ? 'border-green-900/50 bg-green-900/10 opacity-75'
-                                        : craftable
-                                            ? 'border-neutral-600 bg-neutral-800 hover:border-amber-500/50'
-                                            : 'border-neutral-800 bg-neutral-900/50 opacity-60'
-                                    }`}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className={`font-bold font-mono ${rarityColor} ${isOwned ? 'line-through decoration-green-500' : ''}`}>
-                                            {item.name}
-                                        </h3>
-                                        <p className="text-xs text-neutral-400 mt-1 font-mono">{item.description}</p>
-                                    </div>
-                                    {isOwned && <span className="text-xs font-bold text-green-500 bg-green-900/20 px-2 py-1 rounded border border-green-900">OWNED</span>}
-                                </div>
+                            // Check Requirements
+                            const canAffordCost = stats.balance >= item.recipe.cost;
+                            const materialsStatus = item.recipe.materials.map(mat => {
+                                const current = getMaterialCount(mat.type, mat.id);
+                                return { ...mat, current, satisfied: current >= mat.count };
+                            });
+                            const hasMaterials = materialsStatus.every(m => m.satisfied);
+                            const canCraft = canAffordCost && hasMaterials && !isOwned;
 
-                                {/* Bonuses */}
-                                <div className="grid grid-cols-2 gap-2 text-xs font-mono text-neutral-300 bg-black/20 p-2 rounded">
-                                    {item.bonuses.luck && <div>LUCK: <span className="text-yellow-400">+{item.bonuses.luck}</span></div>}
-                                    {item.bonuses.speed && <div>SPEED: <span className="text-cyan-400">-{item.bonuses.speed * 100}%</span></div>}
-                                    {item.bonuses.yield && <div>YIELD: <span className="text-green-400">+{item.bonuses.yield}</span></div>}
-                                    {item.bonuses.multi && <div>MULTI: <span className="text-purple-400">+{item.bonuses.multi}</span></div>}
-                                </div>
-
-                                {/* Recipe */}
-                                <div className="mt-auto">
-                                    <div className="text-[10px] font-bold text-neutral-500 mb-2 uppercase tracking-wider">Required Materials</div>
-                                    <div className="space-y-1 mb-3">
-                                        {item.recipe.materials.map((mat, idx) => {
-                                            const count = getMaterialCount(mat.type, mat.id);
-                                            const hasEnough = count >= mat.count;
-                                            return (
-                                                <div key={idx} className="flex justify-between text-xs font-mono">
-                                                    <span className="text-neutral-400 truncate max-w-[70%]">
-                                                        {getMaterialName(mat.type, mat.id)}
-                                                    </span>
-                                                    <span className={hasEnough ? 'text-green-500' : 'text-red-500'}>
-                                                        {count}/{mat.count}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
-                                        <div className="flex justify-between text-xs font-mono border-t border-neutral-700 pt-1 mt-1">
-                                            <span className="text-neutral-400">COST</span>
-                                            <span className={stats.balance >= item.recipe.cost ? 'text-green-500' : 'text-red-500'}>
-                                                ${item.recipe.cost.toLocaleString()}
-                                            </span>
+                            return (
+                                <div
+                                    key={item.id}
+                                    className={`
+                    relative p-4 rounded border flex flex-col gap-4 transition-all
+                    ${equipped
+                                            ? 'bg-green-900/20 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
+                                            : isOwned
+                                                ? 'bg-neutral-800/40 border-neutral-600'
+                                                : 'bg-neutral-900/40 border-neutral-800 hover:border-neutral-600'
+                                        }
+                  `}
+                                >
+                                    {/* Header */}
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className={`font-bold font-mono ${equipped ? 'text-green-400' : isOwned ? 'text-white' : 'text-neutral-400'}`}>
+                                                    {item.name}
+                                                </h3>
+                                                <span className={`text-[10px] px-1.5 rounded font-mono border ${isMulti ? 'bg-purple-950 border-purple-800 text-purple-400' : 'bg-blue-950 border-blue-800 text-blue-400'}`}>
+                                                    {isMulti ? 'MULTI' : 'BOOST'}
+                                                </span>
+                                                <span className="text-[10px] bg-neutral-950 px-1.5 rounded text-neutral-500 font-mono border border-neutral-800">
+                                                    T{item.tier}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-neutral-400 font-mono mt-1 h-8">{item.description}</p>
                                         </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => onCraft(item)}
-                                        disabled={!craftable || isOwned}
-                                        className={`w-full py-2 text-xs font-bold font-mono uppercase tracking-widest transition-all ${isOwned
-                                                ? 'bg-transparent text-green-500 cursor-default'
-                                                : craftable
-                                                    ? 'bg-amber-600 hover:bg-amber-500 text-black shadow-[0_0_10px_rgba(217,119,6,0.4)]'
-                                                    : 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
-                                            }`}
-                                    >
-                                        {isOwned ? 'Crafted' : 'Craft Item'}
-                                    </button>
+                                    {/* Materials Grid (Only show if not owned) */}
+                                    {!isOwned && (
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            {materialsStatus.map((mat, idx) => (
+                                                <div key={idx} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                                                    <div className={`text-[10px] truncate max-w-[80px] ${getMaterialColor(mat.type, mat.id)}`}>
+                                                        {getMaterialName(mat.type, mat.id)}
+                                                    </div>
+                                                    <div className={`text-[10px] font-mono ${mat.satisfied ? 'text-green-500' : 'text-red-500'}`}>
+                                                        {mat.current}/{mat.count}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <div className="col-span-2 flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                                                <div className="text-[10px] text-yellow-500">COST</div>
+                                                <div className={`text-[10px] font-mono ${canAffordCost ? 'text-green-500' : 'text-red-500'}`}>
+                                                    ${item.recipe.cost.toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div className="mt-auto">
+                                        {isOwned ? (
+                                            equipped ? (
+                                                <button
+                                                    onClick={() => onUnequip(item)}
+                                                    className="w-full py-2 font-mono text-xs font-bold tracking-widest border border-red-900 text-red-500 hover:bg-red-950 hover:text-white transition-all"
+                                                >
+                                                    UNEQUIP
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => onEquip(item)}
+                                                    className="w-full py-2 font-mono text-xs font-bold tracking-widest border border-green-900 text-green-500 hover:bg-green-950 hover:text-white transition-all"
+                                                >
+                                                    EQUIP
+                                                </button>
+                                            )
+                                        ) : (
+                                            <button
+                                                onClick={() => onCraft(item)}
+                                                disabled={!canCraft}
+                                                className={`
+                            w-full py-2 font-mono text-xs font-bold tracking-widest transition-all
+                            ${canCraft
+                                                        ? 'bg-white text-black hover:bg-neutral-200'
+                                                        : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
+                                                    }
+                          `}
+                                            >
+                                                CRAFT
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
+
             </div>
         </div>
     );
