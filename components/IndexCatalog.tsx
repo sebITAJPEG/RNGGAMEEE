@@ -350,17 +350,48 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                 </div>
                             </div>
                         ) : (
-                            // Generic View for Fish/Plants/Dreams (simplified for brevity as they weren't changed)
+                            // Generic View for Fish/Plants/Dreams - ORA AGGIORNATA CON STILE CARD
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {(activeTab === 'FISH' ? FISH : activeTab === 'PLANTS' ? PLANTS : DREAMS)
                                     .sort((a, b) => a.id - b.id)
                                     .map((item) => {
                                         const isDiscovered = (activeTab === 'FISH' ? discoveredFishSet : activeTab === 'PLANTS' ? discoveredPlantSet : discoveredDreamSet).has(item.id);
                                         const isVisible = isDiscovered || showSpoilers;
-                                        // ... simplified styling logic ...
+                                        
                                         return (
-                                            <div key={item.id} className="p-4 border rounded-lg text-center border-neutral-800 bg-neutral-900/50 opacity-50">
-                                                {isVisible ? <span className={item.color}>{item.name}</span> : "LOCKED"}
+                                            <div 
+                                                key={item.id} 
+                                                onClick={() => isVisible && handleResourceClick(item.id, item.name, item.description)}
+                                                className={`
+                                                    relative p-4 border rounded-lg text-center transition-all h-40 flex flex-col items-center justify-center gap-2
+                                                    ${isVisible 
+                                                        ? 'border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 cursor-pointer group' 
+                                                        : 'border-neutral-800 bg-neutral-900/50 opacity-50'
+                                                    }
+                                                `}
+                                                style={{ 
+                                                    borderColor: isVisible && item.id > 20 ? item.glowColor : undefined,
+                                                    boxShadow: isVisible && item.id > 30 ? `0 0 15px ${item.glowColor}22` : 'none'
+                                                }}
+                                            >
+                                                {isVisible ? (
+                                                    <>
+                                                        <div className="text-[9px] font-mono uppercase text-neutral-500 tracking-widest mb-1">
+                                                            {item.tierName}
+                                                        </div>
+                                                        <div className={`text-lg font-bold ${item.color} drop-shadow-sm`}>
+                                                            {item.name}
+                                                        </div>
+                                                        <div className="text-[10px] text-neutral-500 font-mono mt-2">
+                                                            1 in {item.probability.toLocaleString()}
+                                                        </div>
+                                                        <div className="text-[9px] text-neutral-500 uppercase tracking-widest mt-auto pt-2 opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-2">
+                                                            Visualize
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-neutral-700 font-mono">LOCKED</div>
+                                                )}
                                             </div>
                                         );
                                     })}
