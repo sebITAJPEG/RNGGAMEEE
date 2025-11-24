@@ -70,7 +70,6 @@ const generateItems = (): CraftableItem[] => {
             tier,
             category: 'MINING',
             type: 'BOOST',
-            // UPDATED: Now includes Luck bonus
             bonuses: { luck: tier * 0.15, speed: tier * 10 },
             recipe: {
                 cost: Math.floor(500 * Math.pow(1.55, i)),
@@ -201,7 +200,7 @@ const generateItems = (): CraftableItem[] => {
         });
     });
 
-    // --- DREAMING ITEMS (Totems) [BOOST] - Increases Base Stability ---
+    // --- DREAMING ITEMS (Totems) [BOOST] ---
     const totemNames = [
         "Spinning Top", "Loaded Die", "Weighted Chess Piece", "Gold Coin", "Iron Poker",
         "Silver Mirror", "Crystal Orb", "Obsidian Shard", "Runed Stone", "Ancestral Idol",
@@ -228,8 +227,7 @@ const generateItems = (): CraftableItem[] => {
         });
     });
 
-    // --- DREAMING ITEMS (Lucidity) [MULTI] - Increases Regen Chance ---
-    // Note: Using 'MULTI' slot for Regen/Lucidity upgrades to fit the 2-slot system
+    // --- DREAMING ITEMS (Lucidity) [MULTI] ---
     const lucidNames = [
         "Herbal Tea", "Dream Journal", "Lavender Scent", "Meditation Mat", "Lucid Mask",
         "Theta Wave Gen", "Synapse Booster", "Pineal Extract", "Third Eye Open", "Astral Projection",
@@ -254,6 +252,24 @@ const generateItems = (): CraftableItem[] => {
                 ]
             }
         });
+    });
+
+    // --- NEW: SPECIAL MOON ITEM ---
+    items.push({
+        id: 'moon_amulet',
+        name: "Moon Amulet",
+        description: "Mystical artifact that opens the bridge to the Lunar surface. Requires 5 Moonstone.",
+        tier: 10,
+        category: 'GENERAL',
+        type: 'SPECIAL', // Changed from BOOST to SPECIAL
+        bonuses: { luck: 0.5 }, // Also gives a luck bonus
+        unlocksFeature: 'MOON_TRAVEL',
+        recipe: {
+            cost: 50000,
+            materials: [
+                { type: 'ORE', id: 46, count: 5 } // 5 Moonstone (ID 46 is Moonstone in constants)
+            ]
+        }
     });
 
     return items;

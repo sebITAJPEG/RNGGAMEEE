@@ -13,7 +13,8 @@ export enum RarityId {
   PRIMORDIAL,
   INFINITE,
   CHAOS,
-  THE_ONE
+  THE_ONE,
+  MOON = 99 
 }
 
 export enum VariantId {
@@ -55,6 +56,11 @@ export interface ItemData {
   text: string;
   description: string;
   cutscenePhrase?: string;
+}
+
+export interface MoonItem extends ItemData {
+  id: number;
+  probability: number; // 1 in X
 }
 
 export interface Drop {
@@ -155,6 +161,14 @@ export interface DreamInventoryItem {
   locked?: boolean;
 }
 
+// --- MOON INVENTORY ---
+export interface MoonInventoryItem {
+    id: number; // Reference to MOON_ITEMS id
+    count: number;
+    discoveredAt: number;
+    locked?: boolean;
+}
+
 export interface Achievement {
   id: string;
   title: string; // The reward title
@@ -165,10 +179,10 @@ export interface Achievement {
 // --- CRAFTING TYPES ---
 
 export type CraftingCategory = 'GENERAL' | 'MINING' | 'FISHING' | 'HARVESTING' | 'DREAMING';
-export type CraftingType = 'BOOST' | 'MULTI'; // New field to distinguish slot type
+export type CraftingType = 'BOOST' | 'MULTI' | 'SPECIAL'; // Added SPECIAL
 
 export interface CraftingMaterial {
-  type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM';
+  type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON';
   id: number | string; // ID of the resource
   count: number;
 }
@@ -194,11 +208,14 @@ export interface CraftableItem {
     materials: CraftingMaterial[];
     cost: number;
   };
+  unlocksFeature?: 'MOON_TRAVEL'; // Special unlock flag
 }
 
 export interface GameStats {
   totalRolls: number;
+  totalMoonRolls?: number; // New: Explicit counter for Moon rolls
   balance: number;
+  moonBalance?: number; // New Moon Currency
   startTime: number;
   bestRarityFound: RarityId;
 
@@ -209,6 +226,8 @@ export interface GameStats {
 
   entropy: number; // Pity counter
   hasBurst: boolean; // Unlock status
+  moonTravelUnlocked?: boolean; // New: Moon Travel Unlock
+  
   unlockedAchievements: string[]; // Array of achievement IDs
   equippedTitle: string | null;
 
@@ -222,7 +241,9 @@ export interface GameStats {
 
   // Mining Stats & Upgrades
   totalMined: number;
+  totalGoldMined?: number; // New: Explicit counter for Gold Mined
   bestOreMined: number; // ID of best ore
+  bestGoldOreMined?: number; // New: Track separate gold ore best
   miningSpeedLevel: number; // New
   miningLuckLevel: number; // New
   miningMultiLevel: number; // New: How many ores mined at once
@@ -245,6 +266,9 @@ export interface GameStats {
   // Dreaming Stats
   totalDreamt: number;
   bestDreamFound: number;
+
+  // Moon Stats
+  bestMoonItemFound?: number; // New
 
   // Gacha
   gachaCredits: number;

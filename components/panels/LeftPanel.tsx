@@ -7,26 +7,18 @@ import { getEquippedItemName } from '../../utils/gameHelpers';
 
 interface Props {
     stats: GameStats;
-    showExtendedStats: boolean;
-    setShowExtendedStats: (v: boolean) => void;
+    // Removing showExtendedStats props as they are replaced by the modal
     currentGlobalLuck: number;
     autoSpinSpeed: number;
     generalMulti: number;
-    currentMineLuck: number;
-    miningSpeed: number;
-    currentFishLuck: number;
-    fishingSpeed: number;
-    currentHarvLuck: number;
-    harvestingSpeed: number;
-    dreamBonuses: any;
+    onOpenStats: () => void; // New prop to open stats modal
     trophyLuckMult: number;
     onTicTacToeWin: () => void;
 }
 
 export const LeftPanel: React.FC<Props> = ({
-    stats, showExtendedStats, setShowExtendedStats, currentGlobalLuck, autoSpinSpeed,
-    generalMulti, currentMineLuck, miningSpeed, currentFishLuck, fishingSpeed,
-    currentHarvLuck, harvestingSpeed, dreamBonuses, trophyLuckMult, onTicTacToeWin
+    stats, currentGlobalLuck, autoSpinSpeed,
+    generalMulti, onOpenStats, trophyLuckMult, onTicTacToeWin
 }) => {
     const T = TRANSLATIONS['en'];
 
@@ -37,6 +29,10 @@ export const LeftPanel: React.FC<Props> = ({
                 <div className="space-y-1 font-mono text-xs md:text-sm text-text-dim bg-black/60 backdrop-blur p-3 rounded border border-white/10 min-w-[200px]">
                     <p>{T.UI.ROLLS}: <span className="text-text">{stats.totalRolls.toLocaleString()}</span></p>
                     <p>BALANCE: <span className="text-yellow-500">{stats.balance.toLocaleString()}</span></p>
+                    {/* MOON BALANCE DISPLAY */}
+                    {stats.moonTravelUnlocked && (
+                        <p>MOON COINS: <span className="text-slate-300 text-shadow-sm">{stats.moonBalance?.toLocaleString() || 0} ☾</span></p>
+                    )}
                     <p>CREDITS: <span className="text-purple-400">{stats.gachaCredits}</span></p>
                     <p>{T.UI.BEST}: <span className={`${RARITY_TIERS[stats.bestRarityFound]?.textColor || 'text-text'}`}>{T.RARITY_NAMES[stats.bestRarityFound]}</span></p>
 
@@ -50,11 +46,12 @@ export const LeftPanel: React.FC<Props> = ({
                     {stats.equippedTitle && (
                         <p>TITLE: <span className="text-yellow-400 font-bold border-b border-yellow-600">{stats.equippedTitle}</span></p>
                     )}
+                    
                     <button
-                        onClick={() => setShowExtendedStats(!showExtendedStats)}
-                        className="text-[10px] text-text-dim hover:text-white underline mt-2 uppercase"
+                        onClick={onOpenStats}
+                        className="w-full py-1.5 mt-2 text-[10px] font-bold border border-neutral-600 bg-neutral-800/50 hover:bg-neutral-700 text-white uppercase tracking-wider transition-colors rounded"
                     >
-                        {showExtendedStats ? '[-] HIDE SUB-GAMES' : '[+] SHOW SUB-GAMES'}
+                        SHOW FULL STATS
                     </button>
                 </div>
 
@@ -66,62 +63,6 @@ export const LeftPanel: React.FC<Props> = ({
                     </div>
                 </div>
             </div>
-
-            {/* Extended Stats Panel */}
-            {showExtendedStats && (
-                <div className="flex flex-col gap-2 font-mono text-[10px] text-text-dim animate-fade-in-up">
-                    {/* GENERAL EQUIP */}
-                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-white/10 space-y-1">
-                        <div className="text-white font-bold border-b border-white/10 mb-1 pb-1">GENERAL GEAR</div>
-                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName(stats.equippedItems, 'GENERAL', 'BOOST')}</span></p>
-                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName(stats.equippedItems, 'GENERAL', 'MULTI')}</span></p>
-                    </div>
-
-                    {/* MINING */}
-                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-orange-900/30 space-y-1">
-                        <div className="text-orange-400 font-bold border-b border-orange-900/30 mb-1 pb-1">MINING</div>
-                        <p>LUCK: <span className="text-orange-300">{currentMineLuck.toFixed(2)}x</span></p>
-                        <p>SPEED: <span className="text-orange-300">{miningSpeed}ms</span></p>
-                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName(stats.equippedItems, 'MINING', 'BOOST')}</span></p>
-                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName(stats.equippedItems, 'MINING', 'MULTI')}</span></p>
-                    </div>
-
-                    {/* FISHING */}
-                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-cyan-900/30 space-y-1">
-                        <div className="text-cyan-400 font-bold border-b border-cyan-900/30 mb-1 pb-1">FISHING</div>
-                        <p>LUCK: <span className="text-cyan-300">{currentFishLuck.toFixed(2)}x</span></p>
-                        <p>SPEED: <span className="text-cyan-300">{fishingSpeed}ms</span></p>
-                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName(stats.equippedItems, 'FISHING', 'BOOST')}</span></p>
-                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName(stats.equippedItems, 'FISHING', 'MULTI')}</span></p>
-                    </div>
-
-                    {/* HARVESTING */}
-                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-green-900/30 space-y-1">
-                        <div className="text-green-400 font-bold border-b border-green-900/30 mb-1 pb-1">HARVESTING</div>
-                        <p>LUCK: <span className="text-green-300">{currentHarvLuck.toFixed(2)}x</span></p>
-                        <p>SPEED: <span className="text-green-300">{harvestingSpeed}ms</span></p>
-                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName(stats.equippedItems, 'HARVESTING', 'BOOST')}</span></p>
-                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName(stats.equippedItems, 'HARVESTING', 'MULTI')}</span></p>
-                    </div>
-
-                    {/* DREAMING */}
-                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-purple-900/30 space-y-1">
-                        <div className="text-purple-400 font-bold border-b border-purple-900/30 mb-1 pb-1">DREAMING</div>
-                        <p>BASE STABILITY: <span className="text-purple-300">{100 + (dreamBonuses.bonusStability || 0)}%</span></p>
-                        <p>REGEN CHANCE: <span className="text-purple-300">{((dreamBonuses.bonusStabilityRegen || 0) * 100).toFixed(0)}%</span></p>
-                        <p>BOOST: <span className="text-yellow-200">{getEquippedItemName(stats.equippedItems, 'DREAMING', 'BOOST')}</span></p>
-                        <p>MULTI: <span className="text-purple-300">{getEquippedItemName(stats.equippedItems, 'DREAMING', 'MULTI')}</span></p>
-                        <p>TOTAL DREAMS: <span className="text-white">{stats.totalDreamt}</span></p>
-                    </div>
-
-                    {/* TROPHY BONUS INFO */}
-                    <div className="bg-black/60 backdrop-blur p-3 rounded border border-yellow-600/30 space-y-1">
-                        <div className="text-yellow-500 font-bold border-b border-yellow-600/30 mb-1 pb-1">TROFEO</div>
-                        <p>BONUS ATTIVO: <span className="text-white animate-pulse">x{trophyLuckMult.toFixed(2)}</span></p>
-                        <p className="text-[8px] text-neutral-500">MOLTIPLICA TUTTA LA FORTUNA</p>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

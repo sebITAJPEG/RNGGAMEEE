@@ -1,5 +1,5 @@
 
-import { RarityId, RarityTier, Language, ItemData, VariantId, VariantTier, Achievement, Ore, Fish, Plant, Dream } from './types';
+import { RarityId, RarityTier, Language, ItemData, VariantId, VariantTier, Achievement, Ore, Fish, Plant, Dream, MoonItem } from './types';
 
 // Index maps to speedLevel in GameStats
 export const SPEED_TIERS = [
@@ -691,6 +691,15 @@ export const RARITY_TIERS: Record<RarityId, RarityTier> = {
         textColor: "text-white",
         shadowColor: "rgba(255, 255, 255, 1)",
         animate: true,
+    },
+    [RarityId.MOON]: { 
+        id: RarityId.MOON, 
+        name: "Moon", 
+        probability: 1, // Variable, handled by subgame logic
+        color: "border-slate-400", 
+        textColor: "text-slate-200", 
+        shadowColor: "rgba(226, 232, 240, 0.8)", 
+        animate: true 
     }
 };
 
@@ -875,7 +884,9 @@ export const ACHIEVEMENTS: Achievement[] = [
         title: 'BOTANIST',
         description: 'Harvest a Magical plant or rarer.',
         condition: (stats) => (stats.bestPlantHarvested || 0) >= 21
-    }
+    },
+    { id: 'beginner', title: 'NOVICE', description: 'Roll 100 times.', condition: (stats) => stats.totalRolls >= 100 },
+    { id: 'moon_walker', title: 'MOON WALKER', description: 'Travel to the Moon.', condition: (stats) => !!stats.moonTravelUnlocked },
 ];
 
 export const TRANSLATIONS: Record<Language, {
@@ -904,7 +915,9 @@ export const TRANSLATIONS: Record<Language, {
             LUCKY: "LUCKY",
             GOD_MODE: "GOD MODE",
             GUARANTEED: "GUARANTEED",
-            INSPECT: "CLICK TO INSPECT"
+            INSPECT: "CLICK TO INSPECT",
+            MOON_TRAVEL: "MOON TRAVEL",
+            RETURN_EARTH: "RETURN TO EARTH",
         },
         RARITY_NAMES: {
             [RarityId.COMMON]: "Common",
@@ -921,9 +934,12 @@ export const TRANSLATIONS: Record<Language, {
             [RarityId.PRIMORDIAL]: "Primordial",
             [RarityId.INFINITE]: "Infinite",
             [RarityId.CHAOS]: "Chaos",
-            [RarityId.THE_ONE]: "The One"
+            [RarityId.THE_ONE]: "The One",
+            [RarityId.MOON]: "Moon"
+            
         }
     }
+
 };
 
 export const PHRASES = {
@@ -1605,4 +1621,57 @@ export const GOLD_ORES: Ore[] = [
 
     // --- TIER 5: THE GOLDEN ONE (30) ---
     { id: 1030, name: "The Golden Ratio", description: "Perfect perfection.", probability: 100000000, color: "text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-yellow-500 to-yellow-800 drop-shadow-[0_0_25px_gold] animate-pulse", glowColor: "#facc15", tierName: "THE GOLD", dimension: 'GOLD' }
+];
+
+export const MOON_ITEMS: MoonItem[] = [
+    { id: 2001, text: "Moon Dust", description: "Fine grey powder.", probability: 10 },
+    { id: 2002, text: "Lunar Pebble", description: "A small piece of the moon.", probability: 25 },
+    { id: 2003, text: "Crater Rock", description: "Impact debris.", probability: 50 },
+    { id: 2004, text: "Space Ice", description: "Frozen water from the poles.", probability: 100 },
+    { id: 2005, text: "Helium-3 Isotope", description: "Future fuel.", probability: 200 },
+    { id: 2006, text: "Apollo Flag Remnant", description: "Bleached white by the sun.", probability: 500 },
+    { id: 2007, text: "Rover Wheel Track", description: "Preserved in vacuum.", probability: 1000 },
+    { id: 2008, text: "Alien Microbe", description: "Dormant life.", probability: 2500 },
+    { id: 2009, text: "Dark Side Crystal", description: "Absorbs light.", probability: 5000 },
+    { id: 2010, text: "Retroreflector Mirror", description: "Bounces lasers back to Earth.", probability: 7500 },
+    { id: 2011, text: "Space Station Debris", description: "Fallen from orbit.", probability: 10000 },
+    { id: 2012, text: "Moon Rabbit's Fur", description: "Mythological fluff.", probability: 15000 },
+    { id: 2013, text: "Cheese Sample", description: "It really is made of cheese?", probability: 20000 },
+    { id: 2014, text: "Lunar Geode", description: "Sparkling interior.", probability: 30000 },
+    { id: 2015, text: "Gravity Anomaly", description: "Floats on its own.", probability: 50000 },
+    { id: 2016, text: "Silent Sound", description: "A recording of vacuum.", probability: 75000 },
+    { id: 2017, text: "Earthrise Photo", description: "Original vintage print.", probability: 100000 },
+    { id: 2018, text: "Space Suit Glove", description: "Empty inside.", probability: 150000 },
+    { id: 2019, text: "Cosmic Ray Burst", description: "Captured energy.", probability: 250000 },
+    { id: 2020, text: "Lunar Core Fragment", description: "Still molten.", probability: 500000 },
+    { id: 2021, text: "Time Dilation Watch", description: "Ticks slower here.", probability: 750000 },
+    { id: 2022, text: "Void Essence", description: "Bottled nothing.", probability: 1000000 },
+    { id: 2023, text: "Starlight Prism", description: "Splits light into 8 colors.", probability: 1500000 },
+    { id: 2024, text: "Nebula Gas Jar", description: "Swirling colors.", probability: 2000000 },
+    { id: 2025, text: "Zero-G Water", description: "A perfect sphere.", probability: 2500000 },
+    { id: 2026, text: "Asteroid Diamond", description: "Formed in collision.", probability: 3000000 },
+    { id: 2027, text: "Solar Wind Sail", description: "Thin gold foil.", probability: 4000000 },
+    { id: 2028, text: "Black Monolith", description: "Full of stars.", probability: 5000000 },
+    { id: 2029, text: "Lagrange Point Map", description: "Stable gravity zones.", probability: 7500000 },
+    { id: 2030, text: "Wormhole Key", description: "Bends space.", probability: 10000000 },
+    { id: 2031, text: "Alien Artifact", description: "Humming softly.", probability: 15000000 },
+    { id: 2032, text: "Dark Matter Cube", description: "Invisible weight.", probability: 20000000 },
+    { id: 2033, text: "Quantum Foam", description: "Bubbling reality.", probability: 25000000 },
+    { id: 2034, text: "Event Horizon Shard", description: "Do not touch.", probability: 30000000 },
+    { id: 2035, text: "White Hole Spark", description: "Infinite energy.", probability: 40000000 },
+    { id: 2036, text: "Tesseract", description: "4D Cube.", probability: 50000000 },
+    { id: 2037, text: "Galactic Compass", description: "Points to center.", probability: 60000000 },
+    { id: 2038, text: "Star Seed", description: "Plant to grow a sun.", probability: 75000000 },
+    { id: 2039, text: "Neutron Star Spoon", description: "Weighs tons.", probability: 90000000 },
+    { id: 2040, text: "Cosmic String", description: "Fabric of space.", probability: 100000000 },
+    { id: 2041, text: "Parallel Universe Ticket", description: "One way trip.", probability: 120000000 },
+    { id: 2042, text: "Big Bang Echo", description: "Sound of creation.", probability: 140000000 },
+    { id: 2043, text: "Entropy Reverser", description: "Fixes broken glass.", probability: 160000000 },
+    { id: 2044, text: "Reality Anchor", description: "Holds the world together.", probability: 180000000 },
+    { id: 2045, text: "The Moon Itself", description: "Pocket sized.", probability: 200000000 },
+    { id: 2046, text: "Constellation Link", description: "Connect the stars.", probability: 220000000 },
+    { id: 2047, text: "Zodiac Sign", description: "A literal sign.", probability: 230000000 },
+    { id: 2048, text: "Galaxy Cluster", description: "Billions of stars.", probability: 240000000 },
+    { id: 2049, text: "The Void's Stare", description: "It blinks.", probability: 245000000 },
+    { id: 2050, text: "Lunar Divinity", description: "The soul of the moon.", probability: 250000000 }
 ];

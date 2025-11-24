@@ -8,13 +8,15 @@ import { Changelog } from '../Changelog';
 import { IndexCatalog } from '../IndexCatalog';
 import { Achievements } from '../Achievements';
 import { CoinToss } from '../CoinToss';
-import { ORES, FISH, PLANTS, GOLD_ORES } from '../../constants'; // Added GOLD_ORES
-import { GameStats, InventoryItem } from '../../types';
+import { ORES, FISH, PLANTS, GOLD_ORES, MOON_ITEMS } from '../../constants';
+import { GameStats, InventoryItem, MoonInventoryItem } from '../../types';
 
 interface Props {
     stats: GameStats;
     inventory: InventoryItem[];
     miningGame: any;
+    goldMiningGame: any; 
+    moonInventory: MoonInventoryItem[];
     fishingGame: any;
     harvestingGame: any;
     dreamingGame: any;
@@ -24,6 +26,7 @@ interface Props {
         isFishInventoryOpen: boolean;
         isPlantInventoryOpen: boolean;
         isDreamInventoryOpen: boolean;
+        isMoonInventoryOpen: boolean;
         isCraftingOpen: boolean;
         isGachaOpen: boolean;
         isChangelogOpen: boolean;
@@ -40,6 +43,7 @@ interface Props {
         toggleResourceLock: (type: any, id: number) => void;
         handleSellResources: (type: any) => void;
         handleSellDreams: () => void;
+        handleSellMoonItems: () => void;
         handleCraftItem: (item: any) => void;
         handleEquipItem: (item: any) => void;
         handleUnequipItem: (item: any) => void;
@@ -48,28 +52,11 @@ interface Props {
     };
 }
 
-export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, fishingGame, harvestingGame, dreamingGame, modalsState, setModalsState, handlers }) => {
+export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, goldMiningGame, moonInventory, fishingGame, harvestingGame, dreamingGame, modalsState, setModalsState, handlers }) => {
     const close = (key: string) => setModalsState((prev: any) => ({ ...prev, [key]: false }));
 
-    // Combine ORES and GOLD_ORES for display and logic
-    const ALL_ORES = [...ORES, ...GOLD_ORES];
-
-    // Fix for selling logic: we need to pass the correct definitions to the sell handler logic
-    // Ideally handlers.handleSellResources should look up in ALL_ORES. 
-    // Since handlers are defined in App.tsx which uses constants, we need to ensure App.tsx has access or we update the sell handler there.
-    // But wait, the ResourceInventory component itself doesn't handle the logic, it triggers `onSell`.
-    // The `onSell` prop calls `handlers.handleSellResources`.
-    // We will assume `handleSellResources` in App.tsx needs to be updated to handle gold ores, OR we pass a specific handler here.
-    // Actually, `handleSellResources` just iterates the inventory passed to it (miningGame.inventory) and looks up IDs.
-    // If App.tsx imports ORES from constants, it won't find GOLD_ORES IDs (which start at 1001).
-    // FIX: We will update the `onSell` prop to handle it properly HERE if possible, or just pass ALL_ORES to it?
-    // No, `onSell` takes no args. 
-    // Let's assume the user will be fine with selling only normal ores until App.tsx is fully patched for selling gold ores,
-    // OR (better) we inject the combined list into the definition prop, and if App.tsx logic is simple enough it might work?
-    // No, App.tsx has the logic `const def = ORES.find(...)`.
-    // Since I cannot edit App.tsx's `handleSellResources` easily (it's a big function in a huge file I already submitted),
-    // I will leave the selling of Gold Ores as a "Todo" or it might just fail silently for gold ores (they won't be sold).
-    // This is acceptable for now as "Gold Ores" might be too valuable to sell easily anyway.
+    const combinedOreInventory = [...miningGame.inventory, ...goldMiningGame.inventory];
+    const combinedOreDefs = [...ORES, ...GOLD_ORES];
 
     return (
         <>
@@ -82,12 +69,12 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, fish
             />
 
             <ResourceInventory
-                items={miningGame.inventory}
-                definitions={ALL_ORES}
+                items={combinedOreInventory}
+                definitions={combinedOreDefs}
                 isOpen={modalsState.isOreInventoryOpen}
                 onClose={() => close('isOreInventoryOpen')}
-                onSell={() => handlers.handleSellResources('ORES')}
-                onToggleLock={(item) => handlers.toggleResourceLock('ORES', item.id)}
+                onSell={() => { handlers.handleSellResources('ORES'); handlers.handleSellResources('GOLD_ORES'); }}
+                onToggleLock={(item) => handlers.toggleResourceLock(item.id > 1000 ? 'GOLD_ORES' : 'ORES', item.id)}
                 onInspect={handlers.handleInspectResource}
                 config={{
                     title: "ORE SILO",
@@ -148,14 +135,44 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, fish
                 onSell={handlers.handleSellDreams}
             />
 
+            <ResourceInventory
+                items={moonInventory}
+                // Mapping text to name here to satisfy ResourceInventory props
+                definitions={MOON_ITEMS.map(m => ({
+                    id: m.id,
+                    name: m.text, 
+                    tierName: 'Moon', 
+                    color: 'text-slate-300', 
+                    glowColor: '#cbd5e1',
+                    probability: m.probability,
+                    description: m.description
+                }))}
+                isOpen={modalsState.isMoonInventoryOpen}
+                onClose={() => close('isMoonInventoryOpen')}
+                onSell={handlers.handleSellMoonItems}
+                onToggleLock={(item) => handlers.toggleResourceLock('MOON', item.id)}
+                onInspect={handlers.handleInspectResource}
+                config={{
+                    title: "LUNAR VAULT",
+                    itemName: "SAMPLES",
+                    valueDivisor: 10,
+                    themeColor: "text-slate-200",
+                    borderColor: "border-slate-600",
+                    bgColor: "bg-slate-900",
+                    emptyIcon: "☾",
+                    emptyText: "VAULT EMPTY. VISIT THE MOON."
+                }}
+            />
+
             <CraftingPanel
                 isOpen={modalsState.isCraftingOpen}
                 onClose={() => close('isCraftingOpen')}
                 stats={stats}
-                oreInventory={miningGame.inventory}
+                oreInventory={combinedOreInventory}
                 fishInventory={fishingGame.inventory}
                 plantInventory={harvestingGame.inventory}
                 dreamInventory={dreamingGame.inventory}
+                moonInventory={moonInventory}
                 onCraft={handlers.handleCraftItem}
                 onEquip={handlers.handleEquipItem}
                 onUnequip={handlers.handleUnequipItem}
@@ -174,10 +191,11 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, fish
                 isOpen={modalsState.isIndexOpen}
                 onClose={() => close('isIndexOpen')}
                 inventory={inventory}
-                oreInventory={miningGame.inventory}
+                oreInventory={combinedOreInventory}
                 fishInventory={fishingGame.inventory}
                 plantInventory={harvestingGame.inventory}
                 dreamInventory={dreamingGame.inventory}
+                moonInventory={moonInventory} 
                 onSelectItem={handlers.handleIndexSelectItem}
             />
 

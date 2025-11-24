@@ -1,12 +1,11 @@
-
-import { PHRASES, RARITY_TIERS, VARIANTS } from '../constants';
-import { Drop, RarityId, VariantId, ItemData } from '../types';
+import { PHRASES, RARITY_TIERS, VARIANTS, MOON_ITEMS } from '../constants';
+import { Drop, RarityId, VariantId, ItemData, MoonItem } from '../types';
 
 export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
   const rand = Math.random();
   
   // Iterate from highest rarity to lowest
-  const tiers = Object.values(RARITY_TIERS).sort((a, b) => b.id - a.id);
+  const tiers = Object.values(RARITY_TIERS).sort((a, b) => b.id - a.id).filter(t => t.id !== RarityId.MOON);
 
   let selectedTier = RARITY_TIERS[RarityId.COMMON];
 
@@ -34,8 +33,6 @@ export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Dr
 
       for (const variant of variants) {
           // 1 in X chance based on multiplier
-          // e.g. if Multiplier is 10, chance is 0.1
-          // We don't apply luck multiplier to variants to keep them purely RNG prestige
           const chance = 1 / variant.multiplier; 
           if (variantRand < chance) {
               selectedVariantId = variant.id;
@@ -53,4 +50,44 @@ export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Dr
     timestamp: Date.now(),
     rollNumber: totalRolls + 1
   };
+};
+
+// NEW: Moon Drop Logic
+export const generateMoonDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
+    const rand = Math.random();
+    
+    // Sort Moon items by probability (Highest probability first, but logic is inverse: rarest is 1/small)
+    // Actually, items like 1 in 250,000,000 have VERY LOW chance.
+    // We iterate from RAREST (highest 1-in-X value) to COMMON.
+    // probability field is "1 in X". 
+    
+    const sortedItems = [...MOON_ITEMS].sort((a, b) => b.probability - a.probability);
+
+    for (const item of sortedItems) {
+        const baseThreshold = 1 / item.probability;
+        const threshold = baseThreshold * luckMultiplier; // Luck helps find rare moon items
+
+        if (rand < threshold) {
+            return {
+                text: item.text,
+                description: item.description,
+                rarityId: RarityId.MOON,
+                variantId: VariantId.NONE, // No variants on Moon for simplicity, or add if desired
+                timestamp: Date.now(),
+                rollNumber: totalRolls + 1
+            };
+        }
+    }
+
+    // Fallback to the most common item (last in sorted list if we sorted Descending by prob? No wait.)
+    // If sorted Descending by 'probability' value (e.g. 250m first, 10 last), 
+    // then we checked rarest first. If loop finishes, we get the common one.
+    return {
+        text: sortedItems[sortedItems.length - 1].text,
+        description: sortedItems[sortedItems.length - 1].description,
+        rarityId: RarityId.MOON,
+        variantId: VariantId.NONE,
+        timestamp: Date.now(),
+        rollNumber: totalRolls + 1
+    };
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { CraftableItem, CraftingCategory, GameStats, OreInventoryItem, FishInventoryItem, PlantInventoryItem, DreamInventoryItem } from '../types';
-import { ORES, FISH, PLANTS, DREAMS } from '../constants';
+import { CraftableItem, CraftingCategory, GameStats, OreInventoryItem, FishInventoryItem, PlantInventoryItem, DreamInventoryItem, MoonInventoryItem } from '../types';
+import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS } from '../constants';
 import { CRAFTABLE_ITEMS } from '../craftingData';
 import { audioService } from '../services/audioService';
 
@@ -11,14 +11,15 @@ interface Props {
     oreInventory: OreInventoryItem[];
     fishInventory: FishInventoryItem[];
     plantInventory: PlantInventoryItem[];
-    dreamInventory: DreamInventoryItem[]; // Added this
+    dreamInventory: DreamInventoryItem[];
+    moonInventory: MoonInventoryItem[];
     onCraft: (item: CraftableItem) => void;
     onEquip: (item: CraftableItem) => void;
     onUnequip: (item: CraftableItem) => void;
 }
 
 export const CraftingPanel: React.FC<Props> = ({
-    isOpen, onClose, stats, oreInventory, fishInventory, plantInventory, dreamInventory, onCraft, onEquip, onUnequip
+    isOpen, onClose, stats, oreInventory, fishInventory, plantInventory, dreamInventory, moonInventory, onCraft, onEquip, onUnequip
 }) => {
     const [activeCategory, setActiveCategory] = useState<CraftingCategory>('GENERAL');
 
@@ -33,27 +34,30 @@ export const CraftingPanel: React.FC<Props> = ({
         return a.tier - b.tier;
     });
 
-    const getMaterialCount = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM', id: number | string) => {
+    const getMaterialCount = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
         if (type === 'ORE') return oreInventory.find(i => i.id === Number(id))?.count || 0;
         if (type === 'FISH') return fishInventory.find(i => i.id === Number(id))?.count || 0;
         if (type === 'PLANT') return plantInventory.find(i => i.id === Number(id))?.count || 0;
         if (type === 'DREAM') return dreamInventory.find(i => i.id === Number(id))?.count || 0;
+        if (type === 'MOON') return moonInventory.find(i => i.id === Number(id))?.count || 0;
         return 0;
     };
 
-    const getMaterialName = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM', id: number | string) => {
+    const getMaterialName = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
         if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.name || `Ore #${id}`;
         if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.name || `Fish #${id}`;
         if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.name || `Plant #${id}`;
         if (type === 'DREAM') return DREAMS.find(d => d.id === Number(id))?.name || `Dream #${id}`;
+        if (type === 'MOON') return MOON_ITEMS.find(m => m.id === Number(id))?.text || `Moon Item #${id}`;
         return `Item #${id}`;
     };
 
-    const getMaterialColor = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM', id: number | string) => {
+    const getMaterialColor = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
         if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.color || 'text-gray-500';
         if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.color || 'text-gray-500';
         if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.color || 'text-gray-500';
         if (type === 'DREAM') return DREAMS.find(d => d.id === Number(id))?.color || 'text-purple-400';
+        if (type === 'MOON') return 'text-slate-300';
         return 'text-gray-500';
     };
 
