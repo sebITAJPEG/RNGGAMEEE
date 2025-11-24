@@ -1,4 +1,3 @@
-/// <reference types="@react-three/fiber" />
 import React, { useRef, useMemo } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import * as THREE from 'three';
@@ -29,8 +28,9 @@ interface Props {
 const BlackHoleModel = () => {
   const particlesCount = 1500;
   const particlesRef = useRef<THREE.Points>(null);
-  const ringRef1 = useRef<THREE.Mesh>(null);
-  const ringRef2 = useRef<THREE.Mesh>(null);
+  // CORREZIONE: Cambiato da THREE.Mesh a THREE.Group perché sono attaccati a elementi <group>
+  const ringRef1 = useRef<THREE.Group>(null);
+  const ringRef2 = useRef<THREE.Group>(null);
 
   // Generate spiral particles for accretion disk
   const particlePositions = useMemo(() => {
