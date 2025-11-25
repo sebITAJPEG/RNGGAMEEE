@@ -102,6 +102,55 @@ const generateItems = (): CraftableItem[] => {
         });
     });
 
+    // --- GOLD MINING ITEMS (Luck & Speed) [BOOST] ---
+    const goldMiningNames = [
+        "Copper Pan", "Iron Sieve", "Steel Sluice", "Motorized Panner", "Hydro-Dredge",
+        "Vibration Table", "Centrifuge", "Electro-Separator", "Nano-Filter", "Atomic Sifter",
+        "Quantum Panner", "Midas Touch Glove", "Alchemical Basin", "Sun Forge Sieve", "Divine Dredge"
+    ];
+
+    goldMiningNames.forEach((name, i) => {
+        const tier = i + 1;
+        items.push({
+            id: `gold_mine_${tier}`,
+            name: name,
+            description: `Increases GOLD mining luck by ${tier * 20}% and speed by ${tier * 15}ms.`,
+            tier,
+            category: 'GOLD_MINING',
+            type: 'BOOST',
+            bonuses: { luck: tier * 0.2, speed: tier * 15 },
+            recipe: {
+                // Costs Gold Ores (ID 1001+)
+                cost: Math.floor(1000 * Math.pow(1.8, i)),
+                materials: [
+                    { type: 'ORE', id: 1000 + Math.max(1, Math.floor(tier * 2)), count: 5 + tier },
+                    { type: 'ORE', id: 1000 + Math.max(1, Math.floor(tier * 1.5)), count: 10 + tier }
+                ]
+            }
+        });
+    });
+
+    // --- GOLD MINING ITEMS (Multi) [MULTI] ---
+    const goldMiningMultiNames = ["Dual Pan", "Double Sluice", "Industrial Dredge", "Fleet Dredge", "Midas Array"];
+    goldMiningMultiNames.forEach((name, i) => {
+        const tier = i + 1;
+        items.push({
+            id: `gold_mine_multi_${tier}`,
+            name: name,
+            description: `Mines +${tier} additional GOLD ore per action.`,
+            tier,
+            category: 'GOLD_MINING',
+            type: 'MULTI',
+            bonuses: { multi: tier },
+            recipe: {
+                cost: Math.floor(5000 * Math.pow(2.5, i)),
+                materials: [
+                    { type: 'ORE', id: 1000 + Math.max(5, tier * 5), count: 20 * tier }
+                ]
+            }
+        });
+    });
+
     // --- FISHING ITEMS (Luck & Speed) [BOOST] ---
     const fishingNames = [
         "Bamboo Rod", "Fiberglass Rod", "Carbon Rod", "Reinforced Net", "Sonar Lure",
@@ -261,13 +310,13 @@ const generateItems = (): CraftableItem[] => {
         description: "Mystical artifact that opens the bridge to the Lunar surface. Requires 5 Moonstone.",
         tier: 10,
         category: 'GENERAL',
-        type: 'SPECIAL', // Changed from BOOST to SPECIAL
-        bonuses: { luck: 0.5 }, // Also gives a luck bonus
+        type: 'SPECIAL',
+        bonuses: { luck: 0.5 },
         unlocksFeature: 'MOON_TRAVEL',
         recipe: {
             cost: 50000,
             materials: [
-                { type: 'ORE', id: 46, count: 5 } // 5 Moonstone (ID 46 is Moonstone in constants)
+                { type: 'ORE', id: 46, count: 5 }
             ]
         }
     });

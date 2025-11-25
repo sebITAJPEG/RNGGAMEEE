@@ -9,6 +9,8 @@ interface SubGameConfig<T> {
     luck: number;
     multi: number;
     thresholds: { boom: number; rare: number; boomDivisor: number };
+    // New: Allow disabling rarity sounds if needed, or handled externally
+    isMuted?: boolean;
 }
 
 interface GlobalCallbacks {
@@ -42,7 +44,10 @@ export function useSubGame<
     }, [inventory, config.storageKey]);
 
     const performAction = useCallback(() => {
+        // Always play the base action sound (mining/fishing/etc)
+        // The parent handles muting this via the function passed in config.playSound
         config.playSound();
+
         const count = config.multi;
         const batch: T[] = [];
         const updates = new Map<number, number>();
@@ -62,7 +67,6 @@ export function useSubGame<
                 if (idx >= 0) {
                     next[idx].count += qty;
                 } else {
-                    // TypeScript now knows 'locked' is valid here
                     next.push({ id, count: qty, discoveredAt: Date.now(), locked: false } as any);
                 }
             });
@@ -75,16 +79,19 @@ export function useSubGame<
         const foundGacha = Math.random() < 0.0025;
         callbacks.onUpdate(count, bestItem.id, foundGacha ? 1 : 0);
 
-        if (foundGacha) callbacks.playCoinWin(3);
+        if (foundGacha && !config.isMuted) callbacks.playCoinWin(3);
 
-        if (bestItem.id >= config.thresholds.boom) {
-            const estRarity = Math.min(15, Math.floor(bestItem.id / config.thresholds.boomDivisor));
-            callbacks.playBoom(estRarity as RarityId);
-        } else if (bestItem.id >= config.thresholds.rare) {
-            callbacks.playRare(RarityId.RARE);
+        // Only play rarity sounds if NOT muted
+        if (!config.isMuted) {
+            if (bestItem.id >= config.thresholds.boom) {
+                const estRarity = Math.min(15, Math.floor(bestItem.id / config.thresholds.boomDivisor));
+                callbacks.playBoom(estRarity as RarityId);
+            } else if (bestItem.id >= config.thresholds.rare) {
+                callbacks.playRare(RarityId.RARE);
+            }
         }
 
-    }, [config.luck, config.multi, config.dropFn, callbacks, config.playSound, config.thresholds]);
+    }, [config.luck, config.multi, config.dropFn, callbacks, config.playSound, config.thresholds, config.isMuted]);
 
     const savedCallback = useRef(performAction);
 

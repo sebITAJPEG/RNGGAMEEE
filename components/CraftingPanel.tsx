@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CraftableItem, CraftingCategory, GameStats, OreInventoryItem, FishInventoryItem, PlantInventoryItem, DreamInventoryItem, MoonInventoryItem } from '../types';
-import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS } from '../constants';
+import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, GOLD_ORES } from '../constants';
 import { CRAFTABLE_ITEMS } from '../craftingData';
 import { audioService } from '../services/audioService';
 
@@ -35,7 +35,12 @@ export const CraftingPanel: React.FC<Props> = ({
     });
 
     const getMaterialCount = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
-        if (type === 'ORE') return oreInventory.find(i => i.id === Number(id))?.count || 0;
+        if (type === 'ORE') {
+            // Check both inventories if needed, though craftable items usually target standard ores or gold ores specifically by ID range
+            // Here we are passed "oreInventory" which in GameModals.tsx is currently a combined array.
+            // So this check is fine.
+            return oreInventory.find(i => i.id === Number(id))?.count || 0;
+        }
         if (type === 'FISH') return fishInventory.find(i => i.id === Number(id))?.count || 0;
         if (type === 'PLANT') return plantInventory.find(i => i.id === Number(id))?.count || 0;
         if (type === 'DREAM') return dreamInventory.find(i => i.id === Number(id))?.count || 0;
@@ -44,7 +49,7 @@ export const CraftingPanel: React.FC<Props> = ({
     };
 
     const getMaterialName = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
-        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.name || `Ore #${id}`;
+        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.name || GOLD_ORES.find(o => o.id === Number(id))?.name || `Ore #${id}`;
         if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.name || `Fish #${id}`;
         if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.name || `Plant #${id}`;
         if (type === 'DREAM') return DREAMS.find(d => d.id === Number(id))?.name || `Dream #${id}`;
@@ -53,7 +58,7 @@ export const CraftingPanel: React.FC<Props> = ({
     };
 
     const getMaterialColor = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
-        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.color || 'text-gray-500';
+        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.color || GOLD_ORES.find(o => o.id === Number(id))?.color || 'text-gray-500';
         if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.color || 'text-gray-500';
         if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.color || 'text-gray-500';
         if (type === 'DREAM') return DREAMS.find(d => d.id === Number(id))?.color || 'text-purple-400';
@@ -82,7 +87,7 @@ export const CraftingPanel: React.FC<Props> = ({
 
                 {/* Category Tabs */}
                 <div className="flex border-b border-neutral-800 bg-neutral-950/50 overflow-x-auto no-scrollbar">
-                    {(['GENERAL', 'MINING', 'FISHING', 'HARVESTING', 'DREAMING'] as CraftingCategory[]).map(cat => (
+                    {(['GENERAL', 'MINING', 'GOLD_MINING', 'FISHING', 'HARVESTING', 'DREAMING'] as CraftingCategory[]).map(cat => (
                         <button
                             key={cat}
                             onClick={() => { setActiveCategory(cat); audioService.playClick(); }}
@@ -94,7 +99,7 @@ export const CraftingPanel: React.FC<Props> = ({
                                 }
               `}
                         >
-                            {cat}
+                            {cat.replace('_', ' ')}
                         </button>
                     ))}
                 </div>
@@ -102,110 +107,116 @@ export const CraftingPanel: React.FC<Props> = ({
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 bg-neutral-900/50">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {categoryItems.map(item => {
-                            const isOwned = stats.craftedItems?.[item.id];
-                            const equipped = isItemEquipped(item);
-                            const isMulti = item.type === 'MULTI';
+                        {categoryItems.length === 0 ? (
+                            <div className="col-span-full text-center py-12 text-neutral-500 font-mono">
+                                NO RECIPES DISCOVERED.
+                            </div>
+                        ) : (
+                            categoryItems.map(item => {
+                                const isOwned = stats.craftedItems?.[item.id];
+                                const equipped = isItemEquipped(item);
+                                const isMulti = item.type === 'MULTI';
 
-                            // Check Requirements
-                            const canAffordCost = stats.balance >= item.recipe.cost;
-                            const materialsStatus = item.recipe.materials.map(mat => {
-                                const current = getMaterialCount(mat.type, mat.id);
-                                return { ...mat, current, satisfied: current >= mat.count };
-                            });
-                            const hasMaterials = materialsStatus.every(m => m.satisfied);
-                            const canCraft = canAffordCost && hasMaterials && !isOwned;
+                                // Check Requirements
+                                const canAffordCost = stats.balance >= item.recipe.cost;
+                                const materialsStatus = item.recipe.materials.map(mat => {
+                                    const current = getMaterialCount(mat.type, mat.id);
+                                    return { ...mat, current, satisfied: current >= mat.count };
+                                });
+                                const hasMaterials = materialsStatus.every(m => m.satisfied);
+                                const canCraft = canAffordCost && hasMaterials && !isOwned;
 
-                            return (
-                                <div
-                                    key={item.id}
-                                    className={`
-                    relative p-4 rounded border flex flex-col gap-4 transition-all
-                    ${equipped
-                                            ? 'bg-green-900/20 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
-                                            : isOwned
-                                                ? 'bg-neutral-800/40 border-neutral-600'
-                                                : 'bg-neutral-900/40 border-neutral-800 hover:border-neutral-600'
-                                        }
-                  `}
-                                >
-                                    {/* Header */}
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className={`font-bold font-mono ${equipped ? 'text-green-400' : isOwned ? 'text-white' : 'text-neutral-400'}`}>
-                                                    {item.name}
-                                                </h3>
-                                                <span className={`text-[10px] px-1.5 rounded font-mono border ${isMulti ? 'bg-purple-950 border-purple-800 text-purple-400' : 'bg-blue-950 border-blue-800 text-blue-400'}`}>
-                                                    {isMulti ? 'MULTI' : 'BOOST'}
-                                                </span>
-                                                <span className="text-[10px] bg-neutral-950 px-1.5 rounded text-neutral-500 font-mono border border-neutral-800">
-                                                    T{item.tier}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-neutral-400 font-mono mt-1 min-h-[2rem]">{item.description}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Materials Grid (Only show if not owned) */}
-                                    {!isOwned && (
-                                        <div className="grid grid-cols-2 gap-2 mb-2">
-                                            {materialsStatus.map((mat, idx) => (
-                                                <div key={idx} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
-                                                    <div className={`text-[10px] truncate max-w-[80px] ${getMaterialColor(mat.type, mat.id)}`}>
-                                                        {getMaterialName(mat.type, mat.id)}
-                                                    </div>
-                                                    <div className={`text-[10px] font-mono ${mat.satisfied ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {mat.current}/{mat.count}
-                                                    </div>
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className={`
+                        relative p-4 rounded border flex flex-col gap-4 transition-all
+                        ${equipped
+                                                ? 'bg-green-900/20 border-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
+                                                : isOwned
+                                                    ? 'bg-neutral-800/40 border-neutral-600'
+                                                    : 'bg-neutral-900/40 border-neutral-800 hover:border-neutral-600'
+                                            }
+                      `}
+                                    >
+                                        {/* Header */}
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h3 className={`font-bold font-mono ${equipped ? 'text-green-400' : isOwned ? 'text-white' : 'text-neutral-400'}`}>
+                                                        {item.name}
+                                                    </h3>
+                                                    <span className={`text-[10px] px-1.5 rounded font-mono border ${isMulti ? 'bg-purple-950 border-purple-800 text-purple-400' : 'bg-blue-950 border-blue-800 text-blue-400'}`}>
+                                                        {isMulti ? 'MULTI' : 'BOOST'}
+                                                    </span>
+                                                    <span className="text-[10px] bg-neutral-950 px-1.5 rounded text-neutral-500 font-mono border border-neutral-800">
+                                                        T{item.tier}
+                                                    </span>
                                                 </div>
-                                            ))}
-                                            <div className="col-span-2 flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
-                                                <div className="text-[10px] text-yellow-500">COST</div>
-                                                <div className={`text-[10px] font-mono ${canAffordCost ? 'text-green-500' : 'text-red-500'}`}>
-                                                    ${item.recipe.cost.toLocaleString()}
-                                                </div>
+                                                <p className="text-xs text-neutral-400 font-mono mt-1 min-h-[2rem]">{item.description}</p>
                                             </div>
                                         </div>
-                                    )}
 
-                                    {/* Action Buttons */}
-                                    <div className="mt-auto">
-                                        {isOwned ? (
-                                            equipped ? (
-                                                <button
-                                                    onClick={() => onUnequip(item)}
-                                                    className="w-full py-2 font-mono text-xs font-bold tracking-widest border border-red-900 text-red-500 hover:bg-red-950 hover:text-white transition-all"
-                                                >
-                                                    UNEQUIP
-                                                </button>
+                                        {/* Materials Grid (Only show if not owned) */}
+                                        {!isOwned && (
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                {materialsStatus.map((mat, idx) => (
+                                                    <div key={idx} className="flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                                                        <div className={`text-[10px] truncate max-w-[80px] ${getMaterialColor(mat.type, mat.id)}`}>
+                                                            {getMaterialName(mat.type, mat.id)}
+                                                        </div>
+                                                        <div className={`text-[10px] font-mono ${mat.satisfied ? 'text-green-500' : 'text-red-500'}`}>
+                                                            {mat.current}/{mat.count}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <div className="col-span-2 flex justify-between items-center bg-black/20 p-2 rounded border border-white/5">
+                                                    <div className="text-[10px] text-yellow-500">COST</div>
+                                                    <div className={`text-[10px] font-mono ${canAffordCost ? 'text-green-500' : 'text-red-500'}`}>
+                                                        ${item.recipe.cost.toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Action Buttons */}
+                                        <div className="mt-auto">
+                                            {isOwned ? (
+                                                equipped ? (
+                                                    <button
+                                                        onClick={() => onUnequip(item)}
+                                                        className="w-full py-2 font-mono text-xs font-bold tracking-widest border border-red-900 text-red-500 hover:bg-red-950 hover:text-white transition-all"
+                                                    >
+                                                        UNEQUIP
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => onEquip(item)}
+                                                        className="w-full py-2 font-mono text-xs font-bold tracking-widest border border-green-900 text-green-500 hover:bg-green-950 hover:text-white transition-all"
+                                                    >
+                                                        EQUIP
+                                                    </button>
+                                                )
                                             ) : (
                                                 <button
-                                                    onClick={() => onEquip(item)}
-                                                    className="w-full py-2 font-mono text-xs font-bold tracking-widest border border-green-900 text-green-500 hover:bg-green-950 hover:text-white transition-all"
+                                                    onClick={() => onCraft(item)}
+                                                    disabled={!canCraft}
+                                                    className={`
+                                w-full py-2 font-mono text-xs font-bold tracking-widest transition-all
+                                ${canCraft
+                                                            ? 'bg-white text-black hover:bg-neutral-200'
+                                                            : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
+                                                        }
+                              `}
                                                 >
-                                                    EQUIP
+                                                    CRAFT
                                                 </button>
-                                            )
-                                        ) : (
-                                            <button
-                                                onClick={() => onCraft(item)}
-                                                disabled={!canCraft}
-                                                className={`
-                            w-full py-2 font-mono text-xs font-bold tracking-widest transition-all
-                            ${canCraft
-                                                        ? 'bg-white text-black hover:bg-neutral-200'
-                                                        : 'bg-neutral-800 text-neutral-500 cursor-not-allowed border border-neutral-700'
-                                                    }
-                          `}
-                                            >
-                                                CRAFT
-                                            </button>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })
+                        )}
                     </div>
                 </div>
 

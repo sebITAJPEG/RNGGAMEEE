@@ -32,20 +32,34 @@ export default function App() {
     const [selectedDebugItem, setSelectedDebugItem] = useState<any>(null);
     const [volume, setVolume] = useState(0.4);
 
+    // New state for muting only mining sounds
+    const [isMiningMuted, setIsMiningMuted] = useState(false);
+
     const [stats, setStats] = useState<GameStats>(() => {
         const saved = localStorage.getItem('textbound_stats');
         if (saved) {
             const parsed = JSON.parse(saved);
             let bestRarity = parsed.bestRarityFound || RarityId.COMMON;
             if (bestRarity > RarityId.THE_ONE) bestRarity = RarityId.THE_ONE;
-            return { ...parsed, bestRarityFound: bestRarity };
+            return {
+                ...parsed,
+                bestRarityFound: bestRarity,
+                // Ensure new stats exist
+                goldMiningSpeedLevel: parsed.goldMiningSpeedLevel || 0,
+                goldMiningLuckLevel: parsed.goldMiningLuckLevel || 0,
+                goldMiningMultiLevel: parsed.goldMiningMultiLevel || 1
+            };
         }
         return {
             totalRolls: 0, totalMoonRolls: 0, balance: 0, moonBalance: 0, startTime: Date.now(), bestRarityFound: RarityId.COMMON,
             multiRollLevel: 1, speedLevel: 0, luckLevel: 0, entropy: 0, hasBurst: false, moonTravelUnlocked: false,
             unlockedAchievements: [], equippedTitle: null, craftedItems: {}, equippedItems: {},
-            totalMined: 0, totalGoldMined: 0, bestOreMined: 0, bestGoldOreMined: 0, miningSpeedLevel: 0, miningLuckLevel: 0, miningMultiLevel: 1,
+
+            totalMined: 0, totalGoldMined: 0, bestOreMined: 0, bestGoldOreMined: 0,
+            miningSpeedLevel: 0, miningLuckLevel: 0, miningMultiLevel: 1,
+            goldMiningSpeedLevel: 0, goldMiningLuckLevel: 0, goldMiningMultiLevel: 1,
             goldDimensionUnlocked: false,
+
             totalFished: 0, bestFishCaught: 0, fishingSpeedLevel: 0, fishingLuckLevel: 0, fishingMultiLevel: 1,
             totalHarvested: 0, bestPlantHarvested: 0, harvestingSpeedLevel: 0, harvestingLuckLevel: 0, harvestingMultiLevel: 1,
             totalDreamt: 0, bestDreamFound: 0, bestMoonItemFound: 0,
@@ -86,6 +100,7 @@ export default function App() {
     const [luckMultiplier, setLuckMultiplier] = useState(1);
     const [miningLuckMultiplier, setMiningLuckMultiplier] = useState(1);
     const [miningSpeed, setMiningSpeed] = useState(1000);
+    const [goldMiningSpeed, setGoldMiningSpeed] = useState(1000); // Separate state for gold mining
     const [fishingSpeed, setFishingSpeed] = useState(1200);
     const [fishingLuckMultiplier, setFishingLuckMultiplier] = useState(1);
     const [harvestingSpeed, setHarvestingSpeed] = useState(1100);
@@ -120,32 +135,39 @@ export default function App() {
 
     useEffect(() => {
         const baseMineSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
+        const baseGoldMineSpeed = MINING_SPEEDS[Math.min(stats.goldMiningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
         const baseFishSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
         const baseHarvSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100;
 
         const mineBonuses = getCraftingBonuses(stats.equippedItems, 'MINING');
+        const goldMineBonuses = getCraftingBonuses(stats.equippedItems, 'GOLD_MINING');
         const fishBonuses = getCraftingBonuses(stats.equippedItems, 'FISHING');
         const harvBonuses = getCraftingBonuses(stats.equippedItems, 'HARVESTING');
 
         setAutoSpinSpeed(SPEED_TIERS[stats.speedLevel]?.ms || 250);
         setMiningSpeed(Math.max(10, baseMineSpeed - mineBonuses.bonusSpeed));
+        setGoldMiningSpeed(Math.max(10, baseGoldMineSpeed - goldMineBonuses.bonusSpeed));
         setFishingSpeed(Math.max(25, baseFishSpeed - fishBonuses.bonusSpeed));
         setHarvestingSpeed(Math.max(15, baseHarvSpeed - harvBonuses.bonusSpeed));
-    }, [stats.speedLevel, stats.miningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel, stats.equippedItems]);
+    }, [stats.speedLevel, stats.miningSpeedLevel, stats.goldMiningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel, stats.equippedItems]);
 
     // --- SUB-GAMES ---
     const mineBonuses = getCraftingBonuses(stats.equippedItems, 'MINING');
-    const handleMineOre = useCallback((luck: number) => mineOre(luck, miningDimension), [miningDimension]);
-    const playMineSound = useCallback(() => miningDimension === 'GOLD' ? audioService.playGoldMineSound() : audioService.playMineSound(), [miningDimension]);
+    const goldMineBonuses = getCraftingBonuses(stats.equippedItems, 'GOLD_MINING');
+
+    // NOTE: We pass a wrapper function for playing sound that checks the mute state
+    const playNormalMineSound = () => { if (!isMiningMuted) audioService.playMineSound(); };
+    const playGoldMineSound = () => { if (!isMiningMuted) audioService.playGoldMineSound(); };
 
     const normalMiningGame = useSubGame({
         storageKey: 'textbound_ore_inventory',
         dropFn: (l) => mineOre(l, 'NORMAL'),
-        playSound: audioService.playMineSound.bind(audioService),
+        playSound: playNormalMineSound,
         speed: miningSpeed,
         luck: ((miningLuckMultiplier * (1 + (stats.miningLuckLevel * 0.5))) + mineBonuses.bonusLuck) * trophyLuckMult,
         multi: (stats.miningMultiLevel || 1) + mineBonuses.bonusMulti,
-        thresholds: { boom: 30, rare: 10, boomDivisor: 6 }
+        thresholds: { boom: 30, rare: 10, boomDivisor: 6 },
+        isMuted: isMiningMuted // Pass mute state to subgame
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalMined: (prev.totalMined || 0) + count, bestOreMined: Math.max(prev.bestOreMined || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
         playBoom: audioService.playBoom.bind(audioService),
@@ -156,11 +178,12 @@ export default function App() {
     const goldMiningGame = useSubGame({
         storageKey: 'textbound_gold_ore_inventory',
         dropFn: (l) => mineOre(l, 'GOLD'),
-        playSound: audioService.playGoldMineSound.bind(audioService),
-        speed: miningSpeed,
-        luck: ((miningLuckMultiplier * (1 + (stats.miningLuckLevel * 0.5))) + mineBonuses.bonusLuck) * trophyLuckMult,
-        multi: (stats.miningMultiLevel || 1) + mineBonuses.bonusMulti,
-        thresholds: { boom: 10, rare: 5, boomDivisor: 3 }
+        playSound: playGoldMineSound,
+        speed: goldMiningSpeed,
+        luck: ((miningLuckMultiplier * (1 + ((stats.goldMiningLuckLevel || 0) * 0.5))) + goldMineBonuses.bonusLuck) * trophyLuckMult,
+        multi: (stats.goldMiningMultiLevel || 1) + goldMineBonuses.bonusMulti,
+        thresholds: { boom: 10000, rare: 10000, boomDivisor: 3 }, // Increased thresholds to stop constant rarity sounds
+        isMuted: isMiningMuted // Pass mute state to subgame
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalGoldMined: (prev.totalGoldMined || 0) + count, bestGoldOreMined: Math.max(prev.bestGoldOreMined || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
         playBoom: audioService.playBoom.bind(audioService),
@@ -238,6 +261,7 @@ export default function App() {
         audioService.setVolume(val);
     };
 
+    // ... (Rest of handlers remain unchanged)
     const toggleResourceLock = (type: 'ORES' | 'GOLD_ORES' | 'FISH' | 'PLANTS' | 'MOON', id: number) => {
         if (type === 'ORES') normalMiningGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
         else if (type === 'GOLD_ORES') goldMiningGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
@@ -407,7 +431,6 @@ export default function App() {
         }, drops[0]);
     };
 
-    // --- MAIN GAME LOOP (ROLLS) ---
     const batchUpdateStatsAndInventory = (drops: Drop[], rollsCount: number, finalEntropy: number) => {
         let creditsFound = 0;
         if (Math.random() < (0.001 * rollsCount)) creditsFound = 1;
@@ -634,7 +657,7 @@ export default function App() {
 
                     <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
                         <div className="flex gap-4 items-center pointer-events-auto">
-                            <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v3.3.0 MOON</div>
+                            <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v3.4.0 GOLD</div>
                             <button onClick={() => setModalsState(p => ({ ...p, isChangelogOpen: true }))} className="text-neutral-700 hover:text-white text-xs font-mono underline">CHANGELOG</button>
                         </div>
                         <button onClick={() => setModalsState(p => ({ ...p, isAdminOpen: true }))} className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors">[ {T.UI.SYSTEM_CONFIG} ]</button>
@@ -647,7 +670,10 @@ export default function App() {
                     miningGame={{
                         ...currentMiningGame,
                         currentDimension: miningDimension,
-                        onToggleDimension: () => setMiningDimension(d => d === 'NORMAL' ? 'GOLD' : 'NORMAL')
+                        onToggleDimension: () => setMiningDimension(d => d === 'NORMAL' ? 'GOLD' : 'NORMAL'),
+                        // Mute Controls
+                        isMuted: isMiningMuted,
+                        toggleMute: () => setIsMiningMuted(prev => !prev)
                     }}
                     fishingGame={fishingGame}
                     harvestingGame={harvestingGame}

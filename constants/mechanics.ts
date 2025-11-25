@@ -1,4 +1,3 @@
-
 // Index maps to speedLevel in GameStats
 export const SPEED_TIERS = [
     { ms: 250, cost: 0, name: "BASE CLOCK" },
@@ -13,12 +12,21 @@ export const SPEED_TIERS = [
 // UPGRADE CONFIGS
 export const UPGRADE_COSTS = {
     LUCK: { base: 1000, multiplier: 2.5, max: 10 }, // 1.1x, 1.2x, etc.
+
+    // STANDARD MINING
     MINING_SPEED: { base: 500, multiplier: 2.0, max: 8 }, // Reduces ms
     MINING_LUCK: { base: 750, multiplier: 2.2, max: 10 }, // Increases luck mult
     MINING_MULTI: { base: 5000, multiplier: 3.0, max: 5 }, // +1 Ore per mine
+
+    // GOLD MINING (More Expensive)
+    GOLD_MINING_SPEED: { base: 5000, multiplier: 2.5, max: 8 },
+    GOLD_MINING_LUCK: { base: 7500, multiplier: 2.8, max: 10 },
+    GOLD_MINING_MULTI: { base: 50000, multiplier: 4.0, max: 5 },
+
     FISHING_SPEED: { base: 600, multiplier: 2.1, max: 8 },
     FISHING_LUCK: { base: 800, multiplier: 2.3, max: 10 },
     FISHING_MULTI: { base: 6000, multiplier: 3.2, max: 5 },
+
     HARVESTING_SPEED: { base: 550, multiplier: 2.05, max: 8 },
     HARVESTING_LUCK: { base: 775, multiplier: 2.25, max: 10 },
     HARVESTING_MULTI: { base: 5500, multiplier: 3.1, max: 5 }

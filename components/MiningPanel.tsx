@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Ore } from '../types';
-import { audioService } from '../services/audioService';
 
 interface Props {
     onMine: () => void;
@@ -9,11 +8,12 @@ interface Props {
     isAutoMining: boolean;
     onToggleAuto: () => void;
     onOpenInventory: () => void;
-    // New Props
     currentDimension: 'NORMAL' | 'GOLD';
     onToggleDimension: () => void;
     isGoldUnlocked: boolean;
-    balance: number; // Needed to show unlock progress or requirement
+    balance: number;
+    isMuted: boolean;
+    onToggleMute: () => void;
 }
 
 interface FloatingText {
@@ -26,7 +26,8 @@ interface FloatingText {
 
 export const MiningPanel: React.FC<Props> = ({
     onMine, lastBatch, totalMined, isAutoMining, onToggleAuto, onOpenInventory,
-    currentDimension, onToggleDimension, isGoldUnlocked, balance
+    currentDimension, onToggleDimension, isGoldUnlocked, balance,
+    isMuted, onToggleMute
 }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
@@ -55,20 +56,20 @@ export const MiningPanel: React.FC<Props> = ({
         const id = clickCount.current++;
         setFloatingTexts(prev => [
             ...prev,
-            { id, x, y, text: "+1", color: currentDimension === 'GOLD' ? "text-yellow-300" : "text-white" }
+            { id, x, y, text: `+${lastBatch.length || 1}`, color: currentDimension === 'GOLD' ? "text-yellow-300" : "text-white" }
         ]);
     };
 
     const isGold = currentDimension === 'GOLD';
-    const containerClass = isGold 
-        ? "bg-gradient-to-b from-yellow-900/30 to-yellow-950/50 border-yellow-700/50" 
+    const containerClass = isGold
+        ? "bg-gradient-to-b from-yellow-900/30 to-yellow-950/50 border-yellow-700/50"
         : "bg-background/40 border-surface-highlight";
 
     return (
         <div className={`h-full w-full border-l flex flex-col p-6 relative overflow-hidden transition-colors duration-500 ${containerClass} backdrop-blur-sm`}>
-            
+
             {/* Header */}
-            <div className="flex justify-between items-start mb-8 z-10">
+            <div className="flex justify-between items-start mb-8 z-20 relative pointer-events-none">
                 <div>
                     <h2 className={`text-lg font-mono font-bold tracking-widest ${isGold ? 'text-yellow-400 drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]' : 'text-text'}`}>
                         {isGold ? 'GOLD_RUSH' : 'DEEP_DIVING'}
@@ -77,20 +78,29 @@ export const MiningPanel: React.FC<Props> = ({
                         {isGold ? 'DIMENSION: AU-79' : 'SECTOR 7G'}
                     </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 justify-end pointer-events-auto">
+                    {/* Mute Button - Added z-index and pointer-events-auto */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+                        className={`text-[10px] font-mono border px-2 py-1 transition-all z-50 relative ${isMuted ? 'border-red-500 text-red-500 bg-red-950/30' : 'border-neutral-600 text-neutral-400 hover:text-white hover:border-neutral-400'}`}
+                        title={isMuted ? "Unmute Mining Sounds" : "Mute Mining Sounds"}
+                    >
+                        {isMuted ? '🔇' : '🔊'}
+                    </button>
+
                     {/* Dimension Toggle */}
                     {(isGoldUnlocked || balance >= 1000000) && (
                         <button
                             onClick={onToggleDimension}
                             className={`
-                                text-[10px] font-mono border px-2 py-1 transition-all animate-pulse
-                                ${isGold 
-                                    ? 'border-yellow-500 bg-yellow-900/20 text-yellow-300 hover:bg-yellow-900/40' 
-                                    : 'border-neutral-600 bg-neutral-900 text-neutral-400 hover:border-yellow-500 hover:text-yellow-500'
+                                text-[10px] font-mono border px-2 py-1 transition-all
+                                ${isGold
+                                    ? 'border-yellow-500 bg-yellow-900/20 text-yellow-300 hover:bg-yellow-900/40'
+                                    : 'border-neutral-600 bg-neutral-900 text-neutral-400 hover:border-yellow-500 hover:text-yellow-500 animate-pulse'
                                 }
                             `}
                         >
-                            {isGold ? 'EXIT GOLD DIM' : 'ENTER GOLD DIM'}
+                            {isGold ? 'EXIT GOLD' : 'ENTER GOLD'}
                         </button>
                     )}
                     <button
@@ -155,7 +165,7 @@ export const MiningPanel: React.FC<Props> = ({
                 <div className="mt-8 min-h-[6rem] flex flex-col items-center justify-center w-full">
                     {lastBatch.length > 0 ? (
                         <div key={totalMined} className="animate-fade-in-up w-full flex flex-col gap-2 items-center">
-                            {lastBatch.map((ore, idx) => (
+                            {lastBatch.slice(0, 3).map((ore, idx) => (
                                 <div key={idx} className={`flex items-center gap-3 p-2 rounded border w-full max-w-[240px] ${isGold ? 'bg-yellow-950/30 border-yellow-800' : 'bg-background/40 border-surface-highlight'}`} style={{ animationDelay: `${idx * 0.05}s` }}>
                                     <div className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded min-w-[40px] text-center ${isGold ? 'bg-yellow-900 text-yellow-300 border border-yellow-700' : 'bg-surface border border-surface-highlight text-neutral-400'}`}>
                                         {ore.tierName.substring(0, 6)}
@@ -165,6 +175,9 @@ export const MiningPanel: React.FC<Props> = ({
                                     </div>
                                 </div>
                             ))}
+                            {lastBatch.length > 3 && (
+                                <div className="text-[10px] font-mono text-neutral-500">+{lastBatch.length - 3} more...</div>
+                            )}
                         </div>
                     ) : (
                         <span className={`text-xs font-mono ${isGold ? 'text-yellow-700' : 'text-text-dim'}`}>READY TO MINE</span>
@@ -181,11 +194,10 @@ export const MiningPanel: React.FC<Props> = ({
 
                 <button
                     onClick={(e) => handleClick(e)}
-                    className={`w-full py-3 border font-mono font-bold tracking-widest transition-all active:scale-95 ${
-                        isGold 
-                        ? 'bg-yellow-600 hover:bg-yellow-500 text-yellow-950 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)]' 
-                        : 'bg-surface-highlight hover:bg-secondary border-border text-text hover:text-text'
-                    }`}
+                    className={`w-full py-3 border font-mono font-bold tracking-widest transition-all active:scale-95 ${isGold
+                            ? 'bg-yellow-600 hover:bg-yellow-500 text-yellow-950 border-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.3)]'
+                            : 'bg-surface-highlight hover:bg-secondary border-border text-text hover:text-text'
+                        }`}
                 >
                     MINE {isGold ? 'GOLD' : 'ORE'}
                 </button>
@@ -196,7 +208,7 @@ export const MiningPanel: React.FC<Props> = ({
                     w-full py-2 border text-[10px] font-mono font-bold tracking-widest transition-all
                     ${isAutoMining
                             ? 'bg-orange-900/20 border-orange-600 text-orange-500 animate-pulse'
-                            : isGold 
+                            : isGold
                                 ? 'bg-transparent border-yellow-800 text-yellow-700 hover:border-yellow-500 hover:text-yellow-400'
                                 : 'bg-transparent border-surface-highlight text-text-dim hover:border-border hover:text-text'
                         }

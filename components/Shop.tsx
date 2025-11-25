@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { SPEED_TIERS, BURST_COST, UPGRADE_COSTS, MINING_SPEEDS, FISHING_SPEEDS, HARVESTING_SPEEDS } from '../constants';
 import { GameStats } from '../types';
@@ -11,9 +10,15 @@ interface Props {
     onBuySpeed: (cost: number) => void;
     onBuyBurst: () => void;
     onBuyLuck: (cost: number) => void;
+    // Mining
     onBuyMiningSpeed: (cost: number) => void;
     onBuyMiningLuck: (cost: number) => void;
     onBuyMiningMulti: (cost: number) => void;
+    // Gold Mining
+    onBuyGoldMiningSpeed?: (cost: number) => void;
+    onBuyGoldMiningLuck?: (cost: number) => void;
+    onBuyGoldMiningMulti?: (cost: number) => void;
+    // Other
     onBuyFishingSpeed?: (cost: number) => void;
     onBuyFishingLuck?: (cost: number) => void;
     onBuyFishingMulti?: (cost: number) => void;
@@ -26,6 +31,7 @@ export const Shop: React.FC<Props> = ({
     isOpen, onClose, stats,
     onBuyMultiRoll, onBuySpeed, onBuyBurst, onBuyLuck,
     onBuyMiningSpeed, onBuyMiningLuck, onBuyMiningMulti,
+    onBuyGoldMiningSpeed, onBuyGoldMiningLuck, onBuyGoldMiningMulti,
     onBuyFishingSpeed, onBuyFishingLuck, onBuyFishingMulti,
     onBuyHarvestingSpeed, onBuyHarvestingLuck, onBuyHarvestingMulti
 }) => {
@@ -52,57 +58,65 @@ export const Shop: React.FC<Props> = ({
 
     // --- MINING UPGRADES ---
 
-    // Mining Speed
     const nextMineSpeedLevel = (stats.miningSpeedLevel || 0) + 1;
     const mineSpeedCost = Math.floor(UPGRADE_COSTS.MINING_SPEED.base * Math.pow(UPGRADE_COSTS.MINING_SPEED.multiplier, stats.miningSpeedLevel || 0));
     const isMineSpeedMaxed = nextMineSpeedLevel >= MINING_SPEEDS.length;
     const currentMineSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)];
     const nextMineSpeed = MINING_SPEEDS[Math.min(nextMineSpeedLevel, MINING_SPEEDS.length - 1)];
 
-    // Mining Luck
     const nextMineLuckLevel = (stats.miningLuckLevel || 0) + 1;
     const mineLuckCost = Math.floor(UPGRADE_COSTS.MINING_LUCK.base * Math.pow(UPGRADE_COSTS.MINING_LUCK.multiplier, stats.miningLuckLevel || 0));
     const isMineLuckMaxed = nextMineLuckLevel > UPGRADE_COSTS.MINING_LUCK.max;
 
-    // Mining Multi
     const nextMineMultiLevel = (stats.miningMultiLevel || 1) + 1;
     const mineMultiCost = Math.floor(UPGRADE_COSTS.MINING_MULTI.base * Math.pow(UPGRADE_COSTS.MINING_MULTI.multiplier, (stats.miningMultiLevel || 1) - 1));
     const isMineMultiMaxed = nextMineMultiLevel > UPGRADE_COSTS.MINING_MULTI.max;
 
+    // --- GOLD MINING UPGRADES ---
+    // Note: Using base mining speeds array for simplicity but higher cost
+    const nextGoldMineSpeedLevel = (stats.goldMiningSpeedLevel || 0) + 1;
+    const goldMineSpeedCost = Math.floor(UPGRADE_COSTS.GOLD_MINING_SPEED.base * Math.pow(UPGRADE_COSTS.GOLD_MINING_SPEED.multiplier, stats.goldMiningSpeedLevel || 0));
+    const isGoldMineSpeedMaxed = nextGoldMineSpeedLevel >= MINING_SPEEDS.length;
+    const currentGoldMineSpeed = MINING_SPEEDS[Math.min(stats.goldMiningSpeedLevel || 0, MINING_SPEEDS.length - 1)];
+    const nextGoldMineSpeed = MINING_SPEEDS[Math.min(nextGoldMineSpeedLevel, MINING_SPEEDS.length - 1)];
+
+    const nextGoldMineLuckLevel = (stats.goldMiningLuckLevel || 0) + 1;
+    const goldMineLuckCost = Math.floor(UPGRADE_COSTS.GOLD_MINING_LUCK.base * Math.pow(UPGRADE_COSTS.GOLD_MINING_LUCK.multiplier, stats.goldMiningLuckLevel || 0));
+    const isGoldMineLuckMaxed = nextGoldMineLuckLevel > UPGRADE_COSTS.GOLD_MINING_LUCK.max;
+
+    const nextGoldMineMultiLevel = (stats.goldMiningMultiLevel || 1) + 1;
+    const goldMineMultiCost = Math.floor(UPGRADE_COSTS.GOLD_MINING_MULTI.base * Math.pow(UPGRADE_COSTS.GOLD_MINING_MULTI.multiplier, (stats.goldMiningMultiLevel || 1) - 1));
+    const isGoldMineMultiMaxed = nextGoldMineMultiLevel > UPGRADE_COSTS.GOLD_MINING_MULTI.max;
+
+
     // --- FISHING UPGRADES ---
 
-    // Fishing Speed
     const nextFishSpeedLevel = (stats.fishingSpeedLevel || 0) + 1;
     const fishSpeedCost = Math.floor(UPGRADE_COSTS.FISHING_SPEED.base * Math.pow(UPGRADE_COSTS.FISHING_SPEED.multiplier, stats.fishingSpeedLevel || 0));
     const isFishSpeedMaxed = nextFishSpeedLevel >= FISHING_SPEEDS.length;
     const currentFishSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)];
     const nextFishSpeed = FISHING_SPEEDS[Math.min(nextFishSpeedLevel, FISHING_SPEEDS.length - 1)];
 
-    // Fishing Luck
     const nextFishLuckLevel = (stats.fishingLuckLevel || 0) + 1;
     const fishLuckCost = Math.floor(UPGRADE_COSTS.FISHING_LUCK.base * Math.pow(UPGRADE_COSTS.FISHING_LUCK.multiplier, stats.fishingLuckLevel || 0));
     const isFishLuckMaxed = nextFishLuckLevel > UPGRADE_COSTS.FISHING_LUCK.max;
 
-    // Fishing Multi
     const nextFishMultiLevel = (stats.fishingMultiLevel || 1) + 1;
     const fishMultiCost = Math.floor(UPGRADE_COSTS.FISHING_MULTI.base * Math.pow(UPGRADE_COSTS.FISHING_MULTI.multiplier, (stats.fishingMultiLevel || 1) - 1));
     const isFishMultiMaxed = nextFishMultiLevel > UPGRADE_COSTS.FISHING_MULTI.max;
 
     // --- HARVESTING UPGRADES ---
 
-    // Harvesting Speed
     const nextHarvestSpeedLevel = (stats.harvestingSpeedLevel || 0) + 1;
     const harvestSpeedCost = Math.floor(UPGRADE_COSTS.HARVESTING_SPEED.base * Math.pow(UPGRADE_COSTS.HARVESTING_SPEED.multiplier, stats.harvestingSpeedLevel || 0));
     const isHarvestSpeedMaxed = nextHarvestSpeedLevel >= HARVESTING_SPEEDS.length;
     const currentHarvestSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)];
     const nextHarvestSpeed = HARVESTING_SPEEDS[Math.min(nextHarvestSpeedLevel, HARVESTING_SPEEDS.length - 1)];
 
-    // Harvesting Luck
     const nextHarvestLuckLevel = (stats.harvestingLuckLevel || 0) + 1;
     const harvestLuckCost = Math.floor(UPGRADE_COSTS.HARVESTING_LUCK.base * Math.pow(UPGRADE_COSTS.HARVESTING_LUCK.multiplier, stats.harvestingLuckLevel || 0));
     const isHarvestLuckMaxed = nextHarvestLuckLevel > UPGRADE_COSTS.HARVESTING_LUCK.max;
 
-    // Harvesting Multi
     const nextHarvestMultiLevel = (stats.harvestingMultiLevel || 1) + 1;
     const harvestMultiCost = Math.floor(UPGRADE_COSTS.HARVESTING_MULTI.base * Math.pow(UPGRADE_COSTS.HARVESTING_MULTI.multiplier, (stats.harvestingMultiLevel || 1) - 1));
     const isHarvestMultiMaxed = nextHarvestMultiLevel > UPGRADE_COSTS.HARVESTING_MULTI.max;
@@ -226,7 +240,7 @@ export const Shop: React.FC<Props> = ({
 
                     {/* MINING SECTION */}
                     <div>
-                        <h3 className="text-sm font-bold text-text font-mono mb-4 border-b border-surface-highlight pb-2">MINING MODULES</h3>
+                        <h3 className="text-sm font-bold text-text font-mono mb-4 border-b border-surface-highlight pb-2">MINING MODULES (STANDARD)</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <UpgradeCard
                                 title="DRILL RPM (SPEED)"
@@ -263,6 +277,48 @@ export const Shop: React.FC<Props> = ({
                             />
                         </div>
                     </div>
+
+                    {/* GOLD MINING SECTION */}
+                    {(stats.goldDimensionUnlocked || stats.balance > 100000) && (
+                        <div>
+                            <h3 className="text-sm font-bold text-yellow-400 font-mono mb-4 border-b border-yellow-800 pb-2">GOLD MINING (DIMENSION AU-79)</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <UpgradeCard
+                                    title="GOLD DRILL RPM"
+                                    desc="Reduces gold dimension interval."
+                                    current={`${currentGoldMineSpeed}ms`}
+                                    next={`${nextGoldMineSpeed}ms`}
+                                    cost={goldMineSpeedCost}
+                                    isMaxed={isGoldMineSpeedMaxed}
+                                    onBuy={() => onBuyGoldMiningSpeed && onBuyGoldMiningSpeed(goldMineSpeedCost)}
+                                    colorClass="text-yellow-300"
+                                    borderColor="border-yellow-600"
+                                />
+                                <UpgradeCard
+                                    title="MIDAS SENSOR (LUCK)"
+                                    desc="Increases rare gold chance."
+                                    current={`${(1 + ((stats.goldMiningLuckLevel || 0) * 0.5)).toFixed(1)}x`}
+                                    next={`${(1 + (nextGoldMineLuckLevel * 0.5)).toFixed(1)}x`}
+                                    cost={goldMineLuckCost}
+                                    isMaxed={isGoldMineLuckMaxed}
+                                    onBuy={() => onBuyGoldMiningLuck && onBuyGoldMiningLuck(goldMineLuckCost)}
+                                    colorClass="text-amber-400"
+                                    borderColor="border-amber-700"
+                                />
+                                <UpgradeCard
+                                    title="GILDED MULTI-TOOL"
+                                    desc="Mine multiple gold ores."
+                                    current={`${stats.goldMiningMultiLevel || 1}x`}
+                                    next={`${nextGoldMineMultiLevel}x`}
+                                    cost={goldMineMultiCost}
+                                    isMaxed={isGoldMineMultiMaxed}
+                                    onBuy={() => onBuyGoldMiningMulti && onBuyGoldMiningMulti(goldMineMultiCost)}
+                                    colorClass="text-orange-300"
+                                    borderColor="border-orange-700"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* FISHING SECTION */}
                     {onBuyFishingSpeed && (

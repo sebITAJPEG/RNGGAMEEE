@@ -178,8 +178,9 @@ export interface Achievement {
 
 // --- CRAFTING TYPES ---
 
-export type CraftingCategory = 'GENERAL' | 'MINING' | 'FISHING' | 'HARVESTING' | 'DREAMING';
-export type CraftingType = 'BOOST' | 'MULTI' | 'SPECIAL'; // Added SPECIAL
+// UPDATED: Added GOLD_MINING category
+export type CraftingCategory = 'GENERAL' | 'MINING' | 'GOLD_MINING' | 'FISHING' | 'HARVESTING' | 'DREAMING';
+export type CraftingType = 'BOOST' | 'MULTI' | 'SPECIAL';
 
 export interface CraftingMaterial {
     type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON';
@@ -235,7 +236,7 @@ export interface GameStats {
     craftedItems: Record<string, boolean>; // ID -> owned status
     equippedItems: {
         // Format: "CATEGORY_TYPE": "itemId"
-        // e.g. "GENERAL_BOOST": "gen_1", "GENERAL_MULTI": "gen_multi_1"
+        // e.g. "GENERAL_BOOST": "gen_1", "GOLD_MINING_BOOST": "gold_1"
         [key: string]: string | null;
     };
 
@@ -244,9 +245,17 @@ export interface GameStats {
     totalGoldMined?: number; // New: Explicit counter for Gold Mined
     bestOreMined: number; // ID of best ore
     bestGoldOreMined?: number; // New: Track separate gold ore best
-    miningSpeedLevel: number; // New
-    miningLuckLevel: number; // New
-    miningMultiLevel: number; // New: How many ores mined at once
+
+    // Standard Mining Upgrades
+    miningSpeedLevel: number;
+    miningLuckLevel: number;
+    miningMultiLevel: number;
+
+    // Gold Mining Upgrades (Separated)
+    goldMiningSpeedLevel?: number;
+    goldMiningLuckLevel?: number;
+    goldMiningMultiLevel?: number;
+
     goldDimensionUnlocked: boolean; // New: Gold Dimension Unlock
 
     // Fishing Stats & Upgrades
