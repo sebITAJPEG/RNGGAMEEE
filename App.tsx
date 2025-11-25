@@ -76,7 +76,7 @@ export default function App() {
         isPlantInventoryOpen: false, isDreamInventoryOpen: false, isMoonInventoryOpen: false,
         isCraftingOpen: false, isGachaOpen: false, isChangelogOpen: false, isIndexOpen: false,
         isAchievementsOpen: false, isCoinTossOpen: false, isAdminOpen: false,
-        isStatsOpen: false 
+        isStatsOpen: false
     });
 
     const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId }) | null>(null);
@@ -90,7 +90,7 @@ export default function App() {
     const [fishingLuckMultiplier, setFishingLuckMultiplier] = useState(1);
     const [harvestingSpeed, setHarvestingSpeed] = useState(1100);
     const [harvestingLuckMultiplier, setHarvestingLuckMultiplier] = useState(1);
-    const [dreamingLuckMultiplier, setDreamingLuckMultiplier] = useState(1); 
+    const [dreamingLuckMultiplier, setDreamingLuckMultiplier] = useState(1);
 
     const [autoStopRarity, setAutoStopRarity] = useState<RarityId>(() => {
         const saved = localStorage.getItem('textbound_settings_autostop');
@@ -122,7 +122,7 @@ export default function App() {
         const baseMineSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
         const baseFishSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
         const baseHarvSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100;
-        
+
         const mineBonuses = getCraftingBonuses(stats.equippedItems, 'MINING');
         const fishBonuses = getCraftingBonuses(stats.equippedItems, 'FISHING');
         const harvBonuses = getCraftingBonuses(stats.equippedItems, 'HARVESTING');
@@ -254,16 +254,16 @@ export default function App() {
         let defs: any[];
         let divisor: number;
 
-        if (type === 'ORES') { 
-            currentInv = normalMiningGame.inventory; 
-            setInv = normalMiningGame.setInventory; 
-            defs = ORES; 
-            divisor = 5; 
+        if (type === 'ORES') {
+            currentInv = normalMiningGame.inventory;
+            setInv = normalMiningGame.setInventory;
+            defs = ORES;
+            divisor = 5;
         } else if (type === 'GOLD_ORES') {
             currentInv = goldMiningGame.inventory;
             setInv = goldMiningGame.setInventory;
             defs = GOLD_ORES;
-            divisor = 2; 
+            divisor = 2;
         }
         else if (type === 'FISH') { currentInv = fishingGame.inventory; setInv = fishingGame.setInventory; defs = FISH; divisor = 4; }
         else { currentInv = harvestingGame.inventory; setInv = harvestingGame.setInventory; defs = PLANTS; divisor = 4.5; }
@@ -312,7 +312,7 @@ export default function App() {
     const handleInspectResource = (item: { id: number; name: string; description: string }) => {
         let rarityId = RarityId.COMMON;
         if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
-        else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId; 
+        else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
         else rarityId = RarityId.MOON;
 
         audioService.playClick();
@@ -335,7 +335,7 @@ export default function App() {
             return true;
         });
         if (missingMaterial) return;
-        
+
         setStats(prev => {
             const updated = { ...prev, balance: prev.balance - item.recipe.cost, craftedItems: { ...prev.craftedItems, [item.id]: true } };
             if (item.unlocksFeature === 'MOON_TRAVEL') {
@@ -343,12 +343,12 @@ export default function App() {
             }
             return updated;
         });
-        
+
         item.recipe.materials.forEach(mat => {
             const deduct = (inv: any[], setInv: any) => setInv((prev: any[]) => prev.map(i => i.id === mat.id ? { ...i, count: i.count - mat.count } : i).filter(i => i.count > 0));
             if (mat.type === 'ORE') {
-                 if (typeof mat.id === 'number' && mat.id > 1000) deduct(goldMiningGame.inventory, goldMiningGame.setInventory);
-                 else deduct(normalMiningGame.inventory, normalMiningGame.setInventory);
+                if (typeof mat.id === 'number' && mat.id > 1000) deduct(goldMiningGame.inventory, goldMiningGame.setInventory);
+                else deduct(normalMiningGame.inventory, normalMiningGame.setInventory);
             }
             else if (mat.type === 'FISH') deduct(fishingGame.inventory, fishingGame.setInventory);
             else if (mat.type === 'PLANT') deduct(harvestingGame.inventory, harvestingGame.setInventory);
@@ -411,7 +411,7 @@ export default function App() {
     const batchUpdateStatsAndInventory = (drops: Drop[], rollsCount: number, finalEntropy: number) => {
         let creditsFound = 0;
         if (Math.random() < (0.001 * rollsCount)) creditsFound = 1;
-        
+
         setStats(prev => {
             const maxRarityInBatch = Math.max(...drops.filter(d => d.rarityId !== RarityId.MOON).map(d => d.rarityId), prev.bestRarityFound);
             const moonGain = isMoon ? Math.floor(rollsCount * 1.5) : 0;
@@ -422,23 +422,23 @@ export default function App() {
                 if (item && item.id > bestMoonId) bestMoonId = item.id;
             });
 
-            return { 
-                ...prev, 
-                totalRolls: prev.totalRolls + rollsCount, 
-                balance: prev.balance + (isMoon ? 0 : rollsCount), 
+            return {
+                ...prev,
+                totalRolls: prev.totalRolls + rollsCount,
+                balance: prev.balance + (isMoon ? 0 : rollsCount),
                 moonBalance: (prev.moonBalance || 0) + moonGain,
                 bestRarityFound: maxRarityInBatch,
                 bestMoonItemFound: bestMoonId,
-                entropy: finalEntropy, 
+                entropy: finalEntropy,
                 gachaCredits: prev.gachaCredits + creditsFound,
                 totalMoonRolls: (prev.totalMoonRolls || 0) + (isMoon ? rollsCount : 0)
             };
         });
 
         if (creditsFound > 0) audioService.playCoinWin(3);
-        
+
         if (drops.some(d => d.rarityId >= autoStopRarity && d.rarityId !== RarityId.MOON)) setIsAutoSpinning(false);
-        
+
         if (isMoon) {
             setMoonInventory(prev => {
                 const next = [...prev];
@@ -479,30 +479,30 @@ export default function App() {
         const totalLuckMult = luckMultiplier * (levelLuck + genBonuses.bonusLuck) * trophyLuckMult;
         let effectiveLuck = totalLuckMult;
         let consumedPity = false;
-        
+
         if (currentEntropy >= ENTROPY_THRESHOLD) { effectiveLuck = totalLuckMult * 500; consumedPity = true; }
-        
+
         for (let i = 0; i < rollsToPerform; i++) {
             const useLuck = (i === 0 && consumedPity) ? effectiveLuck : totalLuckMult;
-            
+
             let drop: Drop;
             if (isMoon) {
                 drop = generateMoonDrop(stats.totalRolls + i, useLuck);
             } else {
                 drop = generateDrop(stats.totalRolls + i, useLuck);
             }
-            
+
             generatedDrops.push(drop);
-            
+
             if (!isMoon && drop.rarityId >= RarityId.LEGENDARY) { currentEntropy = 0; consumedPity = false; }
             else { if (!consumedPity) currentEntropy++; else currentEntropy = 0; }
         }
-        
+
         const bestDrop = getBestDrop(generatedDrops);
         if (!bestDrop) return;
         setCurrentDrops(generatedDrops);
         batchUpdateStatsAndInventory(generatedDrops, rollsToPerform, currentEntropy);
-        
+
         if (!isMoon) {
             audioService.playBoom(bestDrop.rarityId);
         } else {
@@ -541,7 +541,7 @@ export default function App() {
             audioService.playCoinWin(3);
         }
     };
-    
+
     const handleSetWins = () => {
         const val = parseInt(overrideWins);
         if (!isNaN(val)) {
@@ -557,8 +557,8 @@ export default function App() {
     const currentFishLuck = ((1 + (stats.fishingLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'FISHING').bonusLuck) * trophyLuckMult * fishingLuckMultiplier;
     const currentHarvLuck = ((1 + (stats.harvestingLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'HARVESTING').bonusLuck) * trophyLuckMult * harvestingLuckMultiplier;
 
-    const containerClass = isMoon 
-        ? "bg-slate-950 text-slate-200 selection:bg-slate-200 selection:text-slate-950" 
+    const containerClass = isMoon
+        ? "bg-slate-950 text-slate-200 selection:bg-slate-200 selection:text-slate-950"
         : "bg-background text-text selection:bg-text selection:text-background";
 
     return (
@@ -570,7 +570,7 @@ export default function App() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,_rgba(255,255,255,0.1),transparent_70%)]" />
                     {[...Array(20)].map((_, i) => (
                         <div key={i} className="absolute bg-slate-400 rounded-full animate-float opacity-20"
-                             style={{ width: Math.random()*4+1+'px', height: Math.random()*4+1+'px', left: Math.random()*100+'%', top: Math.random()*100+'%', animationDuration: Math.random()*10+10+'s' }}
+                            style={{ width: Math.random() * 4 + 1 + 'px', height: Math.random() * 4 + 1 + 'px', left: Math.random() * 100 + '%', top: Math.random() * 100 + '%', animationDuration: Math.random() * 10 + 10 + 's' }}
                         />
                     ))}
                 </div>
@@ -645,8 +645,8 @@ export default function App() {
                     activeRightPanel={activeRightPanel}
                     setActiveRightPanel={setActiveRightPanel}
                     miningGame={{
-                        ...currentMiningGame, 
-                        currentDimension: miningDimension, 
+                        ...currentMiningGame,
+                        currentDimension: miningDimension,
                         onToggleDimension: () => setMiningDimension(d => d === 'NORMAL' ? 'GOLD' : 'NORMAL')
                     }}
                     fishingGame={fishingGame}
@@ -723,7 +723,7 @@ export default function App() {
                 setDreamInventory={dreamingGame.setInventory}
                 achievements={ACHIEVEMENTS}
             />
-            
+
             <StatsModal
                 isOpen={modalsState.isStatsOpen}
                 onClose={() => setModalsState(p => ({ ...p, isStatsOpen: false }))}
