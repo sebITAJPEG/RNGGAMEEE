@@ -16,7 +16,7 @@ interface Props {
     onSelectItem: (item: ItemData, rarityId: RarityId) => void;
 }
 
-type Tab = 'ITEMS' | 'ORES' | 'FISH' | 'PLANTS' | 'DREAMS' | 'MOON';
+type Tab = 'ITEMS' | 'ORES' | 'GOLD_ORES' | 'FISH' | 'PLANTS' | 'DREAMS' | 'MOON';
 
 export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreInventory = [], fishInventory = [], plantInventory = [], dreamInventory = [], moonInventory = [], onSelectItem }) => {
     const [activeTab, setActiveTab] = useState<Tab>('ITEMS');
@@ -70,9 +70,13 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
     const foundItems = inventory.filter(i => i.rarityId !== RarityId.MOON).length;
     const percentComplete = Math.min(100, Math.floor((foundItems / totalItems) * 100));
 
-    const totalOres = ORES.length + GOLD_ORES.length;
-    const foundOres = oreInventory.length;
+    const totalOres = ORES.length;
+    const foundOres = oreInventory.filter(i => i.id <= 1000).length;
     const orePercent = Math.min(100, Math.floor((foundOres / totalOres) * 100));
+
+    const totalGoldOres = GOLD_ORES.length;
+    const foundGoldOres = oreInventory.filter(i => i.id > 1000).length;
+    const goldOrePercent = Math.min(100, Math.floor((foundGoldOres / totalGoldOres) * 100));
 
     const totalFish = FISH.length;
     const foundFish = fishInventory.length;
@@ -112,6 +116,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                             <div className="text-[10px] text-neutral-500 font-mono">
                                 {activeTab === 'ITEMS' && `${percentComplete}%`}
                                 {activeTab === 'ORES' && `${orePercent}%`}
+                                {activeTab === 'GOLD_ORES' && `${goldOrePercent}%`}
                                 {activeTab === 'FISH' && `${fishPercent}%`}
                                 {activeTab === 'PLANTS' && `${plantPercent}%`}
                                 {activeTab === 'DREAMS' && `${dreamPercent}%`}
@@ -122,13 +127,13 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                         {/* Tab Switcher */}
                         <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap p-1 bg-neutral-900 rounded border border-neutral-800 gap-1 overflow-x-auto no-scrollbar">
-                                {['ITEMS', 'ORES', 'FISH', 'PLANTS', 'DREAMS', 'MOON'].map((tab) => (
+                                {['ITEMS', 'ORES', 'GOLD_ORES', 'FISH', 'PLANTS', 'DREAMS', 'MOON'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => { audioService.playClick(); setActiveTab(tab as Tab); }}
                                         className={`flex-1 min-w-[60px] py-2 text-[10px] font-mono text-center rounded ${activeTab === tab ? 'bg-neutral-700 text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
                                     >
-                                        {tab}
+                                        {tab === 'GOLD_ORES' ? 'GOLD' : tab}
                                     </button>
                                 ))}
                             </div>
@@ -163,14 +168,15 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                     {/* Statistics Panels */}
                     {activeTab !== 'ITEMS' && (
                         <div className="flex-1 overflow-y-auto p-4">
-                            <div className={`text-xs font-mono mb-4 ${
-                                activeTab === 'ORES' ? 'text-neutral-400' :
-                                activeTab === 'FISH' ? 'text-cyan-400' :
-                                activeTab === 'PLANTS' ? 'text-green-400' :
-                                activeTab === 'DREAMS' ? 'text-purple-400' :
-                                'text-slate-200'
-                            }`}>
-                                {activeTab === 'ORES' && "CATALOGUED RESOURCES FROM SECTOR 7G & DIMENSION AU-79."}
+                            <div className={`text-xs font-mono mb-4 ${activeTab === 'ORES' ? 'text-neutral-400' :
+                                    activeTab === 'GOLD_ORES' ? 'text-yellow-400' :
+                                        activeTab === 'FISH' ? 'text-cyan-400' :
+                                            activeTab === 'PLANTS' ? 'text-green-400' :
+                                                activeTab === 'DREAMS' ? 'text-purple-400' :
+                                                    'text-slate-200'
+                                }`}>
+                                {activeTab === 'ORES' && "CATALOGUED RESOURCES FROM SECTOR 7G."}
+                                {activeTab === 'GOLD_ORES' && "RARE METALS FROM DIMENSION AU-79."}
                                 {activeTab === 'FISH' && "DATA-FORMS FROM THE DEEP WEB."}
                                 {activeTab === 'PLANTS' && "FLORA FROM THE HYDROPONICS BAY."}
                                 {activeTab === 'DREAMS' && "FRAGMENTS FROM THE SUBCONSCIOUS."}
@@ -182,6 +188,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                     <span>Discovered</span>
                                     <span>
                                         {activeTab === 'ORES' && `${foundOres} / ${totalOres}`}
+                                        {activeTab === 'GOLD_ORES' && `${foundGoldOres} / ${totalGoldOres}`}
                                         {activeTab === 'FISH' && `${foundFish} / ${totalFish}`}
                                         {activeTab === 'PLANTS' && `${foundPlants} / ${totalPlants}`}
                                         {activeTab === 'DREAMS' && `${foundDreams} / ${totalDreams}`}
@@ -219,7 +226,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                             ) : activeTab === 'MOON' ? (
                                 <span className="text-sm font-bold font-mono text-slate-200">LUNAR SURFACE</span>
                             ) : (
-                                <span className="text-sm font-bold font-mono text-white">{activeTab} DB</span>
+                                <span className="text-sm font-bold font-mono text-white">{activeTab.replace('_', ' ')} DB</span>
                             )}
                         </div>
                         <button onClick={onClose} className="text-neutral-500 hover:text-white font-mono">[X]</button>
@@ -277,8 +284,8 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                             onClick={() => isVisible && handleMoonClick(item)}
                                             className={`
                                                 relative p-4 border rounded-lg text-center transition-all h-40 flex flex-col items-center justify-center gap-2
-                                                ${isVisible 
-                                                    ? 'border-slate-600 bg-slate-900/40 hover:bg-slate-800 cursor-pointer group shadow-[0_0_15px_rgba(148,163,184,0.1)]' 
+                                                ${isVisible
+                                                    ? 'border-slate-600 bg-slate-900/40 hover:bg-slate-800 cursor-pointer group shadow-[0_0_15px_rgba(148,163,184,0.1)]'
                                                     : 'border-neutral-800 bg-neutral-900/50 opacity-50'
                                                 }
                                             `}
@@ -296,25 +303,30 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                 })}
                             </div>
                         ) : (
-                            // Generic View for Ores/Fish/Plants/Dreams
+                            // Generic View for Ores/Gold Ores/Fish/Plants/Dreams
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {((activeTab === 'ORES' ? ORES.concat(GOLD_ORES) : activeTab === 'FISH' ? FISH : activeTab === 'PLANTS' ? PLANTS : DREAMS) as any[])
+                                {((activeTab === 'ORES' ? ORES : activeTab === 'GOLD_ORES' ? GOLD_ORES : activeTab === 'FISH' ? FISH : activeTab === 'PLANTS' ? PLANTS : DREAMS) as any[])
                                     .sort((a, b) => a.id - b.id)
                                     .map((item) => {
                                         // Determine discovery based on tab sets
-                                        const set = activeTab === 'ORES' ? discoveredOreSet : activeTab === 'FISH' ? discoveredFishSet : activeTab === 'PLANTS' ? discoveredPlantSet : discoveredDreamSet;
+                                        let set;
+                                        if (activeTab === 'ORES' || activeTab === 'GOLD_ORES') set = discoveredOreSet;
+                                        else if (activeTab === 'FISH') set = discoveredFishSet;
+                                        else if (activeTab === 'PLANTS') set = discoveredPlantSet;
+                                        else set = discoveredDreamSet;
+
                                         const isDiscovered = set.has(item.id);
                                         const isVisible = isDiscovered || showSpoilers;
-                                        
+
                                         return (
-                                            <div 
-                                                key={item.id} 
+                                            <div
+                                                key={item.id}
                                                 onClick={() => isVisible && handleResourceClick(item.id, item.name, item.description)}
                                                 className={`
                                                     relative p-4 border rounded-lg text-center transition-all h-40 flex flex-col items-center justify-center gap-2
                                                     ${isVisible ? 'border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800 cursor-pointer group' : 'border-neutral-800 bg-neutral-900/50 opacity-50'}
                                                 `}
-                                                style={{ 
+                                                style={{
                                                     borderColor: isVisible && item.id > 20 ? item.glowColor : undefined,
                                                     boxShadow: isVisible && item.id > 30 ? `0 0 15px ${item.glowColor}22` : 'none'
                                                 }}

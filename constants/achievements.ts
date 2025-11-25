@@ -68,6 +68,18 @@ export const ACHIEVEMENTS: Achievement[] = [
         condition: (stats) => (stats.bestOreMined || 0) >= 26
     },
     {
+        id: 'gold_digger',
+        title: 'GOLD DIGGER',
+        description: 'Unlock the Gold Dimension.',
+        condition: (stats) => !!stats.goldDimensionUnlocked
+    },
+    {
+        id: 'midas',
+        title: 'MIDAS TOUCH',
+        description: 'Mine 10,000 gold ores.',
+        condition: (stats) => (stats.totalGoldMined || 0) >= 10000
+    },
+    {
         id: 'fisher_basic',
         title: 'ANGLER',
         description: 'Catch 500 fish.',
@@ -90,6 +102,12 @@ export const ACHIEVEMENTS: Achievement[] = [
         title: 'BOTANIST',
         description: 'Harvest a Magical plant or rarer.',
         condition: (stats) => (stats.bestPlantHarvested || 0) >= 21
+    },
+    {
+        id: 'dreamer_basic',
+        title: 'SLEEPWALKER',
+        description: 'Enter 50 dreams.',
+        condition: (stats) => (stats.totalDreamt || 0) >= 50
     },
     { id: 'moon_walker', title: 'MOON WALKER', description: 'Travel to the Moon.', condition: (stats) => !!stats.moonTravelUnlocked },
 ];

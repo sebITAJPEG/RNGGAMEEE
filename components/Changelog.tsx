@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface Props {
@@ -11,8 +10,28 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const updates = [
     {
-      version: "2.3.0",
+      version: "3.4.0",
       date: "Current",
+      changes: [
+        "GOLD MINING EXPANSION: Added separate upgrades and crafting recipes specifically for Gold Mining.",
+        "CRAFTING UPDATE: New Gold Mining tools (Pans, Sluices, Dredges) added to the Crafting Panel.",
+        "QUALITY OF LIFE: Added a Mute button to the Mining Panel to toggle mining sounds.",
+        "ACHIEVEMENTS: Added new titles for Gold Mining, Moon Travel, and more.",
+        "BUG FIXES: Fixed an issue where mining multipliers were incorrectly applying across dimensions."
+      ]
+    },
+    {
+      version: "3.3.0",
+      date: "Previous",
+      changes: [
+        "MOON UPDATE: Added Moon dimension with unique resources.",
+        "MOON CRAFTING: Added Moon Amulet to unlock lunar travel.",
+        "UI: Added Moon Inventory and updated visuals for lunar items."
+      ]
+    },
+    {
+      version: "2.3.0",
+      date: "Legacy",
       changes: [
         "MASSIVE CONTENT EXPANSION: Added 50 new Ores, 50 new Fish, and 100 new Plants.",
         "ITEM OVERHAUL: Added 300+ new discoverable items across all rarity tiers.",
@@ -22,7 +41,7 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
     },
     {
       version: "2.2.0",
-      date: "Previous",
+      date: "Legacy",
       changes: [
         "NEW FEATURE: Customizable Themes - Switch between 4 visual styles (Default, Matrix, Cyberpunk, Paper).",
         "THEMES: Access theme switcher in Admin Panel to change the entire UI color scheme.",
@@ -32,7 +51,7 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
     },
     {
       version: "2.1.0",
-      date: "Previous",
+      date: "Legacy",
       changes: [
         "ECONOMY UPDATE: You can now SELL mined ores in the Ore Silo to earn Balance.",
         "NEW UPGRADES: Added Global Luck, Mining Speed, Mining Luck, and Multi-Mining upgrades to the Shop.",
@@ -43,42 +62,13 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
     },
     {
       version: "2.0.0",
-      date: "Previous",
+      date: "Legacy",
       changes: [
         "SYSTEM UPGRADE: Shop is now open! Buy faster speeds and larger multi-roll batches.",
         "PITY SYSTEM: Added 'Entropy' bar. Filling it guarantees a massive luck boost.",
         "BURST MODE: Unlockable module to simulate 50 rolls instantly.",
         "CONTENT EXPANSION: Added 150+ new items across all rarity tiers.",
         "UI: Visuals now support displaying 10+ items at once without hiding them."
-      ]
-    },
-    {
-      version: "1.6.1",
-      date: "Legacy",
-      changes: [
-        "INVENTORY OVERHAUL: Added a dedicated storage section for every Variant type.",
-        "Added Sidebar Navigation to the Inventory for filtering by Normal, Gilded, Holographic, etc.",
-        "Inventory layout is now wider and uses a grid system for better visibility.",
-      ]
-    },
-    {
-      version: "1.6.0",
-      date: "Legacy",
-      changes: [
-        "ADDED VARIANT SYSTEM: Items of Epic rarity and above can now roll with 10 unique variants (e.g., Gilded, Volcanic, Quantum).",
-        "ADDED RARITY MULTIPLIERS: Variants multiply the base rarity of an item (up to x10,000 for 'Pure').",
-        "VISUAL OVERHAUL: Variants have unique text effects, glows, and borders in the main view and inventory.",
-        "Inventory sorting now prioritizes variants."
-      ]
-    },
-    {
-      version: "1.5.0",
-      date: "Legacy",
-      changes: [
-        "Added Index Catalog: View all discoverable items.",
-        "Added Item Visualizer: 3D Holographic card view for items.",
-        "Replay Cutscenes: You can now replay cutscenes from the Visualizer.",
-        "Audio Overhaul: Added cinematic procedural audio engines for cutscenes."
       ]
     }
   ];
