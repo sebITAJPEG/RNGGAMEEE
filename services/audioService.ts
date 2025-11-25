@@ -4,7 +4,7 @@ class AudioService {
     private ctx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
     private globalVolume: number = 0.4; // Default volume (40%)
-    
+
     // Signal specific nodes
     private signalOsc: OscillatorNode | null = null;
     private signalGain: GainNode | null = null;
@@ -267,7 +267,7 @@ class AudioService {
 
             // Very short envelope
             gain.gain.setValueAtTime(0, this.ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.05, this.ctx.currentTime + 0.01); 
+            gain.gain.linearRampToValueAtTime(0.05, this.ctx.currentTime + 0.01);
             gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
 
             osc.start(this.ctx.currentTime);

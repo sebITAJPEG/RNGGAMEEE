@@ -96,7 +96,7 @@ export const RightPanel: React.FC<Props> = ({
                         onOpenInventory={() => { audioService.playClick(); setIsOreInventoryOpen(true); }}
                         // EXTRACTED FROM injected miningGame prop
                         currentDimension={miningGame.currentDimension || 'NORMAL'}
-                        onToggleDimension={miningGame.onToggleDimension || (() => {})}
+                        onToggleDimension={miningGame.onToggleDimension || (() => { })}
                         isGoldUnlocked={stats.goldDimensionUnlocked}
                         balance={stats.balance}
                     />
