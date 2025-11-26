@@ -9,16 +9,14 @@ export const GoldenRatioHTMLView = () => {
     <title>The Golden Ratio Ore</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; }
-        /* CSS Radial Gradient for the deep space background */
         #canvas-container {
             width: 100%;
             height: 100vh;
             background: radial-gradient(circle at center, #1a1500 0%, #000000 100%);
-            cursor: move; /* Indicate interactivity */
+            cursor: move;
         }
-        /* UI HIDDEN AS REQUESTED */
+        /* Original UI Styling Restored */
         #ui {
-            display: none !important;
             position: absolute;
             bottom: 30px;
             left: 30px;
@@ -64,13 +62,11 @@ export const GoldenRatioHTMLView = () => {
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-        // --- CONFIG ---
-        const PHI = (1 + Math.sqrt(5)) / 2; // 1.618...
+        const PHI = (1 + Math.sqrt(5)) / 2;
         const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-        const SHARD_COUNT = 250; // Increased count
-        const PARTICLE_COUNT = 3000; // Increased count
+        const SHARD_COUNT = 250;
+        const PARTICLE_COUNT = 3000;
 
-        // --- SCENE SETUP ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = null; 
@@ -84,27 +80,23 @@ export const GoldenRatioHTMLView = () => {
         renderer.toneMapping = THREE.ReinhardToneMapping;
         container.appendChild(renderer.domElement);
 
-        // --- CONTROLS ---
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.autoRotate = true;
-        controls.autoRotateSpeed = 1.0; // Gentle drift
+        controls.autoRotateSpeed = 1.0;
         controls.enablePan = false;
         controls.minDistance = 5;
         controls.maxDistance = 30;
 
-        // --- 1. THE CORE (PURE ENERGY) ---
         const coreGroup = new THREE.Group();
         scene.add(coreGroup);
 
-        // Inner solid core
         const coreGeo = new THREE.IcosahedronGeometry(1.2, 16);
         const coreMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
         const core = new THREE.Mesh(coreGeo, coreMat);
         coreGroup.add(core);
 
-        // Containment Cage (Wireframe)
         const cageGeo = new THREE.IcosahedronGeometry(1.4, 2);
         const cageMat = new THREE.MeshBasicMaterial({ 
             color: 0xffaa00, 
@@ -118,10 +110,9 @@ export const GoldenRatioHTMLView = () => {
         const coreLight = new THREE.PointLight(0xFFD700, 15, 25);
         scene.add(coreLight);
 
-        // --- 1.5 ENERGY BEAMS (Volumetric Spikes) ---
         const beamGeo = new THREE.CylinderGeometry(0.02, 0.1, 8, 8);
-        beamGeo.translate(0, 4, 0); // Offset so pivot is at base
-        beamGeo.rotateX(Math.PI / 2); // Point along Z
+        beamGeo.translate(0, 4, 0);
+        beamGeo.rotateX(Math.PI / 2);
         const beamMat = new THREE.MeshBasicMaterial({
             color: 0xffdd44,
             transparent: true,
@@ -137,16 +128,15 @@ export const GoldenRatioHTMLView = () => {
         const beamDummy = new THREE.Object3D();
         for(let i=0; i<beamCount; i++) {
             beamDummy.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
-            beamDummy.scale.set(1, 1, 0.5 + Math.random()); // Random lengths
+            beamDummy.scale.set(1, 1, 0.5 + Math.random());
             beamDummy.updateMatrix();
             beams.setMatrixAt(i, beamDummy.matrix);
         }
 
-        // --- 2. THE SHELL (OBSIDIAN SHARDS) ---
         const shardGeo = new THREE.DodecahedronGeometry(0.25, 0);
         const shardMat = new THREE.MeshPhysicalMaterial({
             color: 0x050505,
-            roughness: 0.05, // Polished
+            roughness: 0.05,
             metalness: 0.2,
             transmission: 0.1,
             thickness: 1.5,
@@ -180,7 +170,6 @@ export const GoldenRatioHTMLView = () => {
             shellMesh.setMatrixAt(i, dummy.matrix);
         }
 
-        // --- 3. THE FIELD (FIBONACCI PARTICLES) ---
         const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(PARTICLE_COUNT * 3);
         const randoms = new Float32Array(PARTICLE_COUNT);
@@ -211,19 +200,16 @@ export const GoldenRatioHTMLView = () => {
                 varying float vAlpha;
                 void main() {
                     vec3 pos = position;
-                    // Complex orbit: varied speed based on height
                     float speed = 0.1 + aRandom * 0.1;
                     float angle = uTime * speed + aRandom * 6.0;
                     float c = cos(angle);
                     float s = sin(angle);
                     
-                    // Rotate around Y
                     float nx = pos.x * c - pos.z * s;
                     float nz = pos.x * s + pos.z * c;
                     pos.x = nx;
                     pos.z = nz;
                     
-                    // Gentle vertical wave
                     pos.y += sin(uTime * 0.5 + aRandom * 10.0) * 0.2;
 
                     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
@@ -251,18 +237,15 @@ export const GoldenRatioHTMLView = () => {
         const particles = new THREE.Points(particleGeo, particleMat);
         scene.add(particles);
 
-        // --- 4. POST-PROCESSING (Enhanced) ---
         const composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
 
-        // Bloom
         const bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             2.5, 0.8, 0.0
         );
         composer.addPass(bloomPass);
 
-        // Chromatic Aberration Shader (The "Lens Glitch")
         const chromaticAberrationShader = {
             uniforms: {
                 tDiffuse: { value: null },
@@ -291,7 +274,6 @@ export const GoldenRatioHTMLView = () => {
         const chromPass = new ShaderPass(chromaticAberrationShader);
         composer.addPass(chromPass);
 
-        // Film Grain
         const grainShader = {
             uniforms: {
                 tDiffuse: { value: null },
@@ -327,7 +309,6 @@ export const GoldenRatioHTMLView = () => {
         grainPass.renderToScreen = true;
         composer.addPass(grainPass);
 
-        // --- 5. LIGHTING & ANIMATION ---
         const rimLight = new THREE.DirectionalLight(0xffffff, 4);
         rimLight.position.set(10, 10, 5);
         scene.add(rimLight);
@@ -341,29 +322,22 @@ export const GoldenRatioHTMLView = () => {
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
+            controls.update(); 
 
-            // Controls
-            controls.update(); // Required for autoRotate and damping
-
-            // Cage Rotation
             cage.rotation.y = -time * 0.2;
             cage.rotation.x = time * 0.1;
 
-            // Core Glitch Logic
-            let chromaticAmount = 0.002; // Base level
+            let chromaticAmount = 0.002; 
             
             if (Math.random() > 0.98) {
-                // Glitch frame
                 const glitchScale = 1.0 + Math.random() * 0.6;
                 core.scale.setScalar(glitchScale);
                 cage.scale.setScalar(glitchScale * 1.1);
-                coreMat.color.setHex(0xFFFFFF); // Flash white
+                coreMat.color.setHex(0xFFFFFF); 
                 
-                // Increase beams visibility
                 beamMat.opacity = 0.8;
                 beams.rotation.z += Math.random();
 
-                // Heavy chromatic aberration
                 chromaticAmount = 0.02 + Math.random() * 0.03;
                 
                 if(uiStability) {
@@ -371,13 +345,11 @@ export const GoldenRatioHTMLView = () => {
                     uiStability.style.color = "red";
                 }
             } else {
-                // Recovery
                 core.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
                 cage.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
                 coreMat.color.lerp(new THREE.Color(0xFFD700), 0.1);
                 beamMat.opacity = THREE.MathUtils.lerp(beamMat.opacity, 0.15, 0.1);
                 
-                // Beams slow rotation
                 beams.rotation.y = time * 0.1;
                 beams.rotation.x = time * 0.05;
 
@@ -387,10 +359,8 @@ export const GoldenRatioHTMLView = () => {
                 }
             }
             
-            // Apply Chromatic Aberration
             chromPass.uniforms.amount.value = THREE.MathUtils.lerp(chromPass.uniforms.amount.value, chromaticAmount, 0.1);
 
-            // Shards Breathing
             const breath = Math.sin(time * PHI) * 0.2 + 1.0;
             
             for (let i = 0; i < SHARD_COUNT; i++) {
@@ -404,7 +374,6 @@ export const GoldenRatioHTMLView = () => {
                 const rotSpeed = shardRotSpeeds[i];
                 dummy.rotateOnAxis(rotAxis, rotSpeed * 0.02);
 
-                // Re-apply scale logic slightly modified by breath
                 const s = (0.4 + (i%5)*0.1) * (1.0 - (breath - 1.0) * 0.2);
                 dummy.scale.setScalar(s);
                 
@@ -414,7 +383,6 @@ export const GoldenRatioHTMLView = () => {
             shellMesh.instanceMatrix.needsUpdate = true;
             shellMesh.rotation.y = time * 0.05;
 
-            // Particles
             particleMat.uniforms.uTime.value = time;
             grainPass.uniforms.time.value = time;
 
@@ -449,7 +417,8 @@ export const GoldenRatioHTMLView = () => {
                 width: '100%',
                 height: '100%',
                 border: 'none',
-                backgroundColor: 'black'
+                backgroundColor: 'black',
+                borderRadius: '0.75rem'
             }}
             title="The Golden Ratio"
         />
