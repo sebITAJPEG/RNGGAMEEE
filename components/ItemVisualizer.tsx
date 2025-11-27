@@ -23,6 +23,7 @@ import { CrystallizedThoughtHTMLView } from './models/CrystallizedThoughtHTMLVie
 import { HypercubeFragmentHTMLView } from './models/HypercubeFragmentHTMLView';
 import { SoundShardHTMLView } from './models/SoundShardHTMLView';
 import { AntimatterHTMLView } from './models/AntimatterHTMLView';
+import { DarkMatterHTMLView } from './models/DarkMatterHTMLView';
 import { FrozenTimeHTMLView } from './models/FrozenTimeHTMLView'; // Add Frozen Time
 import { SolidLightHTMLView } from './models/SolidLightHTMLView';
 import { StrangeMatterHTMLView } from './models/StrangeMatterHTMLView';
@@ -97,7 +98,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
 
   const isSpecial = [
     "Black Hole Core", "Sound Shard",
-    "Solar Plasma", "The Golden Ratio", "Neutronium", "Crystallized Thought", "Hypercube Fragment", "Antimatter",
+    "Solar Plasma", "The Golden Ratio", "Neutronium", "Crystallized Thought", "Hypercube Fragment", "Antimatter", "Dark Matter",
     "Frozen Time", "Solid Light", "Strange Matter"
   ].includes(item.text);
 
@@ -109,10 +110,11 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isHypercubeFragment = item.text === "Hypercube Fragment";
   const isSoundShard = item.text === "Sound Shard";
   const isAntimatter = item.text === "Antimatter";
+  const isDarkMatter = item.text === "Dark Matter";
   const isFrozenTime = item.text === "Frozen Time";
   const isSolidLight = item.text === "Solid Light";
   const isStrangeMatter = item.text === "Strange Matter";
-  const isHtmlView = isSolarPlasma || isGoldenRatio || isNeutronium || isCrystallizedThought || isHypercubeFragment || isSoundShard || isAntimatter || isFrozenTime || isSolidLight || isStrangeMatter;
+  const isHtmlView = isSolarPlasma || isGoldenRatio || isNeutronium || isCrystallizedThought || isHypercubeFragment || isSoundShard || isAntimatter || isDarkMatter || isFrozenTime || isSolidLight || isStrangeMatter;
 
   const isOre = !!oreData;
   const modelColor = oreData ? oreData.glowColor : '#888';
@@ -146,6 +148,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
               <SoundShardHTMLView />
             ) : isAntimatter ? (
               <AntimatterHTMLView />
+            ) : isDarkMatter ? (
+              <DarkMatterHTMLView />
             ) : isFrozenTime ? (
               <FrozenTimeHTMLView />
             ) : isSolidLight ? (
