@@ -8,7 +8,7 @@ import {
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import { RarityId, ItemData, VariantId } from '../types';
-import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES } from '../constants';
+import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS } from '../constants';
 
 // Import all localized models
 import { BlackHoleModel } from './models/BlackHoleModel';
@@ -27,6 +27,7 @@ import { DarkMatterHTMLView } from './models/DarkMatterHTMLView';
 import { FrozenTimeHTMLView } from './models/FrozenTimeHTMLView'; // Add Frozen Time
 import { SolidLightHTMLView } from './models/SolidLightHTMLView';
 import { StrangeMatterHTMLView } from './models/StrangeMatterHTMLView';
+import { TheSpectrumHTMLView } from './models/TheSpectrumHTMLView';
 
 // --- SCENE CONTENT ---
 
@@ -96,11 +97,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
     return ORES.find(o => o.name === item.text) || GOLD_ORES.find(o => o.name === item.text);
   }, [item.text]);
 
-  const isSpecial = [
-    "Black Hole Core", "Sound Shard",
-    "Solar Plasma", "The Golden Ratio", "Neutronium", "Crystallized Thought", "Hypercube Fragment", "Antimatter", "Dark Matter",
-    "Frozen Time", "Solid Light", "Strange Matter"
-  ].includes(item.text);
+  const isSpecial = SPECIAL_HTML_ITEMS.includes(item.text);
 
   // Special HTML Views
   const isSolarPlasma = item.text === "Solar Plasma";
@@ -114,24 +111,41 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isFrozenTime = item.text === "Frozen Time";
   const isSolidLight = item.text === "Solid Light";
   const isStrangeMatter = item.text === "Strange Matter";
-  const isHtmlView = isSolarPlasma || isGoldenRatio || isNeutronium || isCrystallizedThought || isHypercubeFragment || isSoundShard || isAntimatter || isDarkMatter || isFrozenTime || isSolidLight || isStrangeMatter;
+  const isTheSpectrum = item.text === "The Spectrum";
+  
+  const isHtmlView = isSpecial; // Assume all special items are HTML views now
+  // @ts-ignore - isFullScreen might not be in ItemData type definition yet but passed from App
+  const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
   const isOre = !!oreData;
   const modelColor = oreData ? oreData.glowColor : '#888';
   const borderClass = hasVariant ? variant.borderClass : tier.color;
   const intensity = (tier.id / 2) + (variant.multiplier > 1 ? 2 : 0);
 
+  const containerClasses = isFullScreen
+    ? "fixed inset-0 w-full h-full z-[100] bg-black"
+    : `relative w-full max-w-lg h-[600px] rounded-xl border-2 ${borderClass} bg-neutral-900 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group cursor-default flex flex-col`;
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md perspective-1000" onClick={onClose}>
       <motion.div
         ref={ref}
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        style={!isFullScreen ? { rotateX, rotateY, transformStyle: "preserve-3d" } : {}}
         // @ts-ignore
-        onPointerMove={handlePointerMove}
-        onMouseLeave={handleMouseLeave}
+        onPointerMove={!isFullScreen ? handlePointerMove : undefined}
+        onMouseLeave={!isFullScreen ? handleMouseLeave : undefined}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full max-w-lg h-[600px] rounded-xl border-2 ${borderClass} bg-neutral-900 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group cursor-default flex flex-col`}
+        className={containerClasses}
       >
+        {isFullScreen && (
+            <button 
+                onClick={onClose}
+                className="absolute top-4 right-4 z-[110] text-white/50 hover:text-white text-2xl font-bold p-2 bg-black/20 hover:bg-black/50 rounded-full transition-colors w-10 h-10 flex items-center justify-center"
+            >
+                ✕
+            </button>
+        )}
+
         {(isOre || isSpecial) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
@@ -156,6 +170,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
               <SolidLightHTMLView />
             ) : isStrangeMatter ? (
               <StrangeMatterHTMLView />
+            ) : isTheSpectrum ? (
+              <TheSpectrumHTMLView />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />

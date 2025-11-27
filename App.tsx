@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, OreInventoryItem, FishInventoryItem, PlantInventoryItem, CraftableItem, MoonInventoryItem } from './types';
-import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, MINING_SPEEDS, ORES, GOLD_ORES, PRISM_ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS, DREAMS, PHRASES, MOON_ITEMS } from './constants';
+import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, MINING_SPEEDS, ORES, GOLD_ORES, PRISM_ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS, DREAMS, PHRASES, MOON_ITEMS, SPECIAL_HTML_ITEMS } from './constants';
 import { generateDrop, generateMoonDrop } from './services/rngService';
 import { mineOre } from './services/miningService';
 import { catchFish } from './services/fishingService';
@@ -103,7 +103,7 @@ export default function App() {
         isStatsOpen: false, isUnlockConditionsOpen: false
     });
 
-    const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId }) | null>(null);
+    const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId, isFullScreen?: boolean }) | null>(null);
 
     // Config State
     const [autoSpinSpeed, setAutoSpinSpeed] = useState(SPEED_TIERS[stats.speedLevel]?.ms || 250);
@@ -169,6 +169,13 @@ export default function App() {
     const mineBonuses = getCraftingBonuses(stats.equippedItems, 'MINING');
     const goldMineBonuses = getCraftingBonuses(stats.equippedItems, 'GOLD_MINING');
 
+    // Helper for auto-inspecting special items found in sub-games
+    const handleSubGameFind = (item: any) => {
+        if (item.name && SPECIAL_HTML_ITEMS.includes(item.name)) {
+            handleInspectResource(item);
+        }
+    };
+
     // NOTE: We pass a wrapper function for playing sound that checks the mute state
     const playNormalMineSound = () => { if (!isMiningMuted) audioService.playMineSound(); };
     const playGoldMineSound = () => { if (!isMiningMuted) audioService.playGoldMineSound(); };
@@ -185,6 +192,7 @@ export default function App() {
         isMuted: isMiningMuted // Pass mute state to subgame
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalMined: (prev.totalMined || 0) + count, bestOreMined: Math.max(prev.bestOreMined || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
+        onFind: handleSubGameFind,
         playBoom: audioService.playBoom.bind(audioService),
         playRare: audioService.playRaritySound.bind(audioService),
         playCoinWin: audioService.playCoinWin.bind(audioService)
@@ -201,6 +209,7 @@ export default function App() {
         isMuted: isMiningMuted // Pass mute state to subgame
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalGoldMined: (prev.totalGoldMined || 0) + count, bestGoldOreMined: Math.max(prev.bestGoldOreMined || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
+        onFind: handleSubGameFind,
         playBoom: audioService.playBoom.bind(audioService),
         playRare: audioService.playRaritySound.bind(audioService),
         playCoinWin: audioService.playCoinWin.bind(audioService)
@@ -217,6 +226,7 @@ export default function App() {
         isMuted: isMiningMuted
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalPrismMined: (prev.totalPrismMined || 0) + count, bestPrismOreMined: Math.max(prev.bestPrismOreMined || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
+        onFind: handleSubGameFind,
         playBoom: audioService.playPrismRaritySound.bind(audioService),
         playRare: audioService.playPrismRaritySound.bind(audioService),
         playCoinWin: audioService.playCoinWin.bind(audioService)
@@ -235,6 +245,7 @@ export default function App() {
         thresholds: { boom: 25, rare: 15, boomDivisor: 3 }
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalFished: (prev.totalFished || 0) + count, bestFishCaught: Math.max(prev.bestFishCaught || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
+        onFind: handleSubGameFind,
         playBoom: audioService.playBoom.bind(audioService),
         playRare: audioService.playRaritySound.bind(audioService),
         playCoinWin: audioService.playCoinWin.bind(audioService)
@@ -251,6 +262,7 @@ export default function App() {
         thresholds: { boom: 25, rare: 15, boomDivisor: 3 }
     }, {
         onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalHarvested: (prev.totalHarvested || 0) + count, bestPlantHarvested: Math.max(prev.bestPlantHarvested || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
+        onFind: handleSubGameFind,
         playBoom: audioService.playBoom.bind(audioService),
         playRare: audioService.playRaritySound.bind(audioService),
         playCoinWin: audioService.playCoinWin.bind(audioService)
@@ -372,7 +384,7 @@ export default function App() {
 
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ text: item.name, description: item.description, rarityId: rarityId, variantId: VariantId.NONE });
+        setInspectedItem({ text: item.name, description: item.description, rarityId: rarityId, variantId: VariantId.NONE, isFullScreen: true });
         setModalsState(prev => ({ ...prev, isOreInventoryOpen: false, isFishInventoryOpen: false, isPlantInventoryOpen: false, isIndexOpen: false, isMoonInventoryOpen: false }));
     };
 
@@ -438,7 +450,7 @@ export default function App() {
     const handleIndexSelectItem = (item: ItemData, rarityId: RarityId) => {
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ text: item.text, description: item.description, rarityId: rarityId, cutscenePhrase: item.cutscenePhrase });
+        setInspectedItem({ text: item.text, description: item.description, rarityId: rarityId, cutscenePhrase: item.cutscenePhrase, isFullScreen: false });
     };
 
     const toggleLock = (item: InventoryItem) => {
@@ -570,6 +582,19 @@ export default function App() {
         } else {
             audioService.playRaritySound(RarityId.MYTHICAL);
         }
+
+        // Auto-inspect special HTML items
+        if (SPECIAL_HTML_ITEMS.includes(bestDrop.text)) {
+            setIsAutoSpinning(false);
+            setInspectedItem({ 
+                text: bestDrop.text, 
+                description: bestDrop.description, 
+                rarityId: bestDrop.rarityId, 
+                variantId: bestDrop.variantId,
+                cutscenePhrase: bestDrop.cutscenePhrase,
+                isFullScreen: true 
+            });
+        }
     }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.equippedItems, trophyLuckMult, autoStopRarity, isMoon]);
 
     const savedHandleRoll = useRef(handleRoll);
@@ -589,7 +614,7 @@ export default function App() {
     const handleInspectItem = (item: InventoryItem) => {
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ text: item.text, description: item.description, rarityId: item.rarityId, variantId: item.variantId, cutscenePhrase: '' });
+        setInspectedItem({ text: item.text, description: item.description, rarityId: item.rarityId, variantId: item.variantId, cutscenePhrase: '', isFullScreen: true });
         setModalsState(prev => ({ ...prev, isInventoryOpen: false }));
     };
 

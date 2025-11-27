@@ -1,8 +1,15 @@
 
 import { FISH } from '../constants';
 import { Fish } from '../types';
+import { scriptedRng } from './rngService';
 
 export const catchFish = (luckMultiplier: number = 1): Fish => {
+  const scriptedName = scriptedRng.checkScript('FISH');
+  if (scriptedName) {
+      const found = FISH.find(f => f.name === scriptedName);
+      if (found) return found;
+  }
+
   const rand = Math.random();
   
   // Sort fish by probability (rare to common)

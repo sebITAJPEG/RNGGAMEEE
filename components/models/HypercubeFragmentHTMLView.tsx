@@ -7,8 +7,9 @@ export const HypercubeFragmentHTMLView = () => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hypercube Fragment [Ascended]</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', monospace; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Share Tech Mono', monospace; }
         #canvas-container { width: 100vw; height: 100vh; }
         
         /* Main UI (Hidden during cutscene) */
@@ -33,15 +34,46 @@ export const HypercubeFragmentHTMLView = () => {
             position: absolute;
             top: 45%;
             width: 100%;
-            text-align: center;
-            color: #fff;
-            font-size: 1.5rem;
-            letter-spacing: 8px;
-            text-shadow: 0 0 15px #fff;
-            opacity: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px #00ffff;
+            opacity: 0; /* Managed by JS */
             pointer-events: none;
             z-index: 50;
-            mix-blend-mode: overlay;
+        }
+
+        .char {
+            display: inline-block;
+            opacity: 0;
+            transform: translate(0, -20px);
+            filter: blur(5px);
+            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .char.visible {
+            opacity: 1;
+            transform: translate(0, 0);
+            filter: blur(0px);
+        }
+        
+        .space { display: inline-block; width: 0.5em; }
+
+        .glitch-text {
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
         }
         
         #flash-overlay {
@@ -464,20 +496,91 @@ export const HypercubeFragmentHTMLView = () => {
 
         // --- CUTSCENE LOGIC ---
         let inCutscene = true;
-        let cutsceneStartTime = 0;
         let shakeIntensity = 0;
-        let hasPlayedImpact = false;
+        let isBreached = false;
+        let breachTime = 0;
 
         const uiDiv = document.getElementById('ui');
         const cinemaText = document.getElementById('cinema-text');
         const flashOverlay = document.getElementById('flash-overlay');
+        
+        const phrases = [
+            "THE THIRD DIMENSION IS A CAGE.",
+            "ANGLES THAT DO NOT EXIST.",
+            "SHAPES THAT CANNOT BE.",
+            "REALITY ANCHOR: DESTABILIZED.",
+            "FOLDING SPACE...",
+            "WITNESS...",
+            "THE TESSERACT."
+        ];
+
+        async function playCutsceneText() {
+            cinemaText.style.opacity = '1';
+            
+            for (let i = 0; i < phrases.length; i++) {
+                const text = phrases[i];
+                cinemaText.innerHTML = '';
+                cinemaText.className = ''; // Reset glitch
+                
+                if (i > 3) shakeIntensity = 0.05 * (i - 2); // Increase shake
+
+                for(let c=0; c<text.length; c++) {
+                    const span = document.createElement('span');
+                    if(text[c] === ' ') {
+                        span.className = 'space';
+                        span.innerHTML = '&nbsp;';
+                    } else {
+                        span.textContent = text[c];
+                        span.className = 'char';
+                    }
+                    cinemaText.appendChild(span);
+                    
+                    // Slam effect
+                    requestAnimationFrame(() => span.classList.add('visible'));
+                    
+                    // Tech typing sound (random pitch noise)
+                    if (audioContext) {
+                        const osc = audioContext.createOscillator();
+                        osc.type = 'square';
+                        osc.frequency.value = 200 + Math.random() * 500;
+                        const g = audioContext.createGain();
+                        g.gain.value = 0.05;
+                        osc.connect(g); g.connect(masterGain);
+                        osc.start(); osc.stop(audioContext.currentTime + 0.03);
+                    }
+                    
+                    await new Promise(r => setTimeout(r, 30));
+                }
+                
+                // Glitch effect on full text
+                cinemaText.classList.add('glitch-text');
+                
+                await new Promise(r => setTimeout(r, 1500));
+                
+                // Clear
+                cinemaText.innerHTML = '';
+                await new Promise(r => setTimeout(r, 300));
+            }
+            
+            // Trigger Breach
+            triggerBreach();
+        }
+
+        function triggerBreach() {
+            playImpact();
+            flashOverlay.style.opacity = 1.0;
+            isBreached = true;
+            breachTime = performance.now() / 1000;
+            cinemaText.style.display = 'none'; // Hide text container
+        }
 
         function startCutscene() {
             initAudio(); // Try to start audio if allowed
             playRiser();
             inCutscene = true;
-            hasPlayedImpact = false;
-            cutsceneStartTime = performance.now() / 1000;
+            isBreached = false;
+            shakeIntensity = 0;
+            
             camera.position.copy(startPos);
             camera.lookAt(0,0,0);
             controls.enabled = false;
@@ -486,12 +589,15 @@ export const HypercubeFragmentHTMLView = () => {
             mask1.scale.set(0,0,0);
             mask2.scale.set(0,0,0);
             uiDiv.style.opacity = 0;
+            cinemaText.style.display = 'flex';
             cinemaText.style.opacity = 0;
             flashOverlay.style.opacity = 0;
+            
+            playCutsceneText();
         }
 
-        // Start automatically
-        startCutscene();
+        // Auto-start after slight delay
+        setTimeout(startCutscene, 500);
 
         // --- ANIMATION ---
         const clock = new THREE.Clock();
@@ -504,59 +610,39 @@ export const HypercubeFragmentHTMLView = () => {
             const time = clock.getElapsedTime();
             const now = performance.now() / 1000;
 
-            // Cutscene Management
+            // Cutscene Updates
             if (inCutscene) {
-                const t = now - cutsceneStartTime;
-                
-                // 1. Shake Phase (0s - 3s)
-                if (t < 3.0) {
-                    shakeIntensity = Math.min(t * 0.02, 0.1);
+                // Shake
+                if (shakeIntensity > 0) {
                     camera.position.x = startPos.x + (Math.random() - 0.5) * shakeIntensity;
                     camera.position.y = startPos.y + (Math.random() - 0.5) * shakeIntensity;
-                    
-                    if (t > 1.0) {
-                        cinemaText.style.opacity = 1;
-                        cinemaText.innerText = "REALITY ANCHOR DESTABILIZING...";
-                        cinemaText.style.color = (t % 0.2 < 0.1) ? "#ff0050" : "#fff"; // Flicker
-                    }
-                } 
-                // 2. The Breach (3s)
-                else if (t >= 3.0 && t < 3.1) {
-                    if(!hasPlayedImpact) {
-                        playImpact();
-                        hasPlayedImpact = true;
-                    }
-                    flashOverlay.style.opacity = 1.0;
-                    cinemaText.innerText = "DIMENSIONAL BREACH";
-                    cinemaText.style.color = "#00ffff";
                 }
-                // 3. Fade Out & Reveal (3.1s - 7s)
-                else {
-                    const flyTime = t - 3.0;
-                    // Flash fade
-                    flashOverlay.style.opacity = Math.max(0, 1.0 - flyTime * 2.0);
+                
+                if (isBreached) {
+                    const t = now - breachTime;
+                    
+                    // Flash Fade
+                    flashOverlay.style.opacity = Math.max(0, 1.0 - t * 1.5);
                     
                     // Portal Pop
-                    const pop = Math.min(flyTime * 3, 1.0);
-                    const elastic = 1 + Math.pow(2, -10 * pop) * Math.sin((pop - 0.1) / 0.4); // Elastic bounce
+                    const pop = Math.min(t * 2.0, 1.0);
+                    const elastic = 1 + Math.pow(2, -10 * pop) * Math.sin((pop - 0.1) / 0.4);
                     const finalScale = (pop > 0.99) ? 1.0 : elastic;
                     mask1.scale.setScalar(finalScale);
                     mask2.scale.setScalar(finalScale);
 
-                    // Camera fly back
-                    const duration = 4.0;
-                    const alpha = Math.min(flyTime / duration, 1.0);
+                    // Camera Fly Back
+                    const duration = 3.0;
+                    const alpha = Math.min(t / duration, 1.0);
                     const ease = 1 - Math.pow(1 - alpha, 3);
-                    
                     camera.position.lerpVectors(startPos, defaultPos, ease);
                     camera.lookAt(0,0,0);
-
-                    // UI Fade in
-                    if(flyTime > 2.0) {
-                        uiDiv.style.opacity = 1;
-                        cinemaText.style.opacity = Math.max(0, 1 - (flyTime - 2.0));
+                    
+                    // UI Fade In
+                    if (t > 2.0) {
+                        uiDiv.style.opacity = Math.min(1, (t - 2.0));
                     }
-
+                    
                     if (alpha >= 1.0) {
                         inCutscene = false;
                         controls.enabled = true;
@@ -564,7 +650,6 @@ export const HypercubeFragmentHTMLView = () => {
                 }
             } else {
                 controls.update();
-                // Ensure masks act normal
                 mask1.scale.set(1,1,1);
                 mask2.scale.set(1,1,1);
             }

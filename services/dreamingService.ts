@@ -1,7 +1,14 @@
 import { DREAMS } from '../constants';
 import { Dream } from '../types';
+import { scriptedRng } from './rngService';
 
 export const rollDream = (depth: number, luckMultiplier: number = 1): Dream => {
+    const scriptedName = scriptedRng.checkScript('DREAM');
+    if (scriptedName) {
+        const found = DREAMS.find(d => d.name === scriptedName);
+        if (found) return found;
+    }
+
     const rand = Math.random();
 
     // Depth acts as a base multiplier for rarity.

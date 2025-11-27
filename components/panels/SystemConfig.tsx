@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { THEMES } from '../../themes';
-import { ORES, GOLD_ORES, FISH, PLANTS, DREAMS, PHRASES, MOON_ITEMS } from '../../constants';
+import { ORES, GOLD_ORES, PRISM_ORES, FISH, PLANTS, DREAMS, PHRASES, MOON_ITEMS } from '../../constants';
 import { RarityId, VariantId, GameStats, InventoryItem, MoonInventoryItem, OreInventoryItem, FishInventoryItem, PlantInventoryItem, DreamInventoryItem } from '../../types';
 import { audioService } from '../../services/audioService';
+import { scriptedRng } from '../../services/rngService';
 
 interface Props {
     isOpen: boolean;
@@ -67,6 +68,12 @@ export const SystemConfig: React.FC<Props> = ({
 }) => {
     const [debugItemSearch, setDebugItemSearch] = useState('');
     const [selectedDebugItem, setSelectedDebugItem] = useState<any>(null);
+    
+    // Scripted Find State
+    const [scriptRolls, setScriptRolls] = useState(5);
+    const [scriptType, setScriptType] = useState<'ORE'|'FISH'|'PLANT'|'DREAM'>('ORE');
+    const [scriptTarget, setScriptTarget] = useState<string>('');
+    const [scriptStatus, setScriptStatus] = useState<string>('');
 
     if (!isOpen) return null;
 
@@ -149,6 +156,24 @@ export const SystemConfig: React.FC<Props> = ({
             if (selectedDebugItem.type === 'DREAM') adder(setDreamInventory);
         }
         audioService.playCoinWin(5);
+    };
+
+    const getScriptTargets = () => {
+        if(scriptType === 'ORE') {
+            // Allow scripting any ore regardless of current dimension
+            return [...ORES, ...GOLD_ORES, ...PRISM_ORES].sort((a, b) => a.id - b.id);
+        }
+        if(scriptType === 'FISH') return FISH;
+        if(scriptType === 'PLANT') return PLANTS;
+        if(scriptType === 'DREAM') return DREAMS;
+        return [];
+    };
+
+    const applyScript = () => {
+        if(!scriptTarget) return;
+        scriptedRng.setScript(scriptTarget, scriptType, scriptRolls);
+        setScriptStatus(`SCRIPT ACTIVE: Find [${scriptTarget}] in ${scriptRolls} rolls.`);
+        audioService.playCoinWin(2);
     };
 
     return (
@@ -246,6 +271,43 @@ export const SystemConfig: React.FC<Props> = ({
                                 <button onClick={handleAddDebugItem} disabled={!selectedDebugItem} className="w-full px-4 py-2 bg-purple-900/30 text-purple-400 border border-purple-800 text-xs hover:bg-purple-900 disabled:opacity-50">
                                     ADD 99x {selectedDebugItem ? `[${selectedDebugItem.text || selectedDebugItem.name}]` : ''}
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* RNG SCRIPTING TOOL */}
+                        <div className="mt-4 pt-4 border-t border-neutral-800">
+                            <div className="flex justify-between text-sm font-mono text-neutral-400 mb-2"><label>RNG SCRIPT (CHEAT)</label></div>
+                            <div className="space-y-2">
+                                <div className="flex gap-2 mb-2">
+                                    <select value={scriptType} onChange={(e) => { setScriptType(e.target.value as any); setScriptTarget(''); }} className="bg-neutral-900 border border-neutral-700 text-white text-xs p-2 rounded flex-1">
+                                        <option value="ORE">MINING</option>
+                                        <option value="FISH">FISHING</option>
+                                        <option value="PLANT">HARVESTING</option>
+                                        <option value="DREAM">DREAMING</option>
+                                    </select>
+                                    <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-700 rounded px-2">
+                                        <span className="text-[10px] text-neutral-500">IN</span>
+                                        <input type="number" min="1" max="100" value={scriptRolls} onChange={(e) => setScriptRolls(Number(e.target.value))} className="bg-transparent text-white text-xs w-8 text-center outline-none" />
+                                        <span className="text-[10px] text-neutral-500">ROLLS</span>
+                                    </div>
+                                </div>
+                                
+                                <select value={scriptTarget} onChange={(e) => setScriptTarget(e.target.value)} className="w-full bg-neutral-900 border border-neutral-700 text-white text-xs p-2 rounded">
+                                    <option value="">-- SELECT TARGET ITEM --</option>
+                                    {getScriptTargets().map((item: any, i) => (
+                                        <option key={i} value={item.name}>{item.name}</option>
+                                    ))}
+                                </select>
+
+                                <button onClick={applyScript} disabled={!scriptTarget} className="w-full px-4 py-2 bg-red-900/30 border border-red-800 text-red-400 hover:bg-red-900 disabled:opacity-50 text-xs font-bold rounded">
+                                    ACTIVATE SCRIPT
+                                </button>
+                                
+                                {scriptStatus && (
+                                    <div className="mt-2 p-2 border border-red-900 bg-red-900/20 text-center rounded">
+                                        <span className="text-xs font-mono text-red-200 font-bold">{scriptStatus}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

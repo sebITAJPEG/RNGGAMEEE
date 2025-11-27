@@ -1,6 +1,47 @@
 import { PHRASES, RARITY_TIERS, VARIANTS, MOON_ITEMS } from '../constants';
 import { Drop, RarityId, VariantId, ItemData, MoonItem } from '../types';
 
+// --- SCRIPTED RNG SINGLETON ---
+class ScriptedRng {
+    private targetItemName: string | null = null;
+    private targetType: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | null = null;
+    private rollsRemaining: number = 0;
+
+    setScript(name: string, type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM', rolls: number) {
+        this.targetItemName = name;
+        this.targetType = type;
+        this.rollsRemaining = rolls;
+    }
+
+    // Called by services. If returns name, force that drop.
+    checkScript(type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM'): string | null {
+        if (!this.targetItemName || this.targetType !== type || this.rollsRemaining <= 0) return null;
+
+        this.rollsRemaining--;
+        
+        if (this.rollsRemaining === 0) {
+            const name = this.targetItemName;
+            // Clear script
+            this.targetItemName = null;
+            this.targetType = null;
+            this.rollsRemaining = 0;
+            return name;
+        }
+        
+        return null;
+    }
+    
+    // Debug info
+    getStatus() {
+        if (!this.targetItemName) return "No script active.";
+        return `Finding [${this.targetItemName}] in ${this.rollsRemaining} rolls.`;
+    }
+}
+
+export const scriptedRng = new ScriptedRng();
+
+// --- STANDARD RNG ---
+
 export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
   const rand = Math.random();
   

@@ -13,8 +13,9 @@ interface SubGameConfig<T> {
     isMuted?: boolean;
 }
 
-interface GlobalCallbacks {
+interface GlobalCallbacks<T> {
     onUpdate: (count: number, bestId: number, gachaCredits: number) => void;
+    onFind?: (item: T) => void;
     playBoom: (rarity: RarityId) => void;
     playRare: (rarity: RarityId) => void;
     playCoinWin: (amount: number) => void;
@@ -26,7 +27,7 @@ export function useSubGame<
     InvItem extends { id: number; count: number; discoveredAt: number; locked?: boolean }
 >(
     config: SubGameConfig<T>,
-    callbacks: GlobalCallbacks
+    callbacks: GlobalCallbacks<T>
 ) {
     const [inventory, setInventory] = useState<InvItem[]>(() => {
         try {
@@ -75,6 +76,8 @@ export function useSubGame<
 
         let bestItem = batch[0];
         batch.forEach(i => { if (i.probability > bestItem.probability) bestItem = i; });
+
+        if (callbacks.onFind) callbacks.onFind(bestItem);
 
         const foundGacha = Math.random() < 0.0025;
         callbacks.onUpdate(count, bestItem.id, foundGacha ? 1 : 0);
