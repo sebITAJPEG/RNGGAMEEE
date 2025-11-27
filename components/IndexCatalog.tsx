@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { InventoryItem, RarityId, ItemData, OreInventoryItem, FishInventoryItem, PlantInventoryItem, DreamInventoryItem, MoonInventoryItem, VariantId } from '../types';
-import { RARITY_TIERS, PHRASES, TRANSLATIONS, ORES, GOLD_ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, VARIANTS } from '../constants';
+import { RARITY_TIERS, PHRASES, TRANSLATIONS, ORES, GOLD_ORES, PRISM_ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, VARIANTS } from '../constants';
 import { RarityBadge } from './RarityBadge';
 import { audioService } from '../services/audioService';
 
@@ -9,6 +9,7 @@ interface Props {
     onClose: () => void;
     inventory: InventoryItem[];
     oreInventory?: OreInventoryItem[];
+    prismInventory?: OreInventoryItem[];
     fishInventory?: FishInventoryItem[];
     plantInventory?: PlantInventoryItem[];
     dreamInventory?: DreamInventoryItem[];
@@ -16,9 +17,9 @@ interface Props {
     onSelectItem: (item: ItemData, rarityId: RarityId) => void;
 }
 
-type Tab = 'ITEMS' | 'ORES' | 'GOLD_ORES' | 'FISH' | 'PLANTS' | 'DREAMS' | 'MOON';
+type Tab = 'ITEMS' | 'ORES' | 'GOLD_ORES' | 'PRISM_ORES' | 'FISH' | 'PLANTS' | 'DREAMS' | 'MOON';
 
-export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreInventory = [], fishInventory = [], plantInventory = [], dreamInventory = [], moonInventory = [], onSelectItem }) => {
+export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreInventory = [], prismInventory = [], fishInventory = [], plantInventory = [], dreamInventory = [], moonInventory = [], onSelectItem }) => {
     const [activeTab, setActiveTab] = useState<Tab>('ITEMS');
     const [selectedRarity, setSelectedRarity] = useState<RarityId>(RarityId.COMMON);
     const [showSpoilers, setShowSpoilers] = useState(false);
@@ -55,6 +56,13 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
         oreInventory.forEach(i => set.add(i.id));
         return set;
     }, [oreInventory, isOpen]);
+
+    const discoveredPrismSet = useMemo(() => {
+        if (!isOpen) return new Set<number>();
+        const set = new Set<number>();
+        (prismInventory || []).forEach(i => set.add(i.id));
+        return set;
+    }, [prismInventory, isOpen]);
 
     const discoveredFishSet = useMemo(() => {
         if (!isOpen) return new Set<number>();
@@ -102,6 +110,10 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
     const foundGoldOres = oreInventory.filter(i => i.id > 1000).length;
     const goldOrePercent = Math.min(100, Math.floor((foundGoldOres / totalGoldOres) * 100));
 
+    const totalPrismOres = PRISM_ORES.length;
+    const foundPrismOres = (prismInventory || []).length;
+    const prismOrePercent = Math.min(100, Math.floor((foundPrismOres / totalPrismOres) * 100));
+
     const totalFish = FISH.length;
     const foundFish = fishInventory.length;
     const fishPercent = Math.min(100, Math.floor((foundFish / totalFish) * 100));
@@ -141,6 +153,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                 {activeTab === 'ITEMS' && `${percentComplete}%`}
                                 {activeTab === 'ORES' && `${orePercent}%`}
                                 {activeTab === 'GOLD_ORES' && `${goldOrePercent}%`}
+                                {activeTab === 'PRISM_ORES' && `${prismOrePercent}%`}
                                 {activeTab === 'FISH' && `${fishPercent}%`}
                                 {activeTab === 'PLANTS' && `${plantPercent}%`}
                                 {activeTab === 'DREAMS' && `${dreamPercent}%`}
@@ -151,13 +164,13 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                         {/* Tab Switcher */}
                         <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap p-1 bg-surface rounded border border-border gap-1 overflow-x-auto no-scrollbar">
-                                {['ITEMS', 'ORES', 'GOLD_ORES', 'FISH', 'PLANTS', 'DREAMS', 'MOON'].map((tab) => (
+                                {['ITEMS', 'ORES', 'GOLD_ORES', 'PRISM_ORES', 'FISH', 'PLANTS', 'DREAMS', 'MOON'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => { audioService.playClick(); setActiveTab(tab as Tab); }}
                                         className={`flex-1 min-w-[60px] py-2 text-[10px] font-mono text-center rounded transition-colors ${activeTab === tab ? 'bg-primary text-background font-bold' : 'text-text-dim hover:text-text hover:bg-surface-highlight'}`}
                                     >
-                                        {tab === 'GOLD_ORES' ? 'GOLD' : tab}
+                                        {tab === 'GOLD_ORES' ? 'GOLD' : tab === 'PRISM_ORES' ? 'PRISM' : tab}
                                     </button>
                                 ))}
                             </div>
@@ -195,6 +208,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                             <div className={`text-xs font-mono mb-4 text-text-dim`}>
                                 {activeTab === 'ORES' && "CATALOGUED RESOURCES FROM SECTOR 7G."}
                                 {activeTab === 'GOLD_ORES' && "RARE METALS FROM DIMENSION AU-79."}
+                                {activeTab === 'PRISM_ORES' && "REFRACTIVE MINERALS FROM THE PRISM."}
                                 {activeTab === 'FISH' && "DATA-FORMS FROM THE DEEP WEB."}
                                 {activeTab === 'PLANTS' && "FLORA FROM THE HYDROPONICS BAY."}
                                 {activeTab === 'DREAMS' && "FRAGMENTS FROM THE SUBCONSCIOUS."}
@@ -207,6 +221,7 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                     <span>
                                         {activeTab === 'ORES' && `${foundOres} / ${totalOres}`}
                                         {activeTab === 'GOLD_ORES' && `${foundGoldOres} / ${totalGoldOres}`}
+                                        {activeTab === 'PRISM_ORES' && `${foundPrismOres} / ${totalPrismOres}`}
                                         {activeTab === 'FISH' && `${foundFish} / ${totalFish}`}
                                         {activeTab === 'PLANTS' && `${foundPlants} / ${totalPlants}`}
                                         {activeTab === 'DREAMS' && `${foundDreams} / ${totalDreams}`}
@@ -341,14 +356,15 @@ export const IndexCatalog: React.FC<Props> = ({ isOpen, onClose, inventory, oreI
                                 })}
                             </div>
                         ) : (
-                            // Generic View for Ores/Gold Ores/Fish/Plants/Dreams
+                            // Generic View for Ores/Gold Ores/Prism Ores/Fish/Plants/Dreams
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {((activeTab === 'ORES' ? ORES : activeTab === 'GOLD_ORES' ? GOLD_ORES : activeTab === 'FISH' ? FISH : activeTab === 'PLANTS' ? PLANTS : DREAMS) as any[])
+                                {((activeTab === 'ORES' ? ORES : activeTab === 'GOLD_ORES' ? GOLD_ORES : activeTab === 'PRISM_ORES' ? PRISM_ORES : activeTab === 'FISH' ? FISH : activeTab === 'PLANTS' ? PLANTS : DREAMS) as any[])
                                     .sort((a, b) => a.id - b.id)
                                     .map((item) => {
                                         // Determine discovery based on tab sets
                                         let set;
                                         if (activeTab === 'ORES' || activeTab === 'GOLD_ORES') set = discoveredOreSet;
+                                        else if (activeTab === 'PRISM_ORES') set = discoveredPrismSet;
                                         else if (activeTab === 'FISH') set = discoveredFishSet;
                                         else if (activeTab === 'PLANTS') set = discoveredPlantSet;
                                         else set = discoveredDreamSet;

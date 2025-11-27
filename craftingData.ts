@@ -75,7 +75,8 @@ const generateItems = (): CraftableItem[] => {
                 cost: Math.floor(500 * Math.pow(1.55, i)),
                 materials: [
                     { type: 'ORE', id: Math.max(1, Math.floor(tier * 4)), count: 10 + tier * 2 },
-                    { type: 'ORE', id: Math.max(1, Math.floor(tier * 2)), count: 20 + tier * 5 }
+                    { type: 'ORE', id: Math.max(1, Math.floor(tier * 2)), count: 20 + tier * 5 },
+                    ...(tier >= 5 ? [{ type: 'PLANT' as const, id: Math.max(1, Math.floor(tier * 2)), count: 10 * tier }] : [])
                 ]
             }
         });
@@ -120,11 +121,12 @@ const generateItems = (): CraftableItem[] => {
             type: 'BOOST',
             bonuses: { luck: tier * 0.2, speed: tier * 15 },
             recipe: {
-                // Costs Gold Ores (ID 1001+)
+                // Costs Gold Ores (ID 1001+) AND Normal Ores for structure
                 cost: Math.floor(1000 * Math.pow(1.8, i)),
                 materials: [
                     { type: 'ORE', id: 1000 + Math.max(1, Math.floor(tier * 2)), count: 5 + tier },
-                    { type: 'ORE', id: 1000 + Math.max(1, Math.floor(tier * 1.5)), count: 10 + tier }
+                    { type: 'ORE', id: 1000 + Math.max(1, Math.floor(tier * 1.5)), count: 10 + tier },
+                    { type: 'ORE', id: Math.max(5, tier * 3), count: 20 * tier }
                 ]
             }
         });
@@ -319,6 +321,74 @@ const generateItems = (): CraftableItem[] => {
                 { type: 'ORE', id: 46, count: 5 }
             ]
         }
+    });
+
+    // --- NEW: PRISM KEY (Unlock Prism Mine) ---
+    items.push({
+        id: 'prism_key',
+        name: "Prism Key",
+        description: "A key made of solidified light. Unlocks the Prism Mine dimension.",
+        tier: 12,
+        category: 'MINING', // Or SPECIAL, but user said 'its category in the crafting tab'. Let's stick to GENERAL SPECIAL for unlocks usually, or MINING SPECIAL.
+        type: 'SPECIAL',
+        bonuses: { luck: 0.2 }, // Minor luck boost
+        unlocksFeature: 'PRISM_MINE',
+        recipe: {
+            cost: 100000000, // 100M Cash
+            materials: [
+                { type: 'ORE', id: 71, count: 1 }, // Requires 1 Solid Light (ID 71)
+                { type: 'ORE', id: 29, count: 50 } // 50 Diamonds
+            ]
+        }
+    });
+
+    // --- PRISM MINING ITEMS (Luck & Speed) [BOOST] ---
+    const prismMiningNames = [
+        "Glass Pick", "Crystal Drill", "Photon Cutter", "Refraction Laser", "Spectrum Bore",
+        "Light Siphon", "Prism Focus", "Chromatic Lens", "Gamma Ray Drill", "Zero-Point Miner"
+    ];
+
+    prismMiningNames.forEach((name, i) => {
+        const tier = i + 1;
+        items.push({
+            id: `prism_mine_${tier}`,
+            name: name,
+            description: `Increases PRISM mining luck by ${tier * 25}% and speed by ${tier * 20}ms.`,
+            tier,
+            category: 'PRISM_MINING',
+            type: 'BOOST',
+            bonuses: { luck: tier * 0.25, speed: tier * 20 },
+            recipe: {
+                // Costs Prism Ores (ID 2001+) AND Gold Ores
+                cost: Math.floor(1000000 * Math.pow(2.0, i)),
+                materials: [
+                    { type: 'ORE', id: 2000 + Math.max(1, Math.floor(tier * 1.5)), count: 10 + tier * 2 },
+                    { type: 'ORE', id: 2000 + Math.max(1, Math.floor(tier * 1.2)), count: 20 + tier * 2 },
+                    { type: 'ORE', id: 1000 + Math.max(5, tier * 2), count: 15 * tier }
+                ]
+            }
+        });
+    });
+
+    // --- PRISM MINING ITEMS (Multi) [MULTI] ---
+    const prismMiningMultiNames = ["Dual Lens", "Split Beam", "Fractal Array", "Mirror Room", "Kaleidoscope"];
+    prismMiningMultiNames.forEach((name, i) => {
+        const tier = i + 1;
+        items.push({
+            id: `prism_mine_multi_${tier}`,
+            name: name,
+            description: `Mines +${tier} additional PRISM ore per action.`,
+            tier,
+            category: 'PRISM_MINING',
+            type: 'MULTI',
+            bonuses: { multi: tier },
+            recipe: {
+                cost: Math.floor(5000000 * Math.pow(3.0, i)),
+                materials: [
+                    { type: 'ORE', id: 2000 + Math.max(4, tier * 3), count: 30 * tier }
+                ]
+            }
+        });
     });
 
     return items;

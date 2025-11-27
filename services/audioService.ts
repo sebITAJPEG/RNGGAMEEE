@@ -122,6 +122,61 @@ class AudioService {
         } catch (e) { }
     }
 
+    public playPrismRaritySound(rarity: RarityId) {
+        if (this.globalVolume <= 0) return;
+        this.init();
+        if (!this.ctx || !this.masterGain) return;
+
+        try {
+            const t = this.ctx.currentTime;
+            // Crystal chime effect
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            
+            // Add some FM modulation for "shimmer"
+            const mod = this.ctx.createOscillator();
+            const modGain = this.ctx.createGain();
+            
+            mod.connect(modGain);
+            modGain.connect(osc.frequency);
+            
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+
+            if (rarity >= RarityId.LEGENDARY) {
+                osc.type = 'sine';
+                mod.type = 'triangle';
+                
+                // Higher pitch for Prism
+                const baseFreq = 1200; 
+                osc.frequency.setValueAtTime(baseFreq, t);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 2, t + 1.5);
+                
+                mod.frequency.value = 50; // Fast shimmer
+                modGain.gain.setValueAtTime(200, t);
+                modGain.gain.linearRampToValueAtTime(0, t + 1.5);
+
+                gain.gain.setValueAtTime(0.15, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 2.0);
+                
+                mod.start(t);
+                osc.start(t);
+                mod.stop(t + 2.0);
+                osc.stop(t + 2.0);
+            } else if (rarity >= RarityId.RARE) {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, t);
+                osc.frequency.exponentialRampToValueAtTime(1200, t + 0.5);
+                
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                
+                osc.start(t);
+                osc.stop(t + 0.5);
+            }
+        } catch (e) { }
+    }
+
     public playCutsceneAmbience(rarity: RarityId) {
         if (this.globalVolume <= 0) return;
         this.init();
@@ -272,6 +327,33 @@ class AudioService {
 
             osc.start(this.ctx.currentTime);
             osc.stop(this.ctx.currentTime + 0.1);
+        } catch (e) { }
+    }
+
+    public playPrismMineSound() {
+        if (this.globalVolume <= 0) return;
+        this.init();
+        if (!this.ctx || !this.masterGain) return;
+
+        try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+
+            // Sine wave for a clear, laser-like "ping"
+            osc.type = 'sine';
+            // Start high and slide down
+            osc.frequency.setValueAtTime(1000, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+
+            // Snappy envelope
+            gain.gain.setValueAtTime(0, this.ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+
+            osc.start(this.ctx.currentTime);
+            osc.stop(this.ctx.currentTime + 0.15);
         } catch (e) { }
     }
 

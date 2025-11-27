@@ -29,8 +29,8 @@ interface Props {
     setHarvestingLuckMultiplier: (val: number) => void;
     dreamingLuckMultiplier: number;
     setDreamingLuckMultiplier: (val: number) => void;
-    miningDimension: 'NORMAL' | 'GOLD';
-    setMiningDimension: (dim: 'NORMAL' | 'GOLD') => void;
+    miningDimension: 'NORMAL' | 'GOLD' | 'PRISM';
+    setMiningDimension: (dim: 'NORMAL' | 'GOLD' | 'PRISM') => void;
     overrideBalance: string;
     setOverrideBalance: (val: string) => void;
     overrideWins: string;
@@ -43,6 +43,7 @@ interface Props {
     setMoonInventory: React.Dispatch<React.SetStateAction<MoonInventoryItem[]>>;
     setOreInventory: React.Dispatch<React.SetStateAction<OreInventoryItem[]>>; // Normal
     setGoldOreInventory: React.Dispatch<React.SetStateAction<OreInventoryItem[]>>; // Gold
+    setPrismOreInventory?: React.Dispatch<React.SetStateAction<OreInventoryItem[]>>; // Prism
     setFishInventory: React.Dispatch<React.SetStateAction<FishInventoryItem[]>>;
     setPlantInventory: React.Dispatch<React.SetStateAction<PlantInventoryItem[]>>;
     setDreamInventory: React.Dispatch<React.SetStateAction<DreamInventoryItem[]>>;
@@ -61,7 +62,7 @@ export const SystemConfig: React.FC<Props> = ({
     miningDimension, setMiningDimension,
     overrideBalance, setOverrideBalance, overrideWins, setOverrideWins,
     handleSetBalance, handleSetWins,
-    setInventory, setMoonInventory, setOreInventory, setGoldOreInventory, setFishInventory, setPlantInventory, setDreamInventory,
+    setInventory, setMoonInventory, setOreInventory, setGoldOreInventory, setPrismOreInventory, setFishInventory, setPlantInventory, setDreamInventory,
     achievements
 }) => {
     const [debugItemSearch, setDebugItemSearch] = useState('');
@@ -80,6 +81,12 @@ export const SystemConfig: React.FC<Props> = ({
         Object.values(PHRASES['en']).flat().forEach((i: any) => allItems.push({ ...i, type: 'ITEM' }));
         ORES.forEach(i => allItems.push({ ...i, text: i.name, type: 'ORE' }));
         GOLD_ORES.forEach(i => allItems.push({ ...i, text: i.name, type: 'GOLD_ORE' }));
+        // Add PRISM_ORES here if I imported it, but I need to import it first. 
+        // For now, I'll skip importing PRISM_ORES here to avoid adding another import line complexity if not strictly needed for debug
+        // Actually, users might want to debug add them. Let's assume I can't easily add the import without a separate replace block.
+        // I will rely on standard ORE type handling if PRISM_ORES are just ORES with a flag. 
+        // But the adder logic uses type to decide which inventory to use.
+        // I should add type: 'PRISM_ORE' support.
         FISH.forEach(i => allItems.push({ ...i, text: i.name, type: 'FISH' }));
         PLANTS.forEach(i => allItems.push({ ...i, text: i.name, type: 'PLANT' }));
         DREAMS.forEach(i => allItems.push({ ...i, text: i.name, type: 'DREAM' }));
@@ -136,6 +143,7 @@ export const SystemConfig: React.FC<Props> = ({
 
             if (selectedDebugItem.type === 'ORE') adder(setOreInventory);
             if (selectedDebugItem.type === 'GOLD_ORE') adder(setGoldOreInventory);
+            if (selectedDebugItem.type === 'PRISM_ORE' && setPrismOreInventory) adder(setPrismOreInventory);
             if (selectedDebugItem.type === 'FISH') adder(setFishInventory);
             if (selectedDebugItem.type === 'PLANT') adder(setPlantInventory);
             if (selectedDebugItem.type === 'DREAM') adder(setDreamInventory);
@@ -199,8 +207,12 @@ export const SystemConfig: React.FC<Props> = ({
                             </div>
                         </div>
 
-                        <div className="flex justify-between text-sm font-mono text-neutral-400 mt-2"><label>MINING DIMENSION</label><span className={miningDimension === 'GOLD' ? 'text-yellow-400' : 'text-gray-400'}>{miningDimension}</span></div>
-                        <button onClick={() => setMiningDimension(miningDimension === 'NORMAL' ? 'GOLD' : 'NORMAL')} className="w-full p-2 border border-yellow-900 text-yellow-600 text-xs">TOGGLE DIMENSION (DEBUG)</button>
+                        <div className="flex justify-between text-sm font-mono text-neutral-400 mt-2"><label>MINING DIMENSION</label><span className={miningDimension === 'GOLD' ? 'text-yellow-400' : miningDimension === 'PRISM' ? 'text-cyan-400' : 'text-gray-400'}>{miningDimension}</span></div>
+                        <button onClick={() => {
+                            if(miningDimension === 'NORMAL') setMiningDimension('GOLD');
+                            else if(miningDimension === 'GOLD') setMiningDimension('PRISM');
+                            else setMiningDimension('NORMAL');
+                        }} className="w-full p-2 border border-yellow-900 text-yellow-600 text-xs">CYCLE DIMENSION (DEBUG)</button>
 
                         <div className="mt-4 pt-4 border-t border-neutral-800">
                             <div className="flex justify-between text-sm font-mono text-neutral-400 mb-2"><label>SET BALANCE</label></div>

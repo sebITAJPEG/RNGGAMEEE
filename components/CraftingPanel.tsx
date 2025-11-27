@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CraftableItem, CraftingCategory, GameStats, OreInventoryItem, FishInventoryItem, PlantInventoryItem, DreamInventoryItem, MoonInventoryItem } from '../types';
-import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, GOLD_ORES } from '../constants';
+import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, GOLD_ORES, PRISM_ORES } from '../constants';
 import { CRAFTABLE_ITEMS } from '../craftingData';
 import { audioService } from '../services/audioService';
 
@@ -49,7 +49,7 @@ export const CraftingPanel: React.FC<Props> = ({
     };
 
     const getMaterialName = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
-        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.name || GOLD_ORES.find(o => o.id === Number(id))?.name || `Ore #${id}`;
+        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.name || GOLD_ORES.find(o => o.id === Number(id))?.name || PRISM_ORES.find(o => o.id === Number(id))?.name || `Ore #${id}`;
         if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.name || `Fish #${id}`;
         if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.name || `Plant #${id}`;
         if (type === 'DREAM') return DREAMS.find(d => d.id === Number(id))?.name || `Dream #${id}`;
@@ -58,7 +58,7 @@ export const CraftingPanel: React.FC<Props> = ({
     };
 
     const getMaterialColor = (type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'ITEM' | 'MOON', id: number | string) => {
-        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.color || GOLD_ORES.find(o => o.id === Number(id))?.color || 'text-gray-500';
+        if (type === 'ORE') return ORES.find(o => o.id === Number(id))?.color || GOLD_ORES.find(o => o.id === Number(id))?.color || PRISM_ORES.find(o => o.id === Number(id))?.color || 'text-gray-500';
         if (type === 'FISH') return FISH.find(f => f.id === Number(id))?.color || 'text-gray-500';
         if (type === 'PLANT') return PLANTS.find(p => p.id === Number(id))?.color || 'text-gray-500';
         if (type === 'DREAM') return DREAMS.find(d => d.id === Number(id))?.color || 'text-purple-400';
@@ -87,7 +87,7 @@ export const CraftingPanel: React.FC<Props> = ({
 
                 {/* Category Tabs */}
                 <div className="flex border-b border-neutral-800 bg-neutral-950/50 overflow-x-auto no-scrollbar">
-                    {(['GENERAL', 'MINING', 'GOLD_MINING', 'FISHING', 'HARVESTING', 'DREAMING'] as CraftingCategory[]).map(cat => (
+                    {(['GENERAL', 'MINING', 'GOLD_MINING', 'PRISM_MINING', 'FISHING', 'HARVESTING', 'DREAMING'] as CraftingCategory[]).map(cat => (
                         <button
                             key={cat}
                             onClick={() => { setActiveCategory(cat); audioService.playClick(); }}

@@ -128,3 +128,44 @@ export const GOLD_ORES: Ore[] = [
     // --- TIER 5: THE GOLDEN ONE (30) ---
     { id: 1030, name: "The Golden Ratio", description: "Perfect perfection.", probability: 100000000, color: "text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-yellow-500 to-yellow-800 drop-shadow-[0_0_25px_gold] animate-pulse", glowColor: "#facc15", tierName: "THE GOLD", dimension: 'GOLD' }
 ];
+
+export const PRISM_ORES: Ore[] = [
+    // --- TIER 1: REFRACTIVE (2001-2003) ---
+    { id: 2001, name: "Glass Shard", description: "A sharp fragment of clear glass.", probability: 500, color: "text-cyan-100", glowColor: "#cffafe", tierName: "Refractive", dimension: 'PRISM' },
+    { id: 2002, name: "Quartz Dust", description: "Sparkles like snow.", probability: 1000, color: "text-white", glowColor: "#ffffff", tierName: "Refractive", dimension: 'PRISM' },
+    { id: 2003, name: "Faint Glimmer", description: "Barely visible light trapped in rock.", probability: 2500, color: "text-yellow-50", glowColor: "#fefce8", tierName: "Refractive", dimension: 'PRISM' },
+
+    // --- TIER 2: CHROMATIC (2004-2006) ---
+    { id: 2004, name: "Fiber Optic Root", description: "A natural light-carrying structure.", probability: 10000, color: "text-emerald-200", glowColor: "#a7f3d0", tierName: "Chromatic", dimension: 'PRISM' },
+    { id: 2005, name: "Hard Light", description: "Solid photons.", probability: 50000, color: "text-blue-300 font-bold", glowColor: "#93c5fd", tierName: "Chromatic", dimension: 'PRISM' },
+    { id: 2006, name: "Rainbow Crystal", description: "Refracts light into all colors.", probability: 250000, color: "text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-green-500 to-blue-500 animate-pulse", glowColor: "#a855f7", tierName: "Chromatic", dimension: 'PRISM' },
+
+    // --- TIER 3: LUMINOUS (2007-2009) ---
+    { id: 2007, name: "Bifrost Fragment", description: "A piece of the rainbow bridge.", probability: 1000000, color: "text-indigo-400", glowColor: "#818cf8", tierName: "Luminous", dimension: 'PRISM' },
+    { id: 2008, name: "Photon Cluster", description: "A dense ball of pure light.", probability: 5000000, color: "text-yellow-100 drop-shadow-[0_0_15px_white]", glowColor: "#fef9c3", tierName: "Luminous", dimension: 'PRISM' },
+    { id: 2009, name: "Mirror of Truth", description: "Reflects your soul.", probability: 25000000, color: "text-slate-200 italic", glowColor: "#e2e8f0", tierName: "Luminous", dimension: 'PRISM' },
+
+    // --- TIER 3.5: SPECTRAL (2011-2015) ---
+    { id: 2011, name: "Prism Shard", description: "A jagged piece of pure refraction.", probability: 50000000, color: "text-pink-200", glowColor: "#fbcfe8", tierName: "Spectral", dimension: 'PRISM' },
+    { id: 2012, name: "Diffracted Gem", description: "Splits light into impossible colors.", probability: 60000000, color: "text-fuchsia-300", glowColor: "#f0abfc", tierName: "Spectral", dimension: 'PRISM' },
+    { id: 2013, name: "Laser Geode", description: "Focuses light into a beam.", probability: 70000000, color: "text-red-400 animate-pulse", glowColor: "#f87171", tierName: "Spectral", dimension: 'PRISM' },
+    { id: 2014, name: "Holographic Rock", description: "Is it really there?", probability: 80000000, color: "text-cyan-200 opacity-80", glowColor: "#a5f3fc", tierName: "Spectral", dimension: 'PRISM' },
+    { id: 2015, name: "Neon Cluster", description: "Buzzes with noble gas energy.", probability: 90000000, color: "text-lime-300 drop-shadow-[0_0_5px_lime]", glowColor: "#bef264", tierName: "Spectral", dimension: 'PRISM' },
+
+    // --- TIER 3.8: RADIANT (2016-2020) ---
+    { id: 2016, name: "Plasma Crystal", description: "Solidified state of matter.", probability: 100000000, color: "text-violet-400", glowColor: "#a78bfa", tierName: "Radiant", dimension: 'PRISM' },
+    { id: 2017, name: "Gamma Ore", description: "High frequency radiation trapped in stone.", probability: 125000000, color: "text-green-400 animate-pulse", glowColor: "#4ade80", tierName: "Radiant", dimension: 'PRISM' },
+    { id: 2018, name: "X-Ray Stone", description: "You can see right through it.", probability: 150000000, color: "text-slate-200", glowColor: "#e2e8f0", tierName: "Radiant", dimension: 'PRISM' },
+    { id: 2019, name: "Ultraviolet Gem", description: "Visible only to bees and machines.", probability: 200000000, color: "text-purple-600", glowColor: "#9333ea", tierName: "Radiant", dimension: 'PRISM' },
+    { id: 2020, name: "Infrared Ingot", description: "Radiates pure heat.", probability: 250000000, color: "text-red-700", glowColor: "#b91c1c", tierName: "Radiant", dimension: 'PRISM' },
+
+    // --- TIER 3.9: DIMENSIONAL (2021-2025) ---
+    { id: 2021, name: "Tesseract Fragment", description: "A shadow of a 4D cube.", probability: 300000000, color: "text-indigo-500", glowColor: "#6366f1", tierName: "Dimensional", dimension: 'PRISM' },
+    { id: 2022, name: "Klein Bottle Shard", description: "Has only one side.", probability: 400000000, color: "text-orange-300", glowColor: "#fdba74", tierName: "Dimensional", dimension: 'PRISM' },
+    { id: 2023, name: "Mobius Strip Ore", description: "Infinite surface area.", probability: 500000000, color: "text-teal-400", glowColor: "#2dd4bf", tierName: "Dimensional", dimension: 'PRISM' },
+    { id: 2024, name: "Non-Euclidean Geode", description: "Angles don't add up.", probability: 750000000, color: "text-rose-400 italic", glowColor: "#fb7185", tierName: "Dimensional", dimension: 'PRISM' },
+    { id: 2025, name: "Singularity Crystal", description: "Infinite density at a single point.", probability: 900000000, color: "text-black bg-white px-1 drop-shadow-[0_0_10px_black]", glowColor: "#000000", tierName: "Dimensional", dimension: 'PRISM' },
+
+    // --- TIER 4: THE SOURCE (2030) ---
+    { id: 2030, name: "The Spectrum", description: "All colors, all light, all at once.", probability: 1000000000, color: "text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 drop-shadow-[0_0_30px_white] animate-pulse text-xl font-bold", glowColor: "#ffffff", tierName: "THE SOURCE", dimension: 'PRISM' }
+];

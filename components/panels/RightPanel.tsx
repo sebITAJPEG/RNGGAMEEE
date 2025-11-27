@@ -68,7 +68,9 @@ export const RightPanel: React.FC<Props> = ({
                         onOpenInventory={() => { audioService.playClick(); setIsOreInventoryOpen(true); }}
                         currentDimension={miningGame.currentDimension || 'NORMAL'}
                         onToggleDimension={miningGame.onToggleDimension || (() => { })}
+                        setDimension={miningGame.setDimension}
                         isGoldUnlocked={stats.goldDimensionUnlocked}
+                        isPrismUnlocked={stats.prismDimensionUnlocked}
                         balance={stats.balance}
                         // Mute props passed from App via miningGame object
                         isMuted={miningGame.isMuted}

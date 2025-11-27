@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameStats, Drop, InventoryItem, RarityId, ItemData, VariantId, OreInventoryItem, FishInventoryItem, PlantInventoryItem, CraftableItem, MoonInventoryItem } from './types';
-import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, MINING_SPEEDS, ORES, GOLD_ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS, DREAMS, PHRASES, MOON_ITEMS } from './constants';
+import { RARITY_TIERS, TRANSLATIONS, VARIANTS, ACHIEVEMENTS, SPEED_TIERS, ENTROPY_THRESHOLD, MINING_SPEEDS, ORES, GOLD_ORES, PRISM_ORES, FISHING_SPEEDS, FISH, HARVESTING_SPEEDS, PLANTS, DREAMS, PHRASES, MOON_ITEMS } from './constants';
 import { generateDrop, generateMoonDrop } from './services/rngService';
 import { mineOre } from './services/miningService';
 import { catchFish } from './services/fishingService';
@@ -18,13 +18,14 @@ import { RightPanel } from './components/panels/RightPanel';
 import { GameModals } from './components/panels/GameModals';
 import { SystemConfig } from './components/panels/SystemConfig';
 import { StatsModal } from './components/panels/StatsModal';
+import { UnlockConditionsModal } from './components/panels/UnlockConditionsModal';
 import { getCraftingBonuses, getTrophyMultiplier } from './utils/gameHelpers';
 
 export default function App() {
     // --- STATE ---
     const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem('textbound_theme') || 'default');
     const [currentDrops, setCurrentDrops] = useState<Drop[]>([]);
-    const [miningDimension, setMiningDimension] = useState<'NORMAL' | 'GOLD'>('NORMAL');
+    const [miningDimension, setMiningDimension] = useState<'NORMAL' | 'GOLD' | 'PRISM'>('NORMAL');
     const [isMoon, setIsMoon] = useState(false);
     const [overrideBalance, setOverrideBalance] = useState('');
     const [overrideWins, setOverrideWins] = useState('');
@@ -47,7 +48,10 @@ export default function App() {
                 // Ensure new stats exist
                 goldMiningSpeedLevel: parsed.goldMiningSpeedLevel || 0,
                 goldMiningLuckLevel: parsed.goldMiningLuckLevel || 0,
-                goldMiningMultiLevel: parsed.goldMiningMultiLevel || 1
+                goldMiningMultiLevel: parsed.goldMiningMultiLevel || 1,
+                prismMiningSpeedLevel: parsed.prismMiningSpeedLevel || 0,
+                prismMiningLuckLevel: parsed.prismMiningLuckLevel || 0,
+                prismMiningMultiLevel: parsed.prismMiningMultiLevel || 1
             };
         }
         return {
@@ -55,10 +59,11 @@ export default function App() {
             multiRollLevel: 1, speedLevel: 0, luckLevel: 0, entropy: 0, hasBurst: false, moonTravelUnlocked: false,
             unlockedAchievements: [], equippedTitle: null, craftedItems: {}, equippedItems: {},
 
-            totalMined: 0, totalGoldMined: 0, bestOreMined: 0, bestGoldOreMined: 0,
+            totalMined: 0, totalGoldMined: 0, totalPrismMined: 0, bestOreMined: 0, bestGoldOreMined: 0, bestPrismOreMined: 0,
             miningSpeedLevel: 0, miningLuckLevel: 0, miningMultiLevel: 1,
             goldMiningSpeedLevel: 0, goldMiningLuckLevel: 0, goldMiningMultiLevel: 1,
-            goldDimensionUnlocked: false,
+            prismMiningSpeedLevel: 0, prismMiningLuckLevel: 0, prismMiningMultiLevel: 1,
+            goldDimensionUnlocked: false, prismDimensionUnlocked: false,
 
             totalFished: 0, bestFishCaught: 0, fishingSpeedLevel: 0, fishingLuckLevel: 0, fishingMultiLevel: 1,
             totalHarvested: 0, bestPlantHarvested: 0, harvestingSpeedLevel: 0, harvestingLuckLevel: 0, harvestingMultiLevel: 1,
@@ -82,6 +87,11 @@ export default function App() {
         return saved ? JSON.parse(saved) : [];
     });
 
+    const [prismOreInventory, setPrismOreInventory] = useState<OreInventoryItem[]>(() => {
+        const saved = localStorage.getItem('textbound_prism_ore_inventory');
+        return saved ? JSON.parse(saved) : [];
+    });
+
     const [isAutoSpinning, setIsAutoSpinning] = useState(false);
     const [activeRightPanel, setActiveRightPanel] = useState<'MINING' | 'FISHING' | 'HARVESTING' | 'DREAMING'>('MINING');
 
@@ -90,7 +100,7 @@ export default function App() {
         isPlantInventoryOpen: false, isDreamInventoryOpen: false, isMoonInventoryOpen: false,
         isCraftingOpen: false, isGachaOpen: false, isChangelogOpen: false, isIndexOpen: false,
         isAchievementsOpen: false, isCoinTossOpen: false, isAdminOpen: false,
-        isStatsOpen: false
+        isStatsOpen: false, isUnlockConditionsOpen: false
     });
 
     const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId }) | null>(null);
@@ -101,6 +111,7 @@ export default function App() {
     const [miningLuckMultiplier, setMiningLuckMultiplier] = useState(1);
     const [miningSpeed, setMiningSpeed] = useState(1000);
     const [goldMiningSpeed, setGoldMiningSpeed] = useState(1000); // Separate state for gold mining
+    const [prismMiningSpeed, setPrismMiningSpeed] = useState(1000); // Separate state for prism mining
     const [fishingSpeed, setFishingSpeed] = useState(1200);
     const [fishingLuckMultiplier, setFishingLuckMultiplier] = useState(1);
     const [harvestingSpeed, setHarvestingSpeed] = useState(1100);
@@ -121,6 +132,7 @@ export default function App() {
     useEffect(() => { localStorage.setItem('textbound_inventory', JSON.stringify(inventory)); }, [inventory]);
     useEffect(() => { localStorage.setItem('textbound_moon_inventory', JSON.stringify(moonInventory)); }, [moonInventory]);
     useEffect(() => { localStorage.setItem('textbound_gold_ore_inventory', JSON.stringify(goldOreInventory)); }, [goldOreInventory]);
+    useEffect(() => { localStorage.setItem('textbound_prism_ore_inventory', JSON.stringify(prismOreInventory)); }, [prismOreInventory]);
     useEffect(() => { localStorage.setItem('textbound_settings_autostop', autoStopRarity.toString()); }, [autoStopRarity]);
     useEffect(() => { applyTheme(currentTheme); localStorage.setItem('textbound_theme', currentTheme); }, [currentTheme]);
 
@@ -136,6 +148,7 @@ export default function App() {
     useEffect(() => {
         const baseMineSpeed = MINING_SPEEDS[Math.min(stats.miningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
         const baseGoldMineSpeed = MINING_SPEEDS[Math.min(stats.goldMiningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
+        const basePrismMineSpeed = MINING_SPEEDS[Math.min(stats.prismMiningSpeedLevel || 0, MINING_SPEEDS.length - 1)] || 1000;
         const baseFishSpeed = FISHING_SPEEDS[Math.min(stats.fishingSpeedLevel || 0, FISHING_SPEEDS.length - 1)] || 1200;
         const baseHarvSpeed = HARVESTING_SPEEDS[Math.min(stats.harvestingSpeedLevel || 0, HARVESTING_SPEEDS.length - 1)] || 1100;
 
@@ -147,9 +160,10 @@ export default function App() {
         setAutoSpinSpeed(SPEED_TIERS[stats.speedLevel]?.ms || 250);
         setMiningSpeed(Math.max(10, baseMineSpeed - mineBonuses.bonusSpeed));
         setGoldMiningSpeed(Math.max(10, baseGoldMineSpeed - goldMineBonuses.bonusSpeed));
+        setPrismMiningSpeed(Math.max(10, basePrismMineSpeed)); // No crafting bonuses for Prism yet
         setFishingSpeed(Math.max(25, baseFishSpeed - fishBonuses.bonusSpeed));
         setHarvestingSpeed(Math.max(15, baseHarvSpeed - harvBonuses.bonusSpeed));
-    }, [stats.speedLevel, stats.miningSpeedLevel, stats.goldMiningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel, stats.equippedItems]);
+    }, [stats.speedLevel, stats.miningSpeedLevel, stats.goldMiningSpeedLevel, stats.prismMiningSpeedLevel, stats.fishingSpeedLevel, stats.harvestingSpeedLevel, stats.equippedItems]);
 
     // --- SUB-GAMES ---
     const mineBonuses = getCraftingBonuses(stats.equippedItems, 'MINING');
@@ -158,6 +172,7 @@ export default function App() {
     // NOTE: We pass a wrapper function for playing sound that checks the mute state
     const playNormalMineSound = () => { if (!isMiningMuted) audioService.playMineSound(); };
     const playGoldMineSound = () => { if (!isMiningMuted) audioService.playGoldMineSound(); };
+    const playPrismMineSound = () => { if (!isMiningMuted) audioService.playPrismMineSound(); };
 
     const normalMiningGame = useSubGame({
         storageKey: 'textbound_ore_inventory',
@@ -191,7 +206,23 @@ export default function App() {
         playCoinWin: audioService.playCoinWin.bind(audioService)
     });
 
-    const currentMiningGame = miningDimension === 'GOLD' ? goldMiningGame : normalMiningGame;
+    const prismMiningGame = useSubGame({
+        storageKey: 'textbound_prism_ore_inventory',
+        dropFn: (l) => mineOre(l, 'PRISM'),
+        playSound: playPrismMineSound,
+        speed: prismMiningSpeed,
+        luck: ((miningLuckMultiplier * (1 + ((stats.prismMiningLuckLevel || 0) * 0.5)))) * trophyLuckMult, // No bonuses yet
+        multi: (stats.prismMiningMultiLevel || 1),
+        thresholds: { boom: 2030, rare: 2007, boomDivisor: 135 },
+        isMuted: isMiningMuted
+    }, {
+        onUpdate: (count, bestId, gacha) => setStats(prev => ({ ...prev, totalPrismMined: (prev.totalPrismMined || 0) + count, bestPrismOreMined: Math.max(prev.bestPrismOreMined || 0, bestId), gachaCredits: prev.gachaCredits + gacha })),
+        playBoom: audioService.playPrismRaritySound.bind(audioService),
+        playRare: audioService.playPrismRaritySound.bind(audioService),
+        playCoinWin: audioService.playCoinWin.bind(audioService)
+    });
+
+    const currentMiningGame = miningDimension === 'GOLD' ? goldMiningGame : miningDimension === 'PRISM' ? prismMiningGame : normalMiningGame;
 
     const fishBonuses = getCraftingBonuses(stats.equippedItems, 'FISHING');
     const fishingGame = useSubGame({
@@ -365,6 +396,9 @@ export default function App() {
             if (item.unlocksFeature === 'MOON_TRAVEL') {
                 updated.moonTravelUnlocked = true;
             }
+            if (item.unlocksFeature === 'PRISM_MINE') {
+                updated.prismDimensionUnlocked = true;
+            }
             return updated;
         });
 
@@ -379,7 +413,12 @@ export default function App() {
             else if (mat.type === 'DREAM') deduct(dreamingGame.inventory, dreamingGame.setInventory);
             else if (mat.type === 'MOON') deduct(moonInventory, setMoonInventory);
         });
-        audioService.playRaritySound(RarityId.MYTHICAL);
+        
+        if (item.unlocksFeature === 'PRISM_MINE') {
+            audioService.playRaritySound(RarityId.COSMIC);
+        } else {
+            audioService.playRaritySound(RarityId.MYTHICAL);
+        }
     };
 
     const handleEquipItem = (item: CraftableItem) => {
@@ -577,6 +616,8 @@ export default function App() {
     const activeRarityVFX = inspectedItem ? inspectedItem.rarityId : getBestDrop(currentDrops)?.rarityId;
     const currentGlobalLuck = (1 + (stats.luckLevel * 0.2) + getCraftingBonuses(stats.equippedItems, 'GENERAL').bonusLuck) * luckMultiplier * trophyLuckMult;
     const currentMineLuck = ((1 + (stats.miningLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'MINING').bonusLuck) * trophyLuckMult * miningLuckMultiplier;
+    const currentGoldMineLuck = ((1 + (stats.goldMiningLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'GOLD_MINING').bonusLuck) * trophyLuckMult * miningLuckMultiplier;
+    const currentPrismMineLuck = ((1 + (stats.prismMiningLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'PRISM_MINING').bonusLuck) * trophyLuckMult * miningLuckMultiplier;
     const currentFishLuck = ((1 + (stats.fishingLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'FISHING').bonusLuck) * trophyLuckMult * fishingLuckMultiplier;
     const currentHarvLuck = ((1 + (stats.harvestingLuckLevel * 0.5)) + getCraftingBonuses(stats.equippedItems, 'HARVESTING').bonusLuck) * trophyLuckMult * harvestingLuckMultiplier;
 
@@ -607,13 +648,6 @@ export default function App() {
                             currentGlobalLuck={currentGlobalLuck}
                             autoSpinSpeed={autoSpinSpeed}
                             generalMulti={(stats.multiRollLevel || 1) + getCraftingBonuses(stats.equippedItems, 'GENERAL').bonusMulti}
-                            currentMineLuck={currentMineLuck}
-                            miningSpeed={miningSpeed}
-                            currentFishLuck={currentFishLuck}
-                            fishingSpeed={fishingSpeed}
-                            currentHarvLuck={currentHarvLuck}
-                            harvestingSpeed={harvestingSpeed}
-                            dreamBonuses={dreamBonuses}
                             trophyLuckMult={trophyLuckMult}
                             onTicTacToeWin={handleTicTacToeWin}
                             onOpenStats={() => setModalsState(p => ({ ...p, isStatsOpen: true }))}
@@ -657,8 +691,9 @@ export default function App() {
 
                     <div className="absolute bottom-0 w-full p-6 flex justify-between items-end z-20 pointer-events-none">
                         <div className="flex gap-4 items-center pointer-events-auto">
-                            <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v3.4.0 GOLD</div>
+                            <div className="text-neutral-800 text-xs font-mono uppercase tracking-widest">v3.5.0 PRISM</div>
                             <button onClick={() => setModalsState(p => ({ ...p, isChangelogOpen: true }))} className="text-neutral-700 hover:text-white text-xs font-mono underline">CHANGELOG</button>
+                            <button onClick={() => setModalsState(p => ({ ...p, isUnlockConditionsOpen: true }))} className="text-neutral-700 hover:text-white text-xs font-mono underline uppercase">UNLOCKS</button>
                         </div>
                         <button onClick={() => setModalsState(p => ({ ...p, isAdminOpen: true }))} className="pointer-events-auto text-neutral-800 hover:text-neutral-500 text-xs font-mono uppercase transition-colors">[ {T.UI.SYSTEM_CONFIG} ]</button>
                     </div>
@@ -670,7 +705,19 @@ export default function App() {
                     miningGame={{
                         ...currentMiningGame,
                         currentDimension: miningDimension,
-                        onToggleDimension: () => setMiningDimension(d => d === 'NORMAL' ? 'GOLD' : 'NORMAL'),
+                        setDimension: setMiningDimension, // Pass setter for Dropdown
+                        onToggleDimension: () => {
+                            // Keep toggle for backward compat or if needed
+                            if (miningDimension === 'NORMAL') {
+                                if (stats.goldDimensionUnlocked) setMiningDimension('GOLD');
+                                else if (stats.prismDimensionUnlocked) setMiningDimension('PRISM');
+                            } else if (miningDimension === 'GOLD') {
+                                if (stats.prismDimensionUnlocked) setMiningDimension('PRISM');
+                                else setMiningDimension('NORMAL');
+                            } else {
+                                setMiningDimension('NORMAL');
+                            }
+                        },
                         // Mute Controls
                         isMuted: isMiningMuted,
                         toggleMute: () => setIsMiningMuted(prev => !prev)
@@ -694,6 +741,7 @@ export default function App() {
                 inventory={inventory}
                 miningGame={normalMiningGame}
                 goldMiningGame={goldMiningGame}
+                prismMiningGame={prismMiningGame}
                 moonInventory={moonInventory}
                 fishingGame={fishingGame}
                 harvestingGame={harvestingGame}
@@ -759,11 +807,21 @@ export default function App() {
                 generalMulti={(stats.multiRollLevel || 1) + getCraftingBonuses(stats.equippedItems, 'GENERAL').bonusMulti}
                 currentMineLuck={currentMineLuck}
                 miningSpeed={miningSpeed}
+                currentGoldMineLuck={currentGoldMineLuck}
+                goldMiningSpeed={goldMiningSpeed}
+                currentPrismMineLuck={currentPrismMineLuck}
+                prismMiningSpeed={prismMiningSpeed}
                 currentFishLuck={currentFishLuck}
                 fishingSpeed={fishingSpeed}
                 currentHarvLuck={currentHarvLuck}
                 harvestingSpeed={harvestingSpeed}
                 dreamBonuses={dreamBonuses}
+            />
+
+            <UnlockConditionsModal
+                isOpen={modalsState.isUnlockConditionsOpen}
+                onClose={() => setModalsState(p => ({ ...p, isUnlockConditionsOpen: false }))}
+                stats={stats}
             />
 
             {activeRarityVFX && activeRarityVFX >= RarityId.DIVINE && (

@@ -11,6 +11,10 @@ interface Props {
     generalMulti: number;
     currentMineLuck: number;
     miningSpeed: number;
+    currentGoldMineLuck: number;
+    goldMiningSpeed: number;
+    currentPrismMineLuck: number;
+    prismMiningSpeed: number;
     currentFishLuck: number;
     fishingSpeed: number;
     currentHarvLuck: number;
@@ -20,8 +24,8 @@ interface Props {
 
 export const StatsModal: React.FC<Props> = ({
     isOpen, onClose, stats, currentGlobalLuck, autoSpinSpeed, generalMulti,
-    currentMineLuck, miningSpeed, currentFishLuck, fishingSpeed,
-    currentHarvLuck, harvestingSpeed, dreamBonuses
+    currentMineLuck, miningSpeed, currentGoldMineLuck, goldMiningSpeed, currentPrismMineLuck, prismMiningSpeed,
+    currentFishLuck, fishingSpeed, currentHarvLuck, harvestingSpeed, dreamBonuses
 }) => {
     if (!isOpen) return null;
 
@@ -65,6 +69,20 @@ export const StatsModal: React.FC<Props> = ({
                         <StatRow label="MULTI" value={getEquippedItemName(stats.equippedItems, 'MINING', 'MULTI')} valueColor="text-purple-300" />
                     </StatSection>
 
+                    <StatSection title="GOLD MINING" color="yellow">
+                        <StatRow label="LUCK" value={`${currentGoldMineLuck.toFixed(2)}x`} valueColor="text-yellow-300" />
+                        <StatRow label="SPEED" value={`${goldMiningSpeed}ms`} valueColor="text-yellow-300" />
+                        <StatRow label="BOOST" value={getEquippedItemName(stats.equippedItems, 'GOLD_MINING', 'BOOST')} valueColor="text-yellow-200" />
+                        <StatRow label="MULTI" value={getEquippedItemName(stats.equippedItems, 'GOLD_MINING', 'MULTI')} valueColor="text-purple-300" />
+                    </StatSection>
+
+                    <StatSection title="PRISM MINING" color="purple">
+                        <StatRow label="LUCK" value={`${currentPrismMineLuck.toFixed(2)}x`} valueColor="text-fuchsia-300" />
+                        <StatRow label="SPEED" value={`${prismMiningSpeed}ms`} valueColor="text-fuchsia-300" />
+                        <StatRow label="BOOST" value={getEquippedItemName(stats.equippedItems, 'PRISM_MINING', 'BOOST')} valueColor="text-yellow-200" />
+                        <StatRow label="MULTI" value={getEquippedItemName(stats.equippedItems, 'PRISM_MINING', 'MULTI')} valueColor="text-purple-300" />
+                    </StatSection>
+
                     <StatSection title="FISHING" color="cyan">
                         <StatRow label="LUCK" value={`${currentFishLuck.toFixed(2)}x`} valueColor="text-cyan-300" />
                         <StatRow label="SPEED" value={`${fishingSpeed}ms`} valueColor="text-cyan-300" />
@@ -87,6 +105,7 @@ export const StatsModal: React.FC<Props> = ({
                             {stats.bestMoonItemFound ? (
                                 <div className="flex justify-between"><span>Rarest Moon Object:</span> <span className="text-slate-300">ID: {stats.bestMoonItemFound}</span></div>
                             ) : null}
+                            <div className="flex justify-between"><span>Rarest Prism Ore:</span> <span className="text-fuchsia-400">{getBestResourceName('ORE', stats.bestPrismOreMined || 0)}</span></div>
                             <div className="flex justify-between"><span>Rarest Gold Ore:</span> <span className="text-yellow-400">{getBestResourceName('ORE', stats.bestGoldOreMined || 0)}</span></div>
                             <div className="flex justify-between"><span>Rarest Mine Ore:</span> <span className="text-orange-400">{getBestResourceName('ORE', stats.bestOreMined)}</span></div>
                             <div className="flex justify-between"><span>Rarest Fish:</span> <span className="text-cyan-400">{getBestResourceName('FISH', stats.bestFishCaught)}</span></div>
@@ -100,6 +119,8 @@ export const StatsModal: React.FC<Props> = ({
                         <h3 className="text-sm font-bold font-mono text-white mb-2 border-b border-neutral-700/50 pb-1">LIFETIME STATS</h3>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono text-neutral-400">
                             <StatRow label="Mine Rolls" value={stats.totalMined.toLocaleString()} />
+                            <StatRow label="Gold Rolls" value={stats.totalGoldMined.toLocaleString()} />
+                            <StatRow label="Prism Rolls" value={stats.totalPrismMined.toLocaleString()} />
                             <StatRow label="Fish Caught" value={stats.totalFished.toLocaleString()} />
                             <StatRow label="Plants Harvested" value={stats.totalHarvested.toLocaleString()} />
                             <StatRow label="Dreams Entered" value={stats.totalDreamt.toLocaleString()} />

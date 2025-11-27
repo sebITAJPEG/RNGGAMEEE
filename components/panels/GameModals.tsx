@@ -8,14 +8,15 @@ import { Changelog } from '../Changelog';
 import { IndexCatalog } from '../IndexCatalog';
 import { Achievements } from '../Achievements';
 import { CoinToss } from '../CoinToss';
-import { ORES, FISH, PLANTS, GOLD_ORES, MOON_ITEMS } from '../../constants';
+import { ORES, FISH, PLANTS, GOLD_ORES, MOON_ITEMS, PRISM_ORES } from '../../constants';
 import { GameStats, InventoryItem, MoonInventoryItem } from '../../types';
 
 interface Props {
     stats: GameStats;
     inventory: InventoryItem[];
     miningGame: any;
-    goldMiningGame: any; 
+    goldMiningGame: any;
+    prismMiningGame: any;
     moonInventory: MoonInventoryItem[];
     fishingGame: any;
     harvestingGame: any;
@@ -52,11 +53,11 @@ interface Props {
     };
 }
 
-export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, goldMiningGame, moonInventory, fishingGame, harvestingGame, dreamingGame, modalsState, setModalsState, handlers }) => {
+export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, goldMiningGame, prismMiningGame, moonInventory, fishingGame, harvestingGame, dreamingGame, modalsState, setModalsState, handlers }) => {
     const close = (key: string) => setModalsState((prev: any) => ({ ...prev, [key]: false }));
 
-    const combinedOreInventory = [...miningGame.inventory, ...goldMiningGame.inventory];
-    const combinedOreDefs = [...ORES, ...GOLD_ORES];
+    const combinedOreInventory = [...miningGame.inventory, ...goldMiningGame.inventory, ...prismMiningGame.inventory];
+    const combinedOreDefs = [...ORES, ...GOLD_ORES, ...PRISM_ORES];
 
     return (
         <>
@@ -73,8 +74,8 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                 definitions={combinedOreDefs}
                 isOpen={modalsState.isOreInventoryOpen}
                 onClose={() => close('isOreInventoryOpen')}
-                onSell={() => { handlers.handleSellResources('ORES'); handlers.handleSellResources('GOLD_ORES'); }}
-                onToggleLock={(item) => handlers.toggleResourceLock(item.id > 1000 ? 'GOLD_ORES' : 'ORES', item.id)}
+                onSell={() => { handlers.handleSellResources('ORES'); handlers.handleSellResources('GOLD_ORES'); handlers.handleSellResources('PRISM_ORES'); }}
+                onToggleLock={(item) => handlers.toggleResourceLock(item.id > 2000 ? 'PRISM_ORES' : item.id > 1000 ? 'GOLD_ORES' : 'ORES', item.id)}
                 onInspect={handlers.handleInspectResource}
                 config={{
                     title: "ORE SILO",
@@ -192,6 +193,7 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                 onClose={() => close('isIndexOpen')}
                 inventory={inventory}
                 oreInventory={combinedOreInventory}
+                prismInventory={prismMiningGame.inventory}
                 fishInventory={fishingGame.inventory}
                 plantInventory={harvestingGame.inventory}
                 dreamInventory={dreamingGame.inventory}

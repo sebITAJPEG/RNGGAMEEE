@@ -10,8 +10,19 @@ export const Changelog: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const updates = [
     {
-      version: "3.4.0",
+      version: "3.5.0",
       date: "Current",
+      changes: [
+        "PRISM DIMENSION: Added the Prism Mine dimension, a crystalline realm of refracted light.",
+        "UNLOCKS: Prism Mines are now unlocked by crafting the 'Prism Key' (requires 100M + materials).",
+        "INDEX UPDATE: Added a dedicated tab for Prism Ores in the Index Catalog.",
+        "AUDIO OVERHAUL: Added unique crystalline sound effects for Prism mining and rare discoveries.",
+        "BUG FIXES: Fixed issues with unlock menus and rarity sound thresholds."
+      ]
+    },
+    {
+      version: "3.4.0",
+      date: "Previous",
       changes: [
         "GOLD MINING EXPANSION: Added separate upgrades and crafting recipes specifically for Gold Mining.",
         "CRAFTING UPDATE: New Gold Mining tools (Pans, Sluices, Dredges) added to the Crafting Panel.",

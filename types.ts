@@ -93,7 +93,7 @@ export interface Ore {
     color: string; // Text color class
     glowColor: string; // CSS color for shadows
     tierName: string;
-    dimension?: 'NORMAL' | 'GOLD'; // New field
+    dimension?: 'NORMAL' | 'GOLD' | 'PRISM'; // New field
 }
 
 export interface OreInventoryItem {
@@ -178,8 +178,8 @@ export interface Achievement {
 
 // --- CRAFTING TYPES ---
 
-// UPDATED: Added GOLD_MINING category
-export type CraftingCategory = 'GENERAL' | 'MINING' | 'GOLD_MINING' | 'FISHING' | 'HARVESTING' | 'DREAMING';
+// UPDATED: Added GOLD_MINING and PRISM_MINING category
+export type CraftingCategory = 'GENERAL' | 'MINING' | 'GOLD_MINING' | 'PRISM_MINING' | 'FISHING' | 'HARVESTING' | 'DREAMING';
 export type CraftingType = 'BOOST' | 'MULTI' | 'SPECIAL';
 
 export interface CraftingMaterial {
@@ -209,7 +209,7 @@ export interface CraftableItem {
         materials: CraftingMaterial[];
         cost: number;
     };
-    unlocksFeature?: 'MOON_TRAVEL'; // Special unlock flag
+    unlocksFeature?: 'MOON_TRAVEL' | 'PRISM_MINE'; // Special unlock flag
 }
 
 export interface GameStats {
@@ -243,8 +243,10 @@ export interface GameStats {
     // Mining Stats & Upgrades
     totalMined: number;
     totalGoldMined?: number; // New: Explicit counter for Gold Mined
+    totalPrismMined?: number; // New: Explicit counter for Prism Mined
     bestOreMined: number; // ID of best ore
     bestGoldOreMined?: number; // New: Track separate gold ore best
+    bestPrismOreMined?: number; // New: Track separate prism ore best
 
     // Standard Mining Upgrades
     miningSpeedLevel: number;
@@ -256,7 +258,13 @@ export interface GameStats {
     goldMiningLuckLevel?: number;
     goldMiningMultiLevel?: number;
 
+    // Prism Mining Upgrades (Separated)
+    prismMiningSpeedLevel?: number;
+    prismMiningLuckLevel?: number;
+    prismMiningMultiLevel?: number;
+
     goldDimensionUnlocked: boolean; // New: Gold Dimension Unlock
+    prismDimensionUnlocked?: boolean; // New: Prism Dimension Unlock
 
     // Fishing Stats & Upgrades
     totalFished: number;
