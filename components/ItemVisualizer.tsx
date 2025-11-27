@@ -24,6 +24,8 @@ import { HypercubeFragmentHTMLView } from './models/HypercubeFragmentHTMLView';
 import { SoundShardHTMLView } from './models/SoundShardHTMLView';
 import { AntimatterHTMLView } from './models/AntimatterHTMLView';
 import { FrozenTimeHTMLView } from './models/FrozenTimeHTMLView'; // Add Frozen Time
+import { SolidLightHTMLView } from './models/SolidLightHTMLView';
+import { StrangeMatterHTMLView } from './models/StrangeMatterHTMLView';
 
 // --- SCENE CONTENT ---
 
@@ -96,7 +98,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isSpecial = [
     "Black Hole Core", "Sound Shard",
     "Solar Plasma", "The Golden Ratio", "Neutronium", "Crystallized Thought", "Hypercube Fragment", "Antimatter",
-    "Frozen Time"
+    "Frozen Time", "Solid Light", "Strange Matter"
   ].includes(item.text);
 
   // Special HTML Views
@@ -108,7 +110,9 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isSoundShard = item.text === "Sound Shard";
   const isAntimatter = item.text === "Antimatter";
   const isFrozenTime = item.text === "Frozen Time";
-  const isHtmlView = isSolarPlasma || isGoldenRatio || isNeutronium || isCrystallizedThought || isHypercubeFragment || isSoundShard || isAntimatter || isFrozenTime;
+  const isSolidLight = item.text === "Solid Light";
+  const isStrangeMatter = item.text === "Strange Matter";
+  const isHtmlView = isSolarPlasma || isGoldenRatio || isNeutronium || isCrystallizedThought || isHypercubeFragment || isSoundShard || isAntimatter || isFrozenTime || isSolidLight || isStrangeMatter;
 
   const isOre = !!oreData;
   const modelColor = oreData ? oreData.glowColor : '#888';
@@ -144,6 +148,10 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
               <AntimatterHTMLView />
             ) : isFrozenTime ? (
               <FrozenTimeHTMLView />
+            ) : isSolidLight ? (
+              <SolidLightHTMLView />
+            ) : isStrangeMatter ? (
+              <StrangeMatterHTMLView />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
