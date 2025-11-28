@@ -7,8 +7,9 @@ export const SoundShardHTMLView = () => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Sound Shard [Harmonic Resonance]</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Rajdhani', sans-serif; }
         #canvas-container { width: 100vw; height: 100vh; }
         
         #ui {
@@ -27,6 +28,16 @@ export const SoundShardHTMLView = () => {
         .rarity { color: #00ffff; font-weight: bold; font-size: 0.8em; text-shadow: 0 0 20px #00ffff; }
         .sub { font-size: 0.7em; opacity: 0.7; margin-top: 5px; color: #aaaaff; }
         
+        /* Background Pulse */
+        #pulse-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0, 255, 255, 0.15) 0%, rgba(0, 0, 0, 1) 70%);
+            opacity: 0;
+            transition: opacity 0.05s;
+            z-index: 1;
+            pointer-events: none;
+        }
+
         /* Scanline Overlay */
         .scanlines {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -37,47 +48,48 @@ export const SoundShardHTMLView = () => {
             opacity: 0.3;
         }
 
-        /* Cinematic Elements */
-        #cinema-overlay {
+        /* Cinematic Text */
+        #cinema-container {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
+            pointer-events: none;
             z-index: 100;
-            cursor: pointer;
-            transition: opacity 0.5s;
+            perspective: 1000px;
         }
-        #start-btn {
-            border: 1px solid #00ffff;
-            padding: 20px 40px;
-            color: #00ffff;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            box-shadow: 0 0 30px rgba(0,255,255,0.3);
-            background: rgba(0,0,0,0.8);
-            font-family: inherit;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        #start-btn:hover { background: rgba(0,255,255,0.2); box-shadow: 0 0 50px rgba(0,255,255,0.6); }
 
         #cinema-text {
-            position: absolute;
-            top: 45%;
-            width: 100%;
             text-align: center;
             color: #fff;
-            font-size: 1.5rem;
-            letter-spacing: 8px;
-            text-shadow: 0 0 15px #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.4);
             opacity: 0;
-            pointer-events: none;
-            z-index: 50;
-            mix-blend-mode: overlay;
+            transform: scale(1);
+            transition: transform 4s cubic-bezier(0.1, 0.9, 0.2, 1), opacity 0.5s ease-out;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+        
+        #cinema-text.expanding {
+            transform: scale(1.25);
+        }
+
+        .wave-char {
+            display: inline-block;
+            opacity: 0;
+            transform: translateZ(-100px) rotateX(90deg);
+            filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .wave-char.visible {
+            opacity: 1;
+            transform: translateZ(0) rotateX(0deg);
+            filter: blur(0px);
         }
 
         #flash-overlay {
@@ -128,13 +140,12 @@ export const SoundShardHTMLView = () => {
     </script>
 </head>
 <body>
+    <div id="pulse-bg"></div>
     <div class="scanlines"></div>
     
-    <div id="cinema-overlay">
-        <div id="start-btn">Initialize Resonance</div>
+    <div id="cinema-container">
+        <div id="cinema-text"></div>
     </div>
-
-    <div id="cinema-text"></div>
     <div id="flash-overlay"></div>
 
     <div id="canvas-container"></div>
@@ -267,36 +278,81 @@ export const SoundShardHTMLView = () => {
             if(!audioContext || isMuted) return;
             const now = audioContext.currentTime;
 
-            // Riser
-            const osc = audioContext.createOscillator();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(50, now);
-            osc.frequency.exponentialRampToValueAtTime(800, now + 3.0);
+            // Chord Swell (Harmonic Riser)
+            // Stops 0.2s before drop for "Silence" effect
+            const dropTime = now + 3.5;
+            const silenceTime = dropTime - 0.2;
+            const riseTime = 3.3;
+
+            const freqs = [130.81, 164.81, 196.00]; // C3 Major Triad
+            freqs.forEach((f, i) => {
+                const osc = audioContext.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, now);
+                osc.frequency.exponentialRampToValueAtTime(f * 2, silenceTime); // Octave up glissando
+                
+                const g = audioContext.createGain();
+                g.gain.setValueAtTime(0, now);
+                g.gain.linearRampToValueAtTime(0.15, now + riseTime * 0.8);
+                g.gain.setValueAtTime(0, silenceTime); // Cut for silence
+                
+                osc.connect(g);
+                g.connect(masterGain);
+                osc.start(now);
+                osc.stop(silenceTime + 0.1);
+            });
             
-            const gain = audioContext.createGain();
-            gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.3, now + 3.0);
-            gain.gain.setValueAtTime(0, now + 3.1);
-
-            osc.connect(gain);
-            gain.connect(masterGain);
-            osc.start(now);
-            osc.stop(now + 3.1);
-
-            // Impact (at 3s)
-            const impactOsc = audioContext.createOscillator();
-            impactOsc.frequency.setValueAtTime(100, now + 3.0);
-            impactOsc.frequency.exponentialRampToValueAtTime(0.01, now + 4.5);
+            // Noise Texture (Wind/Energy)
+            const noise = audioContext.createBufferSource();
+            const bSize = audioContext.sampleRate * 4;
+            const buff = audioContext.createBuffer(1, bSize, audioContext.sampleRate);
+            const d = buff.getChannelData(0);
+            for(let i=0; i<bSize; i++) d[i] = (Math.random()*2-1)*0.05;
+            noise.buffer = buff;
             
-            const impactGain = audioContext.createGain();
-            impactGain.gain.setValueAtTime(0, now + 3.0);
-            impactGain.gain.setValueAtTime(0.8, now + 3.01);
-            impactGain.gain.exponentialRampToValueAtTime(0.01, now + 5.0);
+            const nFilter = audioContext.createBiquadFilter();
+            nFilter.type = 'lowpass';
+            nFilter.frequency.setValueAtTime(100, now);
+            nFilter.frequency.linearRampToValueAtTime(8000, silenceTime);
+            
+            const nGain = audioContext.createGain();
+            nGain.gain.setValueAtTime(0, now);
+            nGain.gain.linearRampToValueAtTime(0.25, silenceTime - 0.5);
+            nGain.gain.setValueAtTime(0, silenceTime);
+            
+            noise.connect(nFilter); nFilter.connect(nGain); nGain.connect(masterGain);
+            noise.start(now);
+            noise.stop(silenceTime + 0.1);
 
-            impactOsc.connect(impactGain);
-            impactGain.connect(masterGain);
-            impactOsc.start(now + 3.0);
-            impactOsc.stop(now + 5.0);
+            // Impact (at dropTime) will be triggered separately by main loop timing
+        }
+        
+        function playImpactSound() {
+            if(!audioContext || isMuted) return;
+            const now = audioContext.currentTime;
+
+            // Sub Drop
+            const sub = audioContext.createOscillator();
+            sub.frequency.setValueAtTime(100, now);
+            sub.frequency.exponentialRampToValueAtTime(0.01, now + 1.5);
+            const subGain = audioContext.createGain();
+            subGain.gain.setValueAtTime(0.8, now);
+            subGain.gain.exponentialRampToValueAtTime(0.01, now + 1.5);
+            sub.connect(subGain); subGain.connect(masterGain);
+            sub.start(now); sub.stop(now + 1.5);
+
+            // Crash
+            const bSize = audioContext.sampleRate * 2;
+            const buff = audioContext.createBuffer(1, bSize, audioContext.sampleRate);
+            const d = buff.getChannelData(0);
+            for(let i=0; i<bSize; i++) d[i] = (Math.random()*2-1);
+            const noise = audioContext.createBufferSource();
+            noise.buffer = buff;
+            const nGain = audioContext.createGain();
+            nGain.gain.setValueAtTime(0.5, now);
+            nGain.gain.exponentialRampToValueAtTime(0.01, now + 2.0);
+            noise.connect(nGain); nGain.connect(masterGain);
+            noise.start(now);
         }
 
         // Controls
@@ -420,32 +476,122 @@ export const SoundShardHTMLView = () => {
         composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.5, 0.05));
 
         // --- CUTSCENE LOGIC ---
-        const startBtn = document.getElementById('start-btn');
-        const cinemaOverlay = document.getElementById('cinema-overlay');
         const cinemaText = document.getElementById('cinema-text');
         const flashOverlay = document.getElementById('flash-overlay');
+        const pulseBg = document.getElementById('pulse-bg');
         const ui = document.getElementById('ui');
 
         let inCutscene = true;
-        let cutsceneTime = 0;
         let cutsceneStarted = false;
+        let dropTime = 0;
 
-        startBtn.addEventListener('click', () => {
+        const phrases = [
+            "IN THE BEGINNING...",
+            "WAS THE WAVE.",
+            "A FREQUENCY UNHEARD.",
+            "VIBRATING THROUGH REALITY.",
+            "HARMONIC CONVERGENCE IMMINENT.",
+            "LISTEN...",
+            "THE SOUND SHARD."
+        ];
+
+        async function playCutsceneSequence() {
+            // Try audio
             initAudio();
-            startCutscene();
-        });
+            
+            // Trigger Audio Riser manually to sync with end
+            // Phrases take ~3s each -> 7 phrases -> 21s
+            // We want riser at end.
+            
+            for (let i = 0; i < phrases.length; i++) {
+                // If near end, start riser (approx 3.5s before drop)
+                if (i === phrases.length - 1) {
+                    playCinematicSfx(); 
+                }
+
+                const text = phrases[i];
+                cinemaText.innerHTML = '';
+                cinemaText.style.opacity = '1';
+                cinemaText.classList.remove('expanding');
+                
+                // Typewriter effect
+                for(let c=0; c < text.length; c++) {
+                    const span = document.createElement('span');
+                    if(text[c] === ' ') {
+                        span.innerHTML = '&nbsp;';
+                        span.className = 'wave-char visible'; // Space doesn't need anim really
+                    } else {
+                        span.textContent = text[c];
+                        span.className = 'wave-char';
+                        // Trigger anim
+                        requestAnimationFrame(() => span.classList.add('visible'));
+                    }
+                    cinemaText.appendChild(span);
+                    
+                    // Pulse BG
+                    pulseBg.style.opacity = 0.2 + (i * 0.1);
+                    setTimeout(() => pulseBg.style.opacity = 0, 50);
+
+                    // Play soft blip
+                    if(audioContext && !isMuted) {
+                        const osc = audioContext.createOscillator();
+                        const g = audioContext.createGain();
+                        osc.frequency.value = 800 + Math.random() * 200;
+                        g.gain.value = 0.02;
+                        osc.connect(g); g.connect(masterGain);
+                        osc.start(); osc.stop(audioContext.currentTime + 0.05);
+                    }
+
+                    await new Promise(r => setTimeout(r, 40));
+                }
+                
+                // Trigger expanding animation after text is written
+                cinemaText.classList.add('expanding');
+
+                await new Promise(r => setTimeout(r, 1200));
+                
+                // Fade out phrase
+                cinemaText.style.opacity = '0';
+                await new Promise(r => setTimeout(r, 500));
+            }
+            
+            // Trigger Drop (with silence gap handled in playCinematicSfx timing)
+            await new Promise(r => setTimeout(r, 200)); // Tiny gap for visual suspense
+            triggerDrop();
+        }
+
+        function triggerDrop() {
+            playImpactSound();
+            flashOverlay.style.opacity = 1.0;
+            
+            // Reveal world
+            shards.forEach(s => s.root.visible = true);
+            ambienceGroup.visible = true;
+            
+            startMusic();
+            dropTime = performance.now() / 1000;
+
+            // Animate flash fade out
+            let fadeInterval = setInterval(() => {
+                const now = performance.now() / 1000;
+                const t = now - dropTime;
+                flashOverlay.style.opacity = Math.max(0, 1.0 - t * 0.5);
+                
+                // Fade UI in
+                if(t > 2.0) ui.style.opacity = 1;
+                
+                if(t > 3.0) {
+                    clearInterval(fadeInterval);
+                    inCutscene = false;
+                    controls.enabled = true;
+                    cinemaText.style.display = 'none';
+                }
+            }, 16);
+        }
 
         function startCutscene() {
             cutsceneStarted = true;
             inCutscene = true;
-            cutsceneTime = 0;
-            
-            playCinematicSfx();
-            setTimeout(startMusic, 4000); // Start music after drop
-
-            cinemaOverlay.style.opacity = 0;
-            setTimeout(() => cinemaOverlay.style.display = 'none', 500);
-            ui.style.opacity = 0;
             
             camera.position.copy(startCamPos);
             controls.enabled = false;
@@ -453,7 +599,17 @@ export const SoundShardHTMLView = () => {
             // Hide everything initially
             shards.forEach(s => s.root.visible = false);
             ambienceGroup.visible = false;
+            ui.style.opacity = 0;
+            
+            playCutsceneSequence();
         }
+
+        // Auto-start logic
+        setTimeout(() => {
+            try { initAudio(); } catch(e) {}
+            startCutscene();
+        }, 500);
+
 
         const clock = new THREE.Clock();
         const dummy = new THREE.Object3D(); // Single Declaration Here
@@ -463,59 +619,22 @@ export const SoundShardHTMLView = () => {
             const delta = clock.getDelta();
             const time = clock.getElapsedTime();
 
-            // --- CUTSCENE SEQUENCER ---
-            if (cutsceneStarted && inCutscene) {
-                cutsceneTime += delta;
-
-                // 0s - 3s: Buildup
-                if (cutsceneTime < 3.0) {
-                    if(cutsceneTime > 0.5) {
-                        cinemaText.style.opacity = 1;
-                        cinemaText.innerText = "SYNCHRONIZING...";
-                        cinemaText.style.color = (cutsceneTime % 0.1 < 0.05) ? "#ff0050" : "#fff";
-                    }
-                    // Camera spins down slowly
-                    camera.position.y = THREE.MathUtils.lerp(30, 20, cutsceneTime/3);
-                    camera.lookAt(0,0,0);
-                }
-                // 3s - 3.2s: FLASH
-                else if (cutsceneTime >= 3.0 && cutsceneTime < 3.5) {
-                    flashOverlay.style.opacity = 1.0;
-                    cinemaText.innerText = "RESONANCE ACHIEVED";
-                    cinemaText.style.color = "#00ffff";
-                    
-                    // Reveal objects
-                    shards.forEach(s => s.root.visible = true);
-                    ambienceGroup.visible = true;
-                }
-                // 3.5s+: Fade in
-                else {
-                    const fadeT = cutsceneTime - 3.5;
-                    flashOverlay.style.opacity = Math.max(0, 1.0 - fadeT * 0.5);
-                    
-                    // Smooth Camera transition
-                    const camProgress = Math.min(fadeT / 3.0, 1.0);
-                    const smoothCam = 1 - Math.pow(1 - camProgress, 3); // Cubic Ease Out
-                    camera.position.lerpVectors(new THREE.Vector3(0, 20, 0), endCamPos, smoothCam);
-                    camera.lookAt(0,0,0);
-
-                    if (fadeT > 2.0) {
-                        ui.style.opacity = 1;
-                        cinemaText.style.opacity = 0;
-                    }
-
-                    if (camProgress >= 1.0) {
-                        inCutscene = false;
-                        controls.enabled = true;
-                    }
-                }
-            } else if (!cutsceneStarted) {
-                // Idle rotation before start
-                const t = Date.now() * 0.0005;
-                camera.position.x = Math.sin(t) * 30;
-                camera.position.z = Math.cos(t) * 30;
+            // Camera movement during cutscene text phase
+            if (cutsceneStarted && inCutscene && shards[0].root.visible === false) {
+                 // Gentle spin while text plays
+                 const t = Date.now() * 0.0002;
+                 camera.position.x = Math.sin(t) * 30;
+                 camera.position.z = Math.cos(t) * 30;
+                 camera.lookAt(0,0,0);
+            } 
+            else if (cutsceneStarted && inCutscene && shards[0].root.visible === true) {
+                // Camera fly in after drop
+                const t = (performance.now() / 1000) - dropTime;
+                const duration = 3.0;
+                const alpha = Math.min(t / duration, 1.0);
+                const ease = 1 - Math.pow(1 - alpha, 3);
+                camera.position.lerpVectors(startCamPos, endCamPos, ease);
                 camera.lookAt(0,0,0);
-                shards.forEach(s => s.root.visible = false); // Hide shards
             }
 
             // AUDIO LEVEL
