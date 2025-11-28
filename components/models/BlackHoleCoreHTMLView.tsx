@@ -248,13 +248,14 @@ export const BlackHoleCoreHTMLView = () => {
                 this.masterGain.gain.value = 0.6;
                 this.masterGain.connect(this.ctx.destination);
                 
-                // Huge Space Reverb
-                this.convolver = this.ctx.createConvolver();
-                this.convolver.buffer = this.createImpulseResponse(5.0, 3.0);
-                this.verbGain = this.ctx.createGain();
-                this.verbGain.gain.value = 0.7;
-                this.convolver.connect(this.verbGain);
-                this.verbGain.connect(this.masterGain);
+                try {
+                    this.convolver = this.ctx.createConvolver();
+                    this.convolver.buffer = this.createImpulseResponse(3.0, 3.0);
+                    this.verbGain = this.ctx.createGain();
+                    this.verbGain.gain.value = 0.5;
+                    this.convolver.connect(this.verbGain);
+                    this.verbGain.connect(this.masterGain);
+                } catch(e) { console.warn("Reverb init failed", e); }
             }
 
             createImpulseResponse(duration, decay) {
@@ -271,10 +272,13 @@ export const BlackHoleCoreHTMLView = () => {
                 return impulse;
             }
             
+            resume() {
+                if(this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+            }
+
             playRumble() {
                 if(!this.ctx) return;
                 const now = this.ctx.currentTime;
-                // Deep Sub-bass Drone
                 const osc = this.ctx.createOscillator();
                 osc.type = 'sawtooth';
                 osc.frequency.value = 40;
@@ -283,7 +287,6 @@ export const BlackHoleCoreHTMLView = () => {
                 filter.type = 'lowpass';
                 filter.frequency.value = 60;
                 
-                // LFO for throbbing
                 const lfo = this.ctx.createOscillator();
                 lfo.frequency.value = 0.2;
                 const lfoGain = this.ctx.createGain();
@@ -298,25 +301,24 @@ export const BlackHoleCoreHTMLView = () => {
             }
             
             playSinging() {
-                // Ethereal "Singing" - bowed metal sound
                 if(!this.ctx) return;
-                
                 const playNote = () => {
                     const now = this.ctx.currentTime;
                     const osc = this.ctx.createOscillator();
                     osc.type = 'triangle';
-                    // Harmonic series based on low C
                     const harmonics = [130.81, 196.00, 261.63, 329.63, 392.00]; 
                     osc.frequency.value = harmonics[Math.floor(Math.random() * harmonics.length)];
                     
                     const g = this.ctx.createGain();
                     g.gain.setValueAtTime(0, now);
-                    g.gain.linearRampToValueAtTime(0.05, now + 2.0); // Slow attack
-                    g.gain.exponentialRampToValueAtTime(0.001, now + 8.0); // Long tail
+                    g.gain.linearRampToValueAtTime(0.05, now + 2.0);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + 8.0);
                     
-                    osc.connect(g); g.connect(this.convolver);
+                    osc.connect(g); 
+                    if(this.convolver) g.connect(this.convolver); 
+                    else g.connect(this.masterGain);
+
                     osc.start(); osc.stop(now + 9.0);
-                    
                     setTimeout(playNote, 4000 + Math.random() * 4000);
                 };
                 playNote();
@@ -328,15 +330,11 @@ export const BlackHoleCoreHTMLView = () => {
                 const osc = this.ctx.createOscillator();
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(100 + Math.random()*500, now);
-                
                 const filter = this.ctx.createBiquadFilter();
-                filter.type = 'highpass';
-                filter.frequency.value = 2000;
-                
+                filter.type = 'highpass'; filter.frequency.value = 2000;
                 const g = this.ctx.createGain();
                 g.gain.setValueAtTime(0.1, now);
                 g.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-                
                 osc.connect(filter); filter.connect(g); g.connect(this.masterGain);
                 osc.start(); osc.stop(now + 0.1);
             }
@@ -344,48 +342,28 @@ export const BlackHoleCoreHTMLView = () => {
             playImplosion() {
                 if(!this.ctx) return;
                 const now = this.ctx.currentTime;
-                
-                // Reverse suction (Riser)
                 const osc = this.ctx.createOscillator();
                 osc.frequency.setValueAtTime(50, now);
-                osc.frequency.exponentialRampToValueAtTime(800, now + 2.0); // Pitch up
-                
+                osc.frequency.exponentialRampToValueAtTime(800, now + 2.0); 
                 const g = this.ctx.createGain();
                 g.gain.setValueAtTime(0, now);
                 g.gain.linearRampToValueAtTime(0.8, now + 1.9);
-                g.gain.linearRampToValueAtTime(0, now + 2.0); // Silence before drop
-                
-                osc.connect(g); g.connect(this.masterGain); g.connect(this.convolver);
+                g.gain.linearRampToValueAtTime(0, now + 2.0);
+                osc.connect(g); g.connect(this.masterGain); 
+                if(this.convolver) g.connect(this.convolver);
                 osc.start(); osc.stop(now + 2.0);
                 
-                // THE DROP (Low impact)
                 const kick = this.ctx.createOscillator();
                 kick.frequency.setValueAtTime(100, now + 2.1);
                 kick.frequency.exponentialRampToValueAtTime(0.01, now + 4.0);
                 const kGain = this.ctx.createGain();
                 kGain.gain.setValueAtTime(1.0, now + 2.1);
                 kGain.gain.exponentialRampToValueAtTime(0.001, now + 4.0);
-                
-                // Add noise burst
-                const bufferSize = this.ctx.sampleRate * 0.5;
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-                const nGain = this.ctx.createGain();
-                nGain.gain.setValueAtTime(0.5, now + 2.1);
-                nGain.gain.exponentialRampToValueAtTime(0.001, now + 2.6);
-                
                 kick.connect(kGain); kGain.connect(this.masterGain);
-                noise.connect(nGain); nGain.connect(this.masterGain);
-                
                 kick.start(now + 2.1); kick.stop(now + 4.0);
-                noise.start(now + 2.1);
             }
         }
         
-        let lastOut = 0; // for pink noise
         const audio = new BlackHoleAudio();
 
         // --- CUTSCENE LOGIC ---
@@ -404,7 +382,6 @@ export const BlackHoleCoreHTMLView = () => {
         const hud = document.getElementById('hud');
         const dataStream = document.getElementById('data-stream');
 
-        // Start Data Stream
         const streamInterval = setInterval(() => {
             let txt = "";
             for(let i=0; i<6; i++) {
@@ -414,79 +391,79 @@ export const BlackHoleCoreHTMLView = () => {
         }, 100);
 
         setTimeout(() => {
-            try{ audio.init(); }catch(e){}
+            try{ audio.init(); audio.resume(); }catch(e){}
             playCutscene();
         }, 100);
 
         async function playCutscene() {
-            audio.playRumble();
-            
-            // Reticle contraction
-            const reticles = document.querySelectorAll('.reticle-corner');
-            setTimeout(() => {
-                reticles.forEach(r => {
-                    r.style.top = r.classList.contains('tl') || r.classList.contains('tr') ? '30%' : '';
-                    r.style.bottom = r.classList.contains('bl') || r.classList.contains('br') ? '30%' : '';
-                    r.style.left = r.classList.contains('tl') || r.classList.contains('bl') ? '30%' : '';
-                    r.style.right = r.classList.contains('tr') || r.classList.contains('br') ? '30%' : '';
-                    r.style.borderColor = 'rgba(255, 50, 50, 0.8)';
-                });
-            }, 3000); // Contract when "Reality is bending"
+            try {
+                audio.playRumble();
+                
+                // Reticle contraction
+                const reticles = document.querySelectorAll('.reticle-corner');
+                setTimeout(() => {
+                    reticles.forEach(r => {
+                        r.style.top = r.classList.contains('tl') || r.classList.contains('tr') ? '30%' : '';
+                        r.style.bottom = r.classList.contains('bl') || r.classList.contains('br') ? '30%' : '';
+                        r.style.left = r.classList.contains('tl') || r.classList.contains('bl') ? '30%' : '';
+                        r.style.right = r.classList.contains('tr') || r.classList.contains('br') ? '30%' : '';
+                        r.style.borderColor = 'rgba(255, 50, 50, 0.8)';
+                    });
+                }, 3000); 
 
-            for(let i=0; i<phrases.length; i++) {
-                const phrase = phrases[i];
-                introText.innerHTML = ''; // Clear previous
-                
-                // Create chars
-                for(let c=0; c<phrase.length; c++) {
-                    const span = document.createElement('span');
-                    span.textContent = phrase[c];
-                    span.className = 'char';
-                    if(phrase[c] === ' ') span.style.width = '15px';
-                    introText.appendChild(span);
+                for(let i=0; i<phrases.length; i++) {
+                    const phrase = phrases[i];
+                    introText.innerHTML = ''; 
+                    
+                    for(let c=0; c<phrase.length; c++) {
+                        const span = document.createElement('span');
+                        span.textContent = phrase[c];
+                        span.className = 'char';
+                        if(phrase[c] === ' ') span.style.width = '15px';
+                        introText.appendChild(span);
+                    }
+                    
+                    const chars = introText.querySelectorAll('.char');
+                    for(let c=0; c<chars.length; c++) {
+                        setTimeout(() => {
+                            if(chars[c]) {
+                                chars[c].classList.add('visible');
+                                if (Math.random() > 0.7) audio.playTextGlitch();
+                            }
+                        }, c * 30); 
+                    }
+                    
+                    if(i > 2) {
+                        setTimeout(() => {
+                            introText.querySelectorAll('.char').forEach(c => c.classList.add('glitch'));
+                            audio.playTextGlitch(); 
+                        }, phrase.length * 30 + 200);
+                    }
+                    
+                    await new Promise(r => setTimeout(r, 1500 + phrase.length * 30));
+                    introText.querySelectorAll('.char').forEach(c => c.classList.remove('visible'));
+                    await new Promise(r => setTimeout(r, 300));
                 }
                 
-                // Animate chars in
-                const chars = introText.querySelectorAll('.char');
-                for(let c=0; c<chars.length; c++) {
-                    setTimeout(() => {
-                        chars[c].classList.add('visible');
-                        if (Math.random() > 0.7) audio.playTextGlitch();
-                    }, c * 30); // Fast typing
-                }
+                audio.playImplosion();
                 
-                // Add distortion for later phrases
-                if(i > 2) {
-                    setTimeout(() => {
-                        introText.querySelectorAll('.char').forEach(c => c.classList.add('glitch'));
-                        audio.playTextGlitch(); // Extra glitch sound
-                    }, phrase.length * 30 + 200);
-                }
+                overlay.style.transition = 'width 0.2s ease-in, height 0.2s ease-in';
+                overlay.style.width = '300vw';
+                overlay.style.height = '300vw';
                 
-                await new Promise(r => setTimeout(r, 1500 + phrase.length * 30));
-                
-                // Fade out
-                introText.querySelectorAll('.char').forEach(c => c.classList.remove('visible'));
                 await new Promise(r => setTimeout(r, 300));
+                
+            } catch(e) {
+                console.error("Cutscene error", e);
+            } finally {
+                // Ensure these run even if cutscene errors
+                introScreen.style.display = 'none';
+                overlay.style.display = 'none';
+                clearInterval(streamInterval);
+                canvasWrapper.style.opacity = 1;
+                hud.style.opacity = 1;
+                audio.playSinging();
             }
-            
-            // Implosion
-            audio.playImplosion();
-            
-            // Animate overlay growing to fill screen (swallowing)
-            overlay.style.transition = 'width 0.2s ease-in, height 0.2s ease-in';
-            overlay.style.width = '300vw';
-            overlay.style.height = '300vw';
-            
-            await new Promise(r => setTimeout(r, 300));
-            
-            introScreen.style.display = 'none';
-            overlay.style.display = 'none';
-            clearInterval(streamInterval);
-            canvasWrapper.style.opacity = 1;
-            hud.style.opacity = 1;
-            
-            audio.playSinging();
         }
 
         // --- SCENE ---
@@ -494,7 +471,7 @@ export const BlackHoleCoreHTMLView = () => {
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 2, 6);
         
-        const renderer = new THREE.WebGLRenderer({ antialias: false }); // False for grit
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); 
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.toneMapping = THREE.ReinhardToneMapping;
         document.getElementById('canvas-wrapper').appendChild(renderer.domElement);
@@ -504,24 +481,11 @@ export const BlackHoleCoreHTMLView = () => {
         controls.autoRotate = true;
         controls.autoRotateSpeed = 2.0;
         controls.minDistance = 4.0;
-        controls.maxDistance = 15.0; // Limit zoom out
+        controls.maxDistance = 15.0; 
 
-        // --- BLACK HOLE SHADERS ---
-        
-        // Jet Shader (Relativistic Beams - Thin & Intense)
-        const jetVertex = \`
-            varying vec2 vUv;
-            void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        \`;
-        
-        const jetFragment = \`
-            uniform float uTime;
-            varying vec2 vUv;
-            
-            // Simplex Noise (Inline)
+        // --- SHADERS ---
+        const jetVertex = \`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`;
+        const jetFragment = \`uniform float uTime; varying vec2 vUv;
             vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -541,40 +505,18 @@ export const BlackHoleCoreHTMLView = () => {
                 g.yz = a0.yz * x12.xz + h.yz * x12.yw;
                 return 130.0 * dot(m, g);
             }
-
             void main() {
                 float flow = snoise(vec2(vUv.x * 20.0, vUv.y * 5.0 - uTime * 12.0));
-                
-                // Fade at edges
                 float alpha = smoothstep(0.0, 0.4, vUv.x) * smoothstep(1.0, 0.6, vUv.x);
                 alpha *= smoothstep(0.0, 0.3, vUv.y) * smoothstep(1.0, 0.8, vUv.y);
-                
                 float core = smoothstep(0.4, 0.6, alpha);
-                
-                // Blue/Purple Energy
                 vec3 col = mix(vec3(0.5, 0.0, 1.0), vec3(0.5, 0.8, 1.0), flow);
-                col += vec3(1.0) * core * 3.0; // Blinding core
-                
+                col += vec3(1.0) * core * 3.0; 
                 gl_FragColor = vec4(col, alpha * (0.2 + flow * 0.3));
             }
         \`;
-
-        // Accretion Disk Shader - Golden Vortex
-        const diskVertex = \`
-            varying vec2 vUv;
-            varying vec3 vPos;
-            void main() {
-                vUv = uv;
-                vPos = position;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        \`;
-        
-        const diskFragment = \`
-            uniform float uTime;
-            varying vec2 vUv;
-            
-            // Simplex Noise
+        const diskVertex = jetVertex;
+        const diskFragment = \`uniform float uTime; varying vec2 vUv;
             vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
             vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -594,149 +536,62 @@ export const BlackHoleCoreHTMLView = () => {
                 g.yz = a0.yz * x12.xz + h.yz * x12.yw;
                 return 130.0 * dot(m, g);
             }
-
             void main() {
                 vec2 centered = vUv - 0.5;
                 float r = length(centered) * 2.0;
                 float a = atan(centered.y, centered.x);
-                
-                // Define horizon (Larger gap for core visibility)
                 if(r < 0.38 || r > 1.0) discard;
-                
-                // Complex swirling vortex
                 float spiral = a + r * 15.0 - uTime * 4.0;
                 float noise1 = snoise(vec2(r * 5.0, spiral));
                 float noise2 = snoise(vec2(r * 20.0 - uTime * 2.5, a * 6.0));
-                
-                // Layer noise
                 float noise = noise1 * 0.6 + noise2 * 0.4;
-                
-                // GOLDEN HEAT MAP
-                // Inner = White, Mid = Gold/Orange, Outer = Deep Red/Black
-                float heat = 1.0 - smoothstep(0.38, 0.95, r); 
-                heat += noise * 0.25;
-                
+                float heat = 1.0 - smoothstep(0.38, 0.95, r); heat += noise * 0.25;
                 vec3 col;
-                if(heat > 0.8) col = mix(vec3(1.0, 0.8, 0.4), vec3(1.0, 1.0, 1.0), (heat-0.8)*5.0); // Gold to White
-                else if(heat > 0.5) col = mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 0.8, 0.4), (heat-0.5)*3.3); // Orange to Gold
-                else if(heat > 0.2) col = mix(vec3(0.3, 0.0, 0.0), vec3(1.0, 0.3, 0.0), (heat-0.2)*3.3); // Red to Orange
-                else col = mix(vec3(0.0, 0.0, 0.0), vec3(0.3, 0.0, 0.0), heat*5.0); // Black to Red
-                
-                // Bright streaks
+                if(heat > 0.8) col = mix(vec3(1.0, 0.8, 0.4), vec3(1.0, 1.0, 1.0), (heat-0.8)*5.0);
+                else if(heat > 0.5) col = mix(vec3(1.0, 0.3, 0.0), vec3(1.0, 0.8, 0.4), (heat-0.5)*3.3);
+                else if(heat > 0.2) col = mix(vec3(0.3, 0.0, 0.0), vec3(1.0, 0.3, 0.0), (heat-0.2)*3.3);
+                else col = mix(vec3(0.0, 0.0, 0.0), vec3(0.3, 0.0, 0.0), heat*5.0);
                 float streaks = smoothstep(0.65, 0.9, noise);
-                col += vec3(1.0, 0.9, 0.7) * streaks * heat * 3.0; // Intense sparkles
-                
-                // Opacity fade at edges
+                col += vec3(1.0, 0.9, 0.7) * streaks * heat * 3.0;
                 float alpha = smoothstep(0.0, 0.1, noise + 0.2);
                 alpha *= smoothstep(1.0, 0.7, r) * smoothstep(0.38, 0.48, r);
-                
                 gl_FragColor = vec4(col * 2.0, alpha); 
             }
         \`;
 
         // --- GEOMETRY ---
-        
         const blackHoleGroup = new THREE.Group();
         scene.add(blackHoleGroup);
 
-        // 1. Event Horizon (Black Sphere)
         const blackHoleGeo = new THREE.SphereGeometry(1.4, 64, 64);
-        const blackHoleMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const blackHoleMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 } },
+            vertexShader: \`varying vec2 vUv; varying vec3 vNormal; void main() { vUv = uv; vNormal = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`,
+            fragmentShader: \`uniform float uTime; varying vec2 vUv; varying vec3 vNormal; float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123); } void main() { float fresnel = pow(1.0 - dot(vNormal, vec3(0,0,1)), 4.0); float noise = random(vUv * 50.0 + uTime); float noise2 = random(vUv * 20.0 - uTime * 0.5); vec3 col = vec3(0.0); if (noise > 0.98) col += vec3(0.2, 0.0, 0.4) * noise2; col += vec3(0.05, 0.0, 0.1) * fresnel; gl_FragColor = vec4(col, 1.0); }\`
+        });
         const blackHole = new THREE.Mesh(blackHoleGeo, blackHoleMat);
         blackHoleGroup.add(blackHole);
         
-        // 2. Gravitational Lensing Halo (Replacement for Photon Ring)
-        // A shader-based ring that simulates light bending and chromatic distortion
         const haloGeo = new THREE.PlaneGeometry(4.5, 4.5);
         const haloMat = new THREE.ShaderMaterial({
             uniforms: { uTime: { value: 0 } },
-            transparent: true,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-            vertexShader: \`
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            \`,
-            fragmentShader: \`
-                uniform float uTime;
-                varying vec2 vUv;
-                
-                void main() {
-                    vec2 center = vUv - 0.5;
-                    float r = length(center) * 2.0;
-                    
-                    // Thin sharp ring at the event horizon limit
-                    float ring = 1.0 - smoothstep(0.0, 0.02, abs(r - 0.63));
-                    
-                    // "Boiling" noise
-                    float angle = atan(center.y, center.x);
-                    float noise = sin(angle * 20.0 + uTime * 5.0) * sin(r * 50.0 - uTime * 10.0);
-                    
-                    ring *= (0.8 + 0.2 * noise);
-                    
-                    // Chromatic Aberration
-                    vec3 col = vec3(ring);
-                    col.r *= 1.0 + ring; 
-                    col.b *= 0.5 + ring * 0.5;
-                    
-                    // Outer glow
-                    float glow = 1.0 / (r * r * 20.0);
-                    glow *= smoothstep(0.63, 1.0, r); 
-                    
-                    col += vec3(glow * 0.2, glow * 0.1, glow * 0.05); // Gold tint
-                    
-                    gl_FragColor = vec4(col, ring + glow);
-                }
-            \`
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+            vertexShader: \`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`,
+            fragmentShader: \`uniform float uTime; varying vec2 vUv; void main() { vec2 center = vUv - 0.5; float r = length(center) * 2.0; float ring = 1.0 - smoothstep(0.0, 0.02, abs(r - 0.63)); float angle = atan(center.y, center.x); float noise = sin(angle * 20.0 + uTime * 5.0) * sin(r * 50.0 - uTime * 10.0); ring *= (0.8 + 0.2 * noise); vec3 col = vec3(ring); col.r *= 1.0 + ring; col.b *= 0.5 + ring * 0.5; float glow = 1.0 / (r * r * 20.0); glow *= smoothstep(0.63, 1.0, r); col += vec3(glow * 0.2, glow * 0.1, glow * 0.05); gl_FragColor = vec4(col, ring + glow); }\`
         });
         const photonRing = new THREE.Mesh(haloGeo, haloMat);
         scene.add(photonRing);
 
-        // 3. Accretion Disk (Multiple layers for volume)
         const diskGeo = new THREE.PlaneGeometry(9, 9, 128, 128);
-        const diskMat = new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            vertexShader: diskVertex,
-            fragmentShader: diskFragment,
-            transparent: true,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        
-        const disk1 = new THREE.Mesh(diskGeo, diskMat);
-        blackHoleGroup.add(disk1);
-        
-        const disk2 = new THREE.Mesh(diskGeo, diskMat.clone());
-        disk2.rotation.y = Math.PI; // Flip
-        disk2.position.y = 0.05; // Slight offset for thickness
-        blackHoleGroup.add(disk2);
+        const diskMat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, vertexShader: diskVertex, fragmentShader: diskFragment, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+        const disk1 = new THREE.Mesh(diskGeo, diskMat); blackHoleGroup.add(disk1);
+        const disk2 = new THREE.Mesh(diskGeo, diskMat.clone()); disk2.rotation.y = Math.PI; disk2.position.y = 0.05; blackHoleGroup.add(disk2);
 
-        // 4. Relativistic Jets (Thinner)
         const jetGeo = new THREE.CylinderGeometry(0.1, 0.8, 14, 32, 10, true);
-        const jetMat = new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            vertexShader: jetVertex,
-            fragmentShader: jetFragment,
-            transparent: true,
-            side: THREE.DoubleSide,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-        
-        const jetTop = new THREE.Mesh(jetGeo, jetMat);
-        jetTop.position.y = 7;
-        blackHoleGroup.add(jetTop);
-        
-        const jetBottom = new THREE.Mesh(jetGeo, jetMat);
-        jetBottom.position.y = -7;
-        jetBottom.rotation.x = Math.PI;
-        blackHoleGroup.add(jetBottom);
+        const jetMat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, vertexShader: jetVertex, fragmentShader: jetFragment, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false });
+        const jetTop = new THREE.Mesh(jetGeo, jetMat); jetTop.position.y = 7; blackHoleGroup.add(jetTop);
+        const jetBottom = new THREE.Mesh(jetGeo, jetMat); jetBottom.position.y = -7; jetBottom.rotation.x = Math.PI; blackHoleGroup.add(jetBottom);
 
-        // 6. Starfield Background (More stars)
         const starsGeo = new THREE.BufferGeometry();
         const starCount = 5000;
         const starPos = new Float32Array(starCount * 3);
@@ -746,117 +601,61 @@ export const BlackHoleCoreHTMLView = () => {
         const starSystem = new THREE.Points(starsGeo, starsMat);
         scene.add(starSystem);
 
-        // 7. Nebula Clouds (Subtle Background)
         const cloudGeo = new THREE.SphereGeometry(60, 32, 32);
         const cloudMat = new THREE.ShaderMaterial({
-            uniforms: { uTime: { value: 0 } },
-            side: THREE.BackSide,
-            transparent: true,
-            depthWrite: false,
-            vertexShader: \`
-                varying vec3 vWorldPos;
-                void main() {
-                    vWorldPos = position;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            \`,
-            fragmentShader: \`
-                uniform float uTime;
-                varying vec3 vWorldPos;
-                float hash(float n) { return fract(sin(n) * 43758.5453123); }
-                float noise(vec3 x) {
-                    vec3 p = floor(x); vec3 f = fract(x);
-                    f = f * f * (3.0 - 2.0 * f);
-                    float n = p.x + p.y * 57.0 + 113.0 * p.z;
-                    return mix(mix(mix(hash(n+0.0), hash(n+1.0),f.x), mix(hash(n+57.0), hash(n+58.0),f.x),f.y),
-                               mix(mix(hash(n+113.0), hash(n+114.0),f.x), mix(hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
-                }
-                void main() {
-                    vec3 p = normalize(vWorldPos) * 2.0;
-                    float n = noise(p + uTime * 0.02);
-                    float intensity = smoothstep(0.4, 0.7, n) * 0.15; // Lower intensity
-                    vec3 col = mix(vec3(0.05, 0.0, 0.1), vec3(0.1, 0.05, 0.0), n); // Dark Violet/Red
-                    gl_FragColor = vec4(col, intensity);
-                }
-            \`
+            uniforms: { uTime: { value: 0 } }, side: THREE.BackSide, transparent: true, depthWrite: false,
+            vertexShader: \`varying vec3 vWorldPos; void main() { vWorldPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`,
+            fragmentShader: \`uniform float uTime; varying vec3 vWorldPos; float hash(float n) { return fract(sin(n) * 43758.5453123); } float noise(vec3 x) { vec3 p = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f); float n = p.x + p.y * 57.0 + 113.0 * p.z; return mix(mix(mix(hash(n+0.0), hash(n+1.0),f.x), mix(hash(n+57.0), hash(n+58.0),f.x),f.y), mix(mix(hash(n+113.0), hash(n+114.0),f.x), mix(hash(n+170.0), hash(n+171.0),f.x),f.y),f.z); } void main() { vec3 p = normalize(vWorldPos) * 2.0; float n = noise(p + uTime * 0.02); float intensity = smoothstep(0.4, 0.7, n) * 0.15; vec3 col = mix(vec3(0.05, 0.0, 0.1), vec3(0.1, 0.05, 0.0), n); gl_FragColor = vec4(col, intensity); }\`
         });
         const nebula = new THREE.Mesh(cloudGeo, cloudMat);
         scene.add(nebula);
 
-        // 8. Volumetric Disk Particles (Sparkling Ring)
         const sparkCount = 3000;
         const sparkGeo = new THREE.BufferGeometry();
         const sparkPos = new Float32Array(sparkCount * 3);
-        const sparkData = []; // Store angle/radius for animation
-        
+        const sparkData = []; 
         for(let i=0; i<sparkCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            // Distribution concentrated in disk
             const r = 2.0 + Math.pow(Math.random(), 2.0) * 6.0; 
-            const y = (Math.random() - 0.5) * (0.2 + (r * 0.05)); // Thicker at edges
-            
-            sparkPos[i*3] = Math.cos(angle) * r;
-            sparkPos[i*3+1] = y;
-            sparkPos[i*3+2] = Math.sin(angle) * r;
-            
+            const y = (Math.random() - 0.5) * (0.2 + (r * 0.05));
+            sparkPos[i*3] = Math.cos(angle) * r; sparkPos[i*3+1] = y; sparkPos[i*3+2] = Math.sin(angle) * r;
             sparkData.push({ angle, r, y, speed: (3.0 / (r*r)) * 0.05 });
         }
         sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-        const sparkMat = new THREE.PointsMaterial({
-            color: 0xffcc88, // Golden sparks
-            size: 0.03,
-            transparent: true,
-            opacity: 0.8,
-            blending: THREE.AdditiveBlending
-        });
+        const sparkMat = new THREE.PointsMaterial({ color: 0xffcc88, size: 0.03, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
         const sparkSystem = new THREE.Points(sparkGeo, sparkMat);
         blackHoleGroup.add(sparkSystem);
 
-        // 9. Magnetic Field Lines
         const linesGroup = new THREE.Group();
         blackHoleGroup.add(linesGroup);
         const lineMat = new THREE.LineBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
-        
         for(let i=0; i<12; i++) {
             const points = [];
-            const radius = 2.0 + Math.random() * 4.0;
-            const height = 4.0 + Math.random() * 4.0;
-            
+            const radius = 2.0 + Math.random() * 4.0; const height = 4.0 + Math.random() * 4.0;
             for(let j=0; j<=50; j++) {
-                const t = j / 50;
-                const angle = t * Math.PI * 2;
-                const x = Math.cos(angle * 2.0) * (radius * (1.0 - Math.abs(t-0.5))); 
-                const z = Math.sin(angle * 2.0) * (radius * (1.0 - Math.abs(t-0.5)));
-                const y = (t - 0.5) * height * 2.0;
+                const t = j / 50; const angle = t * Math.PI * 2;
+                const x = Math.cos(angle * 2.0) * (radius * (1.0 - Math.abs(t-0.5))); const z = Math.sin(angle * 2.0) * (radius * (1.0 - Math.abs(t-0.5))); const y = (t - 0.5) * height * 2.0;
                 points.push(new THREE.Vector3(x, y, z));
             }
             const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const line = new THREE.Line(geometry, lineMat);
-            line.rotation.y = (i / 12) * Math.PI * 2;
-            linesGroup.add(line);
+            const line = new THREE.Line(geometry, lineMat); line.rotation.y = (i / 12) * Math.PI * 2; linesGroup.add(line);
         }
 
-        // 10. Plasma Arcs (Dynamic Electric Bolts)
         const arcsGroup = new THREE.Group();
         blackHoleGroup.add(arcsGroup);
         const arcCount = 5;
         const arcMeshes = [];
-        
         for(let i=0; i<arcCount; i++) {
-            const curve = new THREE.CatmullRomCurve3([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(2, 2, 0),
-                new THREE.Vector3(4, 0, 0)
-            ]);
+            const curve = new THREE.CatmullRomCurve3([ new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 2, 0), new THREE.Vector3(4, 0, 0) ]);
             const pts = curve.getPoints(20);
             const geo = new THREE.BufferGeometry().setFromPoints(pts);
+            geo.attributes.position.setUsage(THREE.DynamicDrawUsage); // Important for animation
             const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
             const mesh = new THREE.Line(geo, mat);
             arcsGroup.add(mesh);
             arcMeshes.push({ mesh, offset: Math.random() * 100, speed: 0.5 + Math.random() });
         }
 
-        // 11. Foreground Dust (Parallax Depth)
         const fgDustGeo = new THREE.BufferGeometry();
         const fgDustCount = 500;
         const fgDustPos = new Float32Array(fgDustCount * 3);
@@ -866,46 +665,32 @@ export const BlackHoleCoreHTMLView = () => {
         const fgDustSystem = new THREE.Points(fgDustGeo, fgDustMat);
         scene.add(fgDustSystem);
 
-        // 12. Shooting Stars (Background Ambience)
-        const shooterGeo = new THREE.BufferGeometry();
-        const shooterCount = 20;
-        const shooterPos = new Float32Array(shooterCount * 3);
-        const shooterVel = [];
-        for(let i=0; i<shooterCount; i++) {
-            shooterPos[i*3] = (Math.random()-0.5) * 200;
-            shooterPos[i*3+1] = (Math.random()-0.5) * 200;
-            shooterPos[i*3+2] = (Math.random()-0.5) * 100 - 50; // Far back
-            shooterVel.push(new THREE.Vector3((Math.random()-0.5), (Math.random()-0.5), 0).normalize().multiplyScalar(0.5 + Math.random()));
+        const waveGeo = new THREE.TorusGeometry(1.0, 0.02, 16, 100);
+        const waveMat = new THREE.MeshBasicMaterial({ color: 0x442266, transparent: true, opacity: 0.0 });
+        const waves = [];
+        for(let i=0; i<5; i++) {
+            const wave = new THREE.Mesh(waveGeo, waveMat.clone());
+            wave.rotation.x = Math.PI / 2; wave.userData = { age: i * 200 };
+            blackHoleGroup.add(wave); waves.push(wave);
         }
-        shooterGeo.setAttribute('position', new THREE.BufferAttribute(shooterPos, 3));
-        const shooterMat = new THREE.PointsMaterial({ color: 0xccffff, size: 0.3, transparent: true, opacity: 0.6 });
-        const shooterSystem = new THREE.Points(shooterGeo, shooterMat);
-        scene.add(shooterSystem);
+        
+        const rayGeo = new THREE.ConeGeometry(3.0, 10, 32, 1, true);
+        const rayMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 } }, transparent: true, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+            vertexShader: \`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`,
+            fragmentShader: \`uniform float uTime; varying vec2 vUv; void main() { float noise = sin(vUv.x * 20.0 + uTime) * 0.5 + 0.5; float grad = smoothstep(0.0, 0.5, vUv.y) * smoothstep(1.0, 0.5, vUv.y); float intensity = smoothstep(0.0, 1.0, grad * noise); gl_FragColor = vec4(1.0, 0.8, 0.6, intensity * 0.1); }\`
+        });
+        const rayMesh = new THREE.Mesh(rayGeo, rayMat); rayMesh.rotation.x = Math.PI / 2; blackHoleGroup.add(rayMesh);
 
-        // Tilt the whole system
         blackHoleGroup.rotation.x = 0.4;
         blackHoleGroup.rotation.z = 0.2;
 
-        // --- POST PROCESSING ---
         const composer = new EffectComposer(renderer);
-        const renderPass = new RenderPass(scene, camera);
-        composer.addPass(renderPass);
-        
-        const bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.0, // strength
-            0.6, // radius
-            0.2  // threshold
-        );
+        composer.addPass(new RenderPass(scene, camera));
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.0, 0.6, 0.2);
         composer.addPass(bloomPass);
 
         const clock = new THREE.Clock();
-        const _tempMat = new THREE.Matrix4();
-        const _rotMat = new THREE.Matrix4();
-        const _euler = new THREE.Euler();
-        const _pos = new THREE.Vector3();
-        const _quat = new THREE.Quaternion();
-        const _scale = new THREE.Vector3();
 
         function animate() {
             requestAnimationFrame(animate);
@@ -913,13 +698,9 @@ export const BlackHoleCoreHTMLView = () => {
             
             diskMat.uniforms.uTime.value = time;
             jetMat.uniforms.uTime.value = time;
-            
-            // Update Halo Shader
             haloMat.uniforms.uTime.value = time;
-            // Face halo to camera
             photonRing.lookAt(camera.position);
             
-            // Animate Sparks (Volumetric Disk)
             const sPos = sparkSystem.geometry.attributes.position.array;
             for(let i=0; i<sparkCount; i++) {
                 const d = sparkData[i];
@@ -929,74 +710,42 @@ export const BlackHoleCoreHTMLView = () => {
             }
             sparkSystem.geometry.attributes.position.needsUpdate = true;
             
-            // Pulse Nebula
             cloudMat.uniforms.uTime.value = time;
-            
-            // Rotate Magnetic Lines
             linesGroup.rotation.y += 0.005;
             
-            // Animate Plasma Arcs
             arcMeshes.forEach((data, i) => {
                 const t = (time * data.speed + data.offset);
                 const positions = data.mesh.geometry.attributes.position.array;
-                
-                // Random walk lightning
                 const r = 2.5 + Math.sin(t) * 0.5;
                 const theta = t * 2.0 + (i * (Math.PI*2/arcCount));
-                
-                // Start on disk
-                const x1 = Math.cos(theta) * r;
-                const z1 = Math.sin(theta) * r;
-                
-                // End near pole (jet)
-                const x2 = Math.cos(theta + 1.0) * 0.5;
-                const z2 = Math.sin(theta + 1.0) * 0.5;
+                const x1 = Math.cos(theta) * r; const z1 = Math.sin(theta) * r;
+                const x2 = Math.cos(theta + 1.0) * 0.5; const z2 = Math.sin(theta + 1.0) * 0.5;
                 const y2 = (i % 2 === 0 ? 1 : -1) * (4.0 + Math.sin(t*3)*2);
-                
-                // Midpoint jitter
-                const xm = (x1+x2)/2 + (Math.random()-0.5);
-                const ym = y2/2 + (Math.random()-0.5);
-                const zm = (z1+z2)/2 + (Math.random()-0.5);
-                
-                // Update line points manually (3 points: start, mid, end)
-                // For smoother curves we'd need to re-sample curve, but simple jagged lines look more like electricity
-                // Let's just do a simple 3-segment bolt
+                const xm = (x1+x2)/2 + (Math.random()-0.5); const ym = y2/2 + (Math.random()-0.5); const zm = (z1+z2)/2 + (Math.random()-0.5);
                 positions[0] = x1; positions[1] = 0; positions[2] = z1;
                 positions[3] = xm; positions[4] = ym; positions[5] = zm;
                 positions[6] = x2; positions[7] = y2; positions[8] = z2;
-                
-                // Randomly flicker visibility
                 data.mesh.material.opacity = Math.random() > 0.7 ? 0.8 : 0.0;
-                
                 data.mesh.geometry.attributes.position.needsUpdate = true;
             });
             
-            // Animate Foreground Dust
             fgDustSystem.rotation.y = time * 0.02;
             fgDustSystem.rotation.x = time * 0.01;
-
-            // Animate Shooting Stars
-            const sStars = shooterSystem.geometry.attributes.position.array;
-            for(let i=0; i<shooterCount; i++) {
-                sStars[i*3] += shooterVel[i].x;
-                sStars[i*3+1] += shooterVel[i].y;
-                
-                // Reset if out of bounds
-                if(Math.abs(sStars[i*3]) > 120 || Math.abs(sStars[i*3+1]) > 120) {
-                    sStars[i*3] = (Math.random()-0.5) * 200;
-                    sStars[i*3+1] = (Math.random()-0.5) * 200;
-                }
-            }
-            shooterSystem.geometry.attributes.position.needsUpdate = true;
             
-            // Random Nebula Lightning
-            if(Math.random() > 0.98) {
-                cloudMat.uniforms.uTime.value += 1.0; // Sharp jump for flicker
-            } else {
-                cloudMat.uniforms.uTime.value = time;
-            }
+            if(Math.random() > 0.98) cloudMat.uniforms.uTime.value += 1.0; else cloudMat.uniforms.uTime.value = time;
             
-            // Flicker light
+            waves.forEach(w => {
+                w.userData.age += 1.0;
+                if(w.userData.age > 1000) w.userData.age = 0;
+                const scale = 1.5 + (w.userData.age / 1000) * 15.0;
+                w.scale.set(scale, scale, 1);
+                w.material.opacity = (1.0 - (w.userData.age / 1000)) * 0.2;
+            });
+            
+            rayMat.uniforms.uTime.value = time;
+            rayMesh.rotation.z = time * 0.05;
+            blackHoleMat.uniforms.uTime.value = time;
+            
             bloomPass.strength = 1.0 + Math.sin(time * 15.0) * 0.1 + (Math.random() * 0.1);
 
             controls.update();

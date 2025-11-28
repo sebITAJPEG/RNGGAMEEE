@@ -3,7 +3,7 @@ import { Language, RarityId } from '../types';
 export const SPECIAL_HTML_ITEMS = [
     "Black Hole Core", "Sound Shard",
     "Solar Plasma", "The Golden Ratio", "Neutronium", "Crystallized Thought", "Hypercube Fragment", "Antimatter", "Dark Matter",
-    "Frozen Time", "Solid Light", "Strange Matter", "The Spectrum"
+    "Frozen Time", "Solid Light", "Strange Matter", "The Spectrum", "Lucid Lobster"
 ];
 
 export const TRANSLATIONS: Record<Language, {

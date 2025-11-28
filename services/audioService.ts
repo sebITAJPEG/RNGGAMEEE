@@ -583,6 +583,63 @@ class AudioService {
             this.stopSignalScan();
         } catch (e) { }
     }
+
+    public playLucidSound() {
+        if (this.globalVolume <= 0) return;
+        this.init();
+        if (!this.ctx || !this.masterGain) return;
+
+        try {
+            const t = this.ctx.currentTime;
+            
+            // Dreamy swell
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, t);
+            osc.frequency.exponentialRampToValueAtTime(800, t + 2.0);
+            
+            // Tremolo
+            const lfo = this.ctx.createOscillator();
+            lfo.frequency.value = 10;
+            const lfoGain = this.ctx.createGain();
+            lfoGain.gain.value = 50;
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start(t);
+            lfo.stop(t + 2.5);
+
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.3, t + 1.0);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+            
+            osc.start(t);
+            osc.stop(t + 2.5);
+
+            // Sparkles
+            for(let i=0; i<10; i++) {
+                setTimeout(() => {
+                    const spark = this.ctx!.createOscillator();
+                    const sGain = this.ctx!.createGain();
+                    spark.connect(sGain);
+                    sGain.connect(this.masterGain!);
+                    
+                    spark.type = 'triangle';
+                    spark.frequency.setValueAtTime(1000 + Math.random() * 2000, this.ctx!.currentTime);
+                    
+                    sGain.gain.setValueAtTime(0.05, this.ctx!.currentTime);
+                    sGain.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + 0.1);
+                    
+                    spark.start();
+                    spark.stop(this.ctx!.currentTime + 0.1);
+                }, i * 200);
+            }
+
+        } catch (e) { }
+    }
 }
 
 export const audioService = new AudioService();

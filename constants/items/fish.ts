@@ -80,35 +80,5 @@ export const FISH: Fish[] = [
     { id: 70, name: "Molten Marlin", description: "Liquid metal body.", probability: 3000000000, color: "text-red-400", glowColor: "#f87171", tierName: "Magma" },
     // --- TIER 8: DREAM (71-80) ---
     { id: 71, name: "Nightmare Eel", description: "You can't wake up.", probability: 3500000000, color: "text-black bg-white px-1", glowColor: "#000000", tierName: "Dream" },
-    { id: 72, name: "Lucid Lobster", description: "It knows it's a lobster.", probability: 4000000000, color: "text-blue-300", glowColor: "#93c5fd", tierName: "Dream" },
-    { id: 73, name: "Sleep Shark", description: "Never stops moving.", probability: 4500000000, color: "text-indigo-400", glowColor: "#818cf8", tierName: "Dream" },
-    { id: 74, name: "REM Ray", description: "Rapid Eye Movement.", probability: 5000000000, color: "text-violet-400", glowColor: "#a78bfa", tierName: "Dream" },
-    { id: 75, name: "Subconscious Squid", description: "Deepest thoughts.", probability: 6000000000, color: "text-purple-600", glowColor: "#9333ea", tierName: "Dream" },
-    { id: 76, name: "Deja Vu Dory", description: "Have I caught this before?", probability: 7000000000, color: "text-cyan-500", glowColor: "#06b6d4", tierName: "Dream" },
-    { id: 77, name: "Memory Mackerel", description: "Don't forget.", probability: 8000000000, color: "text-amber-300", glowColor: "#fcd34d", tierName: "Dream" },
-    { id: 78, name: "Fantasy Fluke", description: "Impossible anatomy.", probability: 9000000000, color: "text-pink-400", glowColor: "#f472b6", tierName: "Dream" },
-    { id: 79, name: "Illusion Ilisha", description: "Not really there.", probability: 10000000000, color: "text-white blur-[1px]", glowColor: "#ffffff", tierName: "Dream" },
-    { id: 80, name: "Trance Tuna", description: "Hypnotic scales.", probability: 12000000000, color: "text-emerald-400 animate-pulse", glowColor: "#34d399", tierName: "Dream" },
-    // --- TIER 9: ABSTRACT (81-90) ---
-    { id: 81, name: "Concept Cod", description: "The idea of a fish.", probability: 15000000000, color: "text-gray-400", glowColor: "#9ca3af", tierName: "Abstract" },
-    { id: 82, name: "Idea Isopod", description: "Crawls into your mind.", probability: 18000000000, color: "text-yellow-100", glowColor: "#fef9c3", tierName: "Abstract" },
-    { id: 83, name: "Thought Trout", description: "Swimming upstream.", probability: 21000000000, color: "text-blue-200", glowColor: "#bfdbfe", tierName: "Abstract" },
-    { id: 84, name: "Philosophy Puffer", description: "Full of hot air.", probability: 25000000000, color: "text-orange-300", glowColor: "#fdba74", tierName: "Abstract" },
-    { id: 85, name: "Logic Loach", description: "Follows the rules.", probability: 30000000000, color: "text-green-600", glowColor: "#16a34a", tierName: "Abstract" },
-    { id: 86, name: "Reason Ray", description: "Makes sense.", probability: 35000000000, color: "text-teal-500", glowColor: "#14b8a6", tierName: "Abstract" },
-    { id: 87, name: "Wisdom Whale", description: "Knows everything.", probability: 40000000000, color: "text-indigo-800", glowColor: "#3730a3", tierName: "Abstract" },
-    { id: 88, name: "Knowledge Koi", description: "Swimming in data.", probability: 50000000000, color: "text-red-500", glowColor: "#ef4444", tierName: "Abstract" },
-    { id: 89, name: "Truth Tetra", description: "Cannot lie.", probability: 60000000000, color: "text-white drop-shadow-md", glowColor: "#ffffff", tierName: "Abstract" },
-    { id: 90, name: "Fact Flounder", description: "Hard evidence.", probability: 75000000000, color: "text-stone-600", glowColor: "#57534e", tierName: "Abstract" },
-    // --- TIER 10: META (91-100) ---
-    { id: 91, name: "Clickbait Catfish", description: "You won't believe this!", probability: 100000000000, color: "text-red-600 font-bold", glowColor: "#dc2626", tierName: "Meta" },
-    { id: 92, name: "Viral Video Viper", description: "Trending now.", probability: 125000000000, color: "text-purple-500", glowColor: "#a855f7", tierName: "Meta" },
-    { id: 93, name: "Meme Minnow", description: "Dank.", probability: 150000000000, color: "text-green-500", glowColor: "#22c55e", tierName: "Meta" },
-    { id: 94, name: "Stream Sniper Shark", description: "Watching your screen.", probability: 200000000000, color: "text-blue-600", glowColor: "#2563eb", tierName: "Meta" },
-    { id: 95, name: "Lag Lobster", description: "Moves... very... slow...", probability: 250000000000, color: "text-neutral-500", glowColor: "#737373", tierName: "Meta" },
-    { id: 96, name: "Buff Bass", description: "Stats increased.", probability: 300000000000, color: "text-orange-600", glowColor: "#ea580c", tierName: "Meta" },
-    { id: 97, name: "Nerf Narwhal", description: "Stats decreased.", probability: 400000000000, color: "text-blue-300", glowColor: "#93c5fd", tierName: "Meta" },
-    { id: 98, name: "Patch Note Piranha", description: "Changes everything.", probability: 500000000000, color: "text-yellow-500", glowColor: "#eab308", tierName: "Meta" },
-    { id: 99, name: "DLC Dolphin", description: "Downloadable Content.", probability: 750000000000, color: "text-pink-500", glowColor: "#ec4899", tierName: "Meta" },
-    { id: 100, name: "Microtransaction Manta", description: "$0.99 to swim.", probability: 1000000000000, color: "text-green-400 animate-pulse", glowColor: "#4ade80", tierName: "Meta" }
+    { id: 72, name: "Lucid Lobster", description: "It knows it's a lobster.", probability: 4000000000, color: "text-blue-300", glowColor: "#93c5fd", tierName: "Dream" }
 ];

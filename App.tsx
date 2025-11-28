@@ -577,7 +577,9 @@ export default function App() {
         setCurrentDrops(generatedDrops);
         batchUpdateStatsAndInventory(generatedDrops, rollsToPerform, currentEntropy);
 
-        if (!isMoon) {
+        if (bestDrop.text === "Lucid Lobster") {
+            audioService.playLucidSound();
+        } else if (!isMoon) {
             audioService.playBoom(bestDrop.rarityId);
         } else {
             audioService.playRaritySound(RarityId.MYTHICAL);
