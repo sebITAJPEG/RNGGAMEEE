@@ -28,6 +28,7 @@ import { FrozenTimeHTMLView } from './models/FrozenTimeHTMLView'; // Add Frozen 
 import { SolidLightHTMLView } from './models/SolidLightHTMLView';
 import { StrangeMatterHTMLView } from './models/StrangeMatterHTMLView';
 import { TheSpectrumHTMLView } from './models/TheSpectrumHTMLView';
+import { BlackHoleCoreHTMLView } from './models/BlackHoleCoreHTMLView';
 
 // --- SCENE CONTENT ---
 
@@ -112,8 +113,9 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isSolidLight = item.text === "Solid Light";
   const isStrangeMatter = item.text === "Strange Matter";
   const isTheSpectrum = item.text === "The Spectrum";
+  const isBlackHoleCore = item.text === "Black Hole Core";
   
-  const isHtmlView = isSpecial; // Assume all special items are HTML views now
+  const isHtmlView = isSpecial || isBlackHoleCore; // Assume all special items are HTML views now
   // @ts-ignore - isFullScreen might not be in ItemData type definition yet but passed from App
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
@@ -172,6 +174,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
               <StrangeMatterHTMLView />
             ) : isTheSpectrum ? (
               <TheSpectrumHTMLView />
+            ) : isBlackHoleCore ? (
+              <BlackHoleCoreHTMLView />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
