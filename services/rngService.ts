@@ -4,17 +4,17 @@ import { Drop, RarityId, VariantId, ItemData, MoonItem } from '../types';
 // --- SCRIPTED RNG SINGLETON ---
 class ScriptedRng {
     private targetItemName: string | null = null;
-    private targetType: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | null = null;
+    private targetType: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'NORMAL' | 'GOLD_ORE' | 'PRISM_ORE' | 'MOON' | null = null;
     private rollsRemaining: number = 0;
 
-    setScript(name: string, type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM', rolls: number) {
+    setScript(name: string, type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'NORMAL' | 'GOLD_ORE' | 'PRISM_ORE' | 'MOON', rolls: number) {
         this.targetItemName = name;
         this.targetType = type;
         this.rollsRemaining = rolls;
     }
 
     // Called by services. If returns name, force that drop.
-    checkScript(type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM'): string | null {
+    checkScript(type: 'ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'NORMAL' | 'GOLD_ORE' | 'PRISM_ORE' | 'MOON'): string | null {
         if (!this.targetItemName || this.targetType !== type || this.rollsRemaining <= 0) return null;
 
         this.rollsRemaining--;
@@ -43,6 +43,27 @@ export const scriptedRng = new ScriptedRng();
 // --- STANDARD RNG ---
 
 export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
+  // Check for Scripted Drop first
+  const scriptedName = scriptedRng.checkScript('NORMAL');
+  if (scriptedName) {
+      // Find the item in PHRASES
+      for (const [rId, items] of Object.entries(PHRASES['en'])) {
+          const found = (items as ItemData[]).find(i => i.text === scriptedName);
+          if (found) {
+              return {
+                  text: found.text,
+                  description: found.description,
+                  cutscenePhrase: found.cutscenePhrase,
+                  rarityId: parseInt(rId) as RarityId,
+                  variantId: VariantId.NONE,
+                  timestamp: Date.now(),
+                  rollNumber: totalRolls + 1
+              };
+          }
+      }
+      // If not found, fall back to normal generation
+  }
+
   const rand = Math.random();
   
   // Iterate from highest rarity to lowest
@@ -95,13 +116,38 @@ export const generateDrop = (totalRolls: number, luckMultiplier: number = 1): Dr
 
 // NEW: Moon Drop Logic
 export const generateMoonDrop = (totalRolls: number, luckMultiplier: number = 1): Drop => {
+    // Sort tiers descending to find correct rarity for the item
+    const sortedTiers = Object.values(RARITY_TIERS).sort((a, b) => b.probability - a.probability);
+
+    const getRarityForProbability = (prob: number): RarityId => {
+        for(const tier of sortedTiers) {
+            // Find the highest tier that this item's probability qualifies for (item prob >= tier prob)
+            // e.g. item 200M >= tier 200M (Infinite)
+            if (prob >= tier.probability && tier.id !== RarityId.MOON) {
+                return tier.id;
+            }
+        }
+        return RarityId.COMMON;
+    };
+
+    const scriptedName = scriptedRng.checkScript('MOON');
+    if (scriptedName) {
+        const found = MOON_ITEMS.find(i => i.text === scriptedName);
+        if (found) {
+            return {
+                text: found.text,
+                description: found.description,
+                rarityId: getRarityForProbability(found.probability),
+                variantId: VariantId.NONE,
+                timestamp: Date.now(),
+                rollNumber: totalRolls + 1
+            };
+        }
+    }
+
     const rand = Math.random();
     
-    // Sort Moon items by probability (Highest probability first, but logic is inverse: rarest is 1/small)
-    // Actually, items like 1 in 250,000,000 have VERY LOW chance.
-    // We iterate from RAREST (highest 1-in-X value) to COMMON.
-    // probability field is "1 in X". 
-    
+    // Sort Moon items by probability (Highest 1-in-X first)
     const sortedItems = [...MOON_ITEMS].sort((a, b) => b.probability - a.probability);
 
     for (const item of sortedItems) {
@@ -112,21 +158,20 @@ export const generateMoonDrop = (totalRolls: number, luckMultiplier: number = 1)
             return {
                 text: item.text,
                 description: item.description,
-                rarityId: RarityId.MOON,
-                variantId: VariantId.NONE, // No variants on Moon for simplicity, or add if desired
+                rarityId: getRarityForProbability(item.probability),
+                variantId: VariantId.NONE,
                 timestamp: Date.now(),
                 rollNumber: totalRolls + 1
             };
         }
     }
 
-    // Fallback to the most common item (last in sorted list if we sorted Descending by prob? No wait.)
-    // If sorted Descending by 'probability' value (e.g. 250m first, 10 last), 
-    // then we checked rarest first. If loop finishes, we get the common one.
+    // Fallback to the most common item
+    const fallbackItem = sortedItems[sortedItems.length - 1];
     return {
-        text: sortedItems[sortedItems.length - 1].text,
-        description: sortedItems[sortedItems.length - 1].description,
-        rarityId: RarityId.MOON,
+        text: fallbackItem.text,
+        description: fallbackItem.description,
+        rarityId: getRarityForProbability(fallbackItem.probability),
         variantId: VariantId.NONE,
         timestamp: Date.now(),
         rollNumber: totalRolls + 1

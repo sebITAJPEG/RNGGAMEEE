@@ -4,7 +4,11 @@ import { scriptedRng } from './rngService';
 
 export const mineOre = (luckMultiplier: number = 1, dimension: 'NORMAL' | 'GOLD' | 'PRISM' = 'NORMAL'): Ore => {
   // Check for scripted find
-  const scriptedName = scriptedRng.checkScript('ORE');
+  let scriptType: any = 'ORE';
+  if (dimension === 'GOLD') scriptType = 'GOLD_ORE';
+  else if (dimension === 'PRISM') scriptType = 'PRISM_ORE';
+
+  const scriptedName = scriptedRng.checkScript(scriptType);
   if (scriptedName) {
       let sourceOres = ORES;
       if (dimension === 'GOLD') sourceOres = GOLD_ORES;
@@ -12,9 +16,8 @@ export const mineOre = (luckMultiplier: number = 1, dimension: 'NORMAL' | 'GOLD'
       
       const found = sourceOres.find(o => o.name === scriptedName);
       if (found) return found;
-      // If scripted item is not in current dimension, fallback to normal RNG or try to find in other lists? 
-      // User might script "The Spectrum" but be in GOLD dimension. 
-      // It's safer to check all lists if not found in current.
+      
+      // Fallback search in all ores just in case
       const anyFound = [...ORES, ...GOLD_ORES, ...PRISM_ORES].find(o => o.name === scriptedName);
       if(anyFound) return anyFound;
   }

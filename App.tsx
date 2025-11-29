@@ -10,8 +10,10 @@ import { SpecialEffects } from './components/SpecialEffects';
 import { ItemVisualizer } from './components/ItemVisualizer';
 import { useSubGame } from './hooks/useSubGame';
 import { useDreaming } from './hooks/useDreaming';
+import { useBuildUpSequence } from './hooks/useBuildUpSequence';
 import { THEMES, applyTheme } from './themes';
 
+import { SpectrumStyles } from './components/SpectrumEffects';
 import { LeftPanel } from './components/panels/LeftPanel';
 import { CenterPanel } from './components/panels/CenterPanel';
 import { RightPanel } from './components/panels/RightPanel';
@@ -32,6 +34,7 @@ export default function App() {
     const [debugItemSearch, setDebugItemSearch] = useState('');
     const [selectedDebugItem, setSelectedDebugItem] = useState<any>(null);
     const [volume, setVolume] = useState(0.4);
+    const { activeSequence, triggerSequence } = useBuildUpSequence();
 
     // New state for muting only mining sounds
     const [isMiningMuted, setIsMiningMuted] = useState(false);
@@ -172,7 +175,17 @@ export default function App() {
     // Helper for auto-inspecting special items found in sub-games
     const handleSubGameFind = (item: any) => {
         if (item.name && SPECIAL_HTML_ITEMS.includes(item.name)) {
-            handleInspectResource(item);
+            if (item.name === "The Spectrum") {
+                triggerSequence('SPECTRUM', () => {
+                    handleInspectResource(item);
+                });
+            } else if (item.name === "Nightmare Eel") {
+                triggerSequence('NIGHTMARE', () => {
+                    handleInspectResource(item);
+                });
+            } else {
+                handleInspectResource(item);
+            }
         }
     };
 
@@ -588,14 +601,38 @@ export default function App() {
         // Auto-inspect special HTML items
         if (SPECIAL_HTML_ITEMS.includes(bestDrop.text)) {
             setIsAutoSpinning(false);
-            setInspectedItem({ 
-                text: bestDrop.text, 
-                description: bestDrop.description, 
-                rarityId: bestDrop.rarityId, 
-                variantId: bestDrop.variantId,
-                cutscenePhrase: bestDrop.cutscenePhrase,
-                isFullScreen: true 
-            });
+            if (bestDrop.text === "The Spectrum") {
+                triggerSequence('SPECTRUM', () => {
+                    setInspectedItem({ 
+                        text: bestDrop.text, 
+                        description: bestDrop.description, 
+                        rarityId: bestDrop.rarityId, 
+                        variantId: bestDrop.variantId,
+                        cutscenePhrase: bestDrop.cutscenePhrase,
+                        isFullScreen: true 
+                    });
+                });
+            } else if (bestDrop.text === "Nightmare Eel") {
+                triggerSequence('NIGHTMARE', () => {
+                    setInspectedItem({ 
+                        text: bestDrop.text, 
+                        description: bestDrop.description, 
+                        rarityId: bestDrop.rarityId, 
+                        variantId: bestDrop.variantId,
+                        cutscenePhrase: bestDrop.cutscenePhrase,
+                        isFullScreen: true 
+                    });
+                });
+            } else {
+                setInspectedItem({ 
+                    text: bestDrop.text, 
+                    description: bestDrop.description, 
+                    rarityId: bestDrop.rarityId, 
+                    variantId: bestDrop.variantId,
+                    cutscenePhrase: bestDrop.cutscenePhrase,
+                    isFullScreen: true 
+                });
+            }
         }
     }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.equippedItems, trophyLuckMult, autoStopRarity, isMoon]);
 
@@ -653,7 +690,7 @@ export default function App() {
         : "bg-background text-text selection:bg-text selection:text-background";
 
     return (
-        <div className={`relative min-h-screen overflow-hidden flex transition-colors duration-1000 ${containerClass}`}>
+        <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : ''}`}>
             {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
             {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} />}
             {isMoon && (
@@ -670,16 +707,18 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_300px] xl:grid-cols-[1fr_2fr_350px] w-full h-screen relative z-10">
                 <div className="relative flex flex-col items-center justify-center col-span-1 lg:col-span-2 lg:border-r border-surface-highlight h-full">
                     <div className="absolute top-0 left-0 w-full p-6 z-20 pointer-events-none flex flex-col md:flex-row justify-between items-start gap-4">
-                        <LeftPanel
-                            stats={stats}
-                            currentGlobalLuck={currentGlobalLuck}
-                            autoSpinSpeed={autoSpinSpeed}
-                            generalMulti={(stats.multiRollLevel || 1) + getCraftingBonuses(stats.equippedItems, 'GENERAL').bonusMulti}
-                            trophyLuckMult={trophyLuckMult}
-                            onTicTacToeWin={handleTicTacToeWin}
-                            onOpenStats={() => setModalsState(p => ({ ...p, isStatsOpen: true }))}
-                        />
-                        <div className="flex flex-wrap justify-end gap-2 pointer-events-auto ml-auto">
+                        <div style={{ pointerEvents: 'auto' }}>
+                            <LeftPanel
+                                stats={stats}
+                                currentGlobalLuck={currentGlobalLuck}
+                                autoSpinSpeed={autoSpinSpeed}
+                                generalMulti={(stats.multiRollLevel || 1) + getCraftingBonuses(stats.equippedItems, 'GENERAL').bonusMulti}
+                                trophyLuckMult={trophyLuckMult}
+                                onTicTacToeWin={handleTicTacToeWin}
+                                onOpenStats={() => { console.log('App: onOpenStats called'); setModalsState(p => ({ ...p, isStatsOpen: true })); }}
+                            />
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2 pointer-events-auto ml-auto" style={{ pointerEvents: 'auto' }}>
                             {stats.moonTravelUnlocked && (
                                 <>
                                     <button onClick={() => { audioService.playRaritySound(RarityId.DIVINE); setIsMoon(!isMoon); }} className={`border px-4 py-2 transition-all uppercase backdrop-blur font-bold ${isMoon ? 'bg-slate-800 border-slate-500 text-slate-300' : 'bg-black/50 border-indigo-500 text-indigo-400 hover:bg-indigo-900/30'}`}>
@@ -694,10 +733,10 @@ export default function App() {
                                 <span className="text-xs text-neutral-400 font-mono">{volume > 0 ? '🔊' : '🔇'}</span>
                                 <input type="range" min="0" max="1" step="0.1" value={volume} onChange={handleVolumeChange} className="w-20 h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer accent-white" />
                             </div>
-                            <button onClick={() => { audioService.playClick(); setModalsState(p => ({ ...p, isGachaOpen: true })); }} className="border border-purple-700 text-purple-400 hover:bg-purple-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">GACHA</button>
+                            <button onClick={() => { console.log('GACHA clicked'); audioService.playClick(); setModalsState(p => ({ ...p, isGachaOpen: true })); }} className="border border-purple-700 text-purple-400 hover:bg-purple-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">GACHA</button>
                             <button onClick={() => { audioService.playClick(); setModalsState(p => ({ ...p, isCraftingOpen: true })); }} className="border border-green-700 text-green-500 hover:bg-green-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">CRAFT</button>
                             <button onClick={() => { audioService.playClick(); setModalsState(p => ({ ...p, isCoinTossOpen: true })); }} className="border border-yellow-700 text-yellow-500 hover:bg-yellow-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur animate-pulse">FLIP</button>
-                            <button onClick={() => { audioService.playClick(); setModalsState(p => ({ ...p, isAchievementsOpen: true })); }} className="border border-amber-700 text-amber-500 hover:bg-amber-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">TITLES</button>
+                            <button onClick={() => { console.log('TITLES clicked'); audioService.playClick(); setModalsState(p => ({ ...p, isAchievementsOpen: true })); }} className="border border-amber-700 text-amber-500 hover:bg-amber-900/30 px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">TITLES</button>
                             <button onClick={() => { audioService.playClick(); setModalsState(p => ({ ...p, isIndexOpen: true })); }} className="border border-indigo-900 text-indigo-400 hover:bg-indigo-900/30 hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">INDEX</button>
                             <button onClick={() => { audioService.playClick(); setModalsState(p => ({ ...p, isInventoryOpen: true })); }} className="border border-neutral-700 hover:border-white hover:text-white px-4 py-2 transition-all uppercase bg-black/50 backdrop-blur">{T.UI.INVENTORY} [{inventory.length}]</button>
                         </div>
@@ -854,6 +893,8 @@ export default function App() {
             {activeRarityVFX && activeRarityVFX >= RarityId.DIVINE && (
                 <div key={Date.now()} className="absolute inset-0 bg-white pointer-events-none animate-flash z-40 mix-blend-overlay opacity-50" />
             )}
+
+            <SpectrumStyles />
 
             <style>{`
         @keyframes flash { 0% { opacity: 0.8; } 100% { opacity: 0; } }

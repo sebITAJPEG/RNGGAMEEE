@@ -27,6 +27,7 @@ export const StatsModal: React.FC<Props> = ({
     currentMineLuck, miningSpeed, currentGoldMineLuck, goldMiningSpeed, currentPrismMineLuck, prismMiningSpeed,
     currentFishLuck, fishingSpeed, currentHarvLuck, harvestingSpeed, dreamBonuses
 }) => {
+    console.log('StatsModal render. isOpen:', isOpen);
     if (!isOpen) return null;
 
     const StatSection = ({ title, color, children }: { title: string, color: string, children: React.ReactNode }) => (

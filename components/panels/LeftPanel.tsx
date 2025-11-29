@@ -23,7 +23,7 @@ export const LeftPanel: React.FC<Props> = ({
     const T = TRANSLATIONS['en'];
 
     return (
-        <div className="flex flex-col gap-4 pointer-events-auto max-h-[80vh] overflow-y-auto no-scrollbar">
+        <div className="flex flex-col gap-4 pointer-events-auto max-h-[80vh] overflow-y-auto no-scrollbar" style={{ pointerEvents: 'auto' }}>
             {/* Main Economy Stats with Mini Game */}
             <div className="flex items-start gap-2">
                 <div className="space-y-1 font-mono text-xs md:text-sm text-text-dim bg-black/60 backdrop-blur p-3 rounded border border-white/10 min-w-[200px]">
@@ -48,7 +48,7 @@ export const LeftPanel: React.FC<Props> = ({
                     )}
                     
                     <button
-                        onClick={onOpenStats}
+                        onClick={() => { console.log('LeftPanel: SHOW FULL STATS clicked'); onOpenStats(); }}
                         className="w-full py-1.5 mt-2 text-[10px] font-bold border border-neutral-600 bg-neutral-800/50 hover:bg-neutral-700 text-white uppercase tracking-wider transition-colors rounded"
                     >
                         SHOW FULL STATS

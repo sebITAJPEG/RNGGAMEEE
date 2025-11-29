@@ -71,6 +71,7 @@ export const Cutscene: React.FC<Props> = ({ text, rarityId, cutscenePhrase, onCo
       </>
   );
 
+
   // --- PRIMORDIAL (Magma) ---
   if (rarityId === RarityId.PRIMORDIAL) {
     return (

@@ -71,7 +71,7 @@ export const SystemConfig: React.FC<Props> = ({
     
     // Scripted Find State
     const [scriptRolls, setScriptRolls] = useState(5);
-    const [scriptType, setScriptType] = useState<'ORE'|'FISH'|'PLANT'|'DREAM'>('ORE');
+    const [scriptType, setScriptType] = useState<'ORE'|'FISH'|'PLANT'|'DREAM'|'NORMAL'|'GOLD_ORE'|'PRISM_ORE'|'MOON'>('ORE');
     const [scriptTarget, setScriptTarget] = useState<string>('');
     const [scriptStatus, setScriptStatus] = useState<string>('');
 
@@ -159,13 +159,18 @@ export const SystemConfig: React.FC<Props> = ({
     };
 
     const getScriptTargets = () => {
-        if(scriptType === 'ORE') {
-            // Allow scripting any ore regardless of current dimension
-            return [...ORES, ...GOLD_ORES, ...PRISM_ORES].sort((a, b) => a.id - b.id);
-        }
+        if(scriptType === 'ORE') return ORES.sort((a, b) => a.id - b.id);
+        if(scriptType === 'GOLD_ORE') return GOLD_ORES.sort((a, b) => a.id - b.id);
+        if(scriptType === 'PRISM_ORE') return PRISM_ORES.sort((a, b) => a.id - b.id);
         if(scriptType === 'FISH') return FISH;
         if(scriptType === 'PLANT') return PLANTS;
         if(scriptType === 'DREAM') return DREAMS;
+        if(scriptType === 'MOON') return MOON_ITEMS.map(i => ({ name: i.text, id: i.id })).sort((a, b) => a.id - b.id);
+        if(scriptType === 'NORMAL') {
+            const allItems: any[] = [];
+            Object.values(PHRASES['en']).flat().forEach((i: any) => allItems.push({ name: i.text }));
+            return allItems.sort((a, b) => a.name.localeCompare(b.name));
+        }
         return [];
     };
 
@@ -280,7 +285,11 @@ export const SystemConfig: React.FC<Props> = ({
                             <div className="space-y-2">
                                 <div className="flex gap-2 mb-2">
                                     <select value={scriptType} onChange={(e) => { setScriptType(e.target.value as any); setScriptTarget(''); }} className="bg-neutral-900 border border-neutral-700 text-white text-xs p-2 rounded flex-1">
-                                        <option value="ORE">MINING</option>
+                                        <option value="NORMAL">NORMAL ROLL</option>
+                                        <option value="ORE">MINING (NORMAL)</option>
+                                        <option value="GOLD_ORE">MINING (GOLD)</option>
+                                        <option value="PRISM_ORE">MINING (PRISM)</option>
+                                        <option value="MOON">MOON ROLL</option>
                                         <option value="FISH">FISHING</option>
                                         <option value="PLANT">HARVESTING</option>
                                         <option value="DREAM">DREAMING</option>

@@ -9,6 +9,7 @@ import {
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import { RarityId, ItemData, VariantId } from '../types';
 import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS } from '../constants';
+import { Cutscene } from './Cutscene';
 
 // Import all localized models
 import { BlackHoleModel } from './models/BlackHoleModel';
@@ -30,6 +31,10 @@ import { StrangeMatterHTMLView } from './models/StrangeMatterHTMLView';
 import { TheSpectrumHTMLView } from './models/TheSpectrumHTMLView';
 import { BlackHoleCoreHTMLView } from './models/BlackHoleCoreHTMLView';
 import { LucidLobsterHTMLView } from './models/LucidLobsterHTMLView';
+import { NightmareEelHTMLView } from './models/NightmareEelHTMLView';
+import { LunarDivinityHTMLView } from './models/LunarDivinityHTMLView';
+import { MoonItemHTMLView } from './models/MoonItemHTMLView';
+
 
 // --- SCENE CONTENT ---
 
@@ -72,6 +77,10 @@ interface Props {
 }
 
 export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
+  // Only trigger cutscene for specific high rarities (excluding MOON/Lunar Divinity as it handles its own)
+  const hasDefinedCutscene = (item.rarityId >= RarityId.PRIMORDIAL && item.rarityId <= RarityId.THE_ONE);
+  const [cutscenePlaying, setCutscenePlaying] = React.useState(hasDefinedCutscene);
+
   const tier = RARITY_TIERS[item.rarityId];
   const variant = VARIANTS[item.variantId || 0]; // Default to NONE
   const hasVariant = (item.variantId ?? 0) !== 0;
@@ -116,8 +125,13 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isTheSpectrum = item.text === "The Spectrum";
   const isBlackHoleCore = item.text === "Black Hole Core";
   const isLucidLobster = item.text === "Lucid Lobster";
+  const isNightmareEel = item.text === "Nightmare Eel";
+  const isLunarDivinity = item.text === "Lunar Divinity";
   
-  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster; // Assume all special items are HTML views now
+  // Generic Moon Check
+  const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
+  
+  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem; // Assume all special items are HTML views now
   // @ts-ignore - isFullScreen might not be in ItemData type definition yet but passed from App
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
@@ -129,6 +143,17 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const containerClasses = isFullScreen
     ? "fixed inset-0 w-full h-full z-[100] bg-black"
     : `relative w-full max-w-lg h-[600px] rounded-xl border-2 ${borderClass} bg-neutral-900 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group cursor-default flex flex-col`;
+
+  if (cutscenePlaying) {
+      return (
+          <Cutscene 
+            text={item.text}
+            rarityId={item.rarityId}
+            cutscenePhrase={item.cutscenePhrase}
+            onComplete={() => setCutscenePlaying(false)}
+          />
+      );
+  }
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md perspective-1000" onClick={onClose}>
@@ -150,7 +175,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
             </button>
         )}
 
-        {(isOre || isSpecial || isLucidLobster) && (
+        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
               <SolarPlasmaHTMLView />
@@ -180,11 +205,17 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
               <BlackHoleCoreHTMLView />
             ) : isLucidLobster ? (
               <LucidLobsterHTMLView />
+            ) : isNightmareEel ? (
+              <NightmareEelHTMLView />
+            ) : isLunarDivinity ? (
+              <LunarDivinityHTMLView />
+            ) : isMoonItem ? (
+              <MoonItemHTMLView item={item} />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
               </Canvas>
-            )}
+            )}  
           </div>
         )}
 

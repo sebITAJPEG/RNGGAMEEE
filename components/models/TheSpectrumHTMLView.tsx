@@ -24,7 +24,7 @@ export const TheSpectrumHTMLView = () => {
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000000;
             z-index: 100;
-            display: none; /* Hidden until start */
+            display: flex; /* Visible immediately to hide ore */
             align-items: center;
             justify-content: center;
             padding: 40px;
@@ -472,7 +472,7 @@ export const TheSpectrumHTMLView = () => {
             try {
                 audio.init();
             } catch(e) { console.warn("Audio init failed (likely autoplay policy)", e); }
-            introScreen.style.display = 'flex';
+            // introScreen.style.display = 'flex'; // Already visible
             playCutscene();
         }, 500);
 
