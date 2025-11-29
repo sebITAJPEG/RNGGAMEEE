@@ -14,6 +14,7 @@ import { useBuildUpSequence } from './hooks/useBuildUpSequence';
 import { THEMES, applyTheme } from './themes';
 
 import { SpectrumStyles } from './components/SpectrumEffects';
+import { LunarStyles } from './components/LunarEffects';
 import { LeftPanel } from './components/panels/LeftPanel';
 import { CenterPanel } from './components/panels/CenterPanel';
 import { RightPanel } from './components/panels/RightPanel';
@@ -65,7 +66,7 @@ export default function App() {
             totalMined: 0, totalGoldMined: 0, totalPrismMined: 0, bestOreMined: 0, bestGoldOreMined: 0, bestPrismOreMined: 0,
             miningSpeedLevel: 0, miningLuckLevel: 0, miningMultiLevel: 1,
             goldMiningSpeedLevel: 0, goldMiningLuckLevel: 0, goldMiningMultiLevel: 1,
-            prismMiningSpeedLevel: 0, prismMiningLuckLevel: 0, prismMiningMultiLevel: 1,
+            prismMiningSpeedLevel: 0, prismMiningLuckLevel: 0, prismMiningLuckLevel: 0, prismMiningMultiLevel: 1,
             goldDimensionUnlocked: false, prismDimensionUnlocked: false,
 
             totalFished: 0, bestFishCaught: 0, fishingSpeedLevel: 0, fishingLuckLevel: 0, fishingMultiLevel: 1,
@@ -181,6 +182,10 @@ export default function App() {
                 });
             } else if (item.name === "Nightmare Eel") {
                 triggerSequence('NIGHTMARE', () => {
+                    handleInspectResource(item);
+                });
+            } else if (item.name === "Lunar Divinity") {
+                triggerSequence('LUNAR', () => {
                     handleInspectResource(item);
                 });
             } else {
@@ -623,6 +628,17 @@ export default function App() {
                         isFullScreen: true 
                     });
                 });
+            } else if (bestDrop.text === "Lunar Divinity") {
+                triggerSequence('LUNAR', () => {
+                    setInspectedItem({ 
+                        text: bestDrop.text, 
+                        description: bestDrop.description, 
+                        rarityId: bestDrop.rarityId, 
+                        variantId: bestDrop.variantId,
+                        cutscenePhrase: bestDrop.cutscenePhrase,
+                        isFullScreen: true 
+                    });
+                });
             } else {
                 setInspectedItem({ 
                     text: bestDrop.text, 
@@ -690,7 +706,7 @@ export default function App() {
         : "bg-background text-text selection:bg-text selection:text-background";
 
     return (
-        <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : ''}`}>
+        <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : activeSequence === 'LUNAR' ? 'animate-lunar-buildup' : ''}`}>
             {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
             {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} />}
             {isMoon && (
@@ -895,6 +911,7 @@ export default function App() {
             )}
 
             <SpectrumStyles />
+            <LunarStyles />
 
             <style>{`
         @keyframes flash { 0% { opacity: 0.8; } 100% { opacity: 0; } }

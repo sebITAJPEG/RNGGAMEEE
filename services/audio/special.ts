@@ -43,7 +43,7 @@ export const playSpectrumBuildup = (core: AudioCore) => {
         rumbleGain.connect(masterGain);
 
         rumble.frequency.setValueAtTime(30, t);
-        rumble.frequency.linearRampToValueAtTime(80, t + duration); 
+        rumble.frequency.linearRampToValueAtTime(8, t + duration); 
 
         rumbleGain.gain.setValueAtTime(0, t);
         rumbleGain.gain.linearRampToValueAtTime(0.2, t + duration);
@@ -75,6 +75,85 @@ export const playSpectrumBuildup = (core: AudioCore) => {
             noteOsc.start(noteTime);
             noteOsc.stop(noteTime + 0.2);
         }
+
+    } catch (e) { }
+};
+
+export const playLunarBuildup = (core: AudioCore) => {
+    if (!core.ensureContext()) return;
+    const { ctx, masterGain } = core;
+    if (!ctx || !masterGain) return;
+
+    try {
+        const t = ctx.currentTime;
+        const duration = 4.0;
+
+        // 1. Ethereal Choir Swell (Multiple detuned sine/triangles)
+        const freqs = [110, 164.8, 220, 277.2, 329.6]; // A Major(ish) chord
+        freqs.forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const panner = ctx.createStereoPanner();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, t);
+            // Pitch bend up an octave
+            osc.frequency.exponentialRampToValueAtTime(f * 2, t + duration);
+
+            // Pan spread
+            panner.pan.value = (i / freqs.length) * 2 - 1;
+
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.05, t + duration * 0.8);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + duration + 0.2);
+
+            osc.connect(gain);
+            gain.connect(panner);
+            panner.connect(masterGain);
+
+            osc.start(t);
+            osc.stop(t + duration + 0.2);
+        });
+
+        // 2. High Shimmer (Sparkles)
+        const shimmerCount = 30;
+        for(let i = 0; i < shimmerCount; i++) {
+            const timeOffset = (i / shimmerCount) * duration;
+            const noteTime = t + timeOffset;
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(masterGain);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800 + Math.random() * 2000, noteTime);
+            osc.frequency.exponentialRampToValueAtTime(200, noteTime + 0.2); // Downward chime
+
+            gain.gain.setValueAtTime(0, noteTime);
+            gain.gain.linearRampToValueAtTime(0.05, noteTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.2);
+
+            osc.start(noteTime);
+            osc.stop(noteTime + 0.2);
+        }
+
+        // 3. Deep Resonance (Bass Riser)
+        const bass = ctx.createOscillator();
+        const bassGain = ctx.createGain();
+        bass.connect(bassGain);
+        bassGain.connect(masterGain);
+
+        bass.type = 'sine';
+        bass.frequency.setValueAtTime(55, t);
+        bass.frequency.linearRampToValueAtTime(110, t + duration);
+
+        bassGain.gain.setValueAtTime(0, t);
+        bassGain.gain.linearRampToValueAtTime(0.3, t + duration);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, t + duration + 0.1);
+
+        bass.start(t);
+        bass.stop(t + duration + 0.1);
 
     } catch (e) { }
 };

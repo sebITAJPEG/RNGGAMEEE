@@ -38,6 +38,7 @@ class AudioService {
     // Special Sounds
     public playSpectrumBuildup() { special.playSpectrumBuildup(audioCore); }
     public playNightmareBuildup() { special.playNightmareBuildup(audioCore); }
+    public playLunarBuildup() { special.playLunarBuildup(audioCore); }
     public playLucidSound() { special.playLucidSound(audioCore); }
     public playCutsceneAmbience(r: RarityId) { special.playCutsceneAmbience(audioCore, r); }
     public playSlotSpin() { special.playSlotSpin(audioCore); }

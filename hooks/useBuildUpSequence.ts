@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { audioService } from '../services/audioService';
 
-export type BuildUpType = 'SPECTRUM' | 'NIGHTMARE';
+export type BuildUpType = 'SPECTRUM' | 'NIGHTMARE' | 'LUNAR';
 
 export const useBuildUpSequence = () => {
     const [activeSequence, setActiveSequence] = useState<BuildUpType | null>(null);
@@ -12,6 +12,8 @@ export const useBuildUpSequence = () => {
             audioService.playSpectrumBuildup();
         } else if (type === 'NIGHTMARE') {
             audioService.playNightmareBuildup();
+        } else if (type === 'LUNAR') {
+            audioService.playLunarBuildup();
         }
         
         setTimeout(() => {
