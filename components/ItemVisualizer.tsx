@@ -9,7 +9,6 @@ import {
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import { RarityId, ItemData, VariantId } from '../types';
 import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS } from '../constants';
-import { Cutscene } from './Cutscene';
 
 // Import all localized models
 import { BlackHoleModel } from './models/BlackHoleModel';
@@ -77,10 +76,6 @@ interface Props {
 }
 
 export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
-  // Only trigger cutscene for specific high rarities (excluding MOON/Lunar Divinity as it handles its own)
-  const hasDefinedCutscene = (item.rarityId >= RarityId.PRIMORDIAL && item.rarityId <= RarityId.THE_ONE);
-  const [cutscenePlaying, setCutscenePlaying] = React.useState(hasDefinedCutscene);
-
   const tier = RARITY_TIERS[item.rarityId];
   const variant = VARIANTS[item.variantId || 0]; // Default to NONE
   const hasVariant = (item.variantId ?? 0) !== 0;
@@ -143,17 +138,6 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const containerClasses = isFullScreen
     ? "fixed inset-0 w-full h-full z-[100] bg-black"
     : `relative w-full max-w-lg h-[600px] rounded-xl border-2 ${borderClass} bg-neutral-900 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden group cursor-default flex flex-col`;
-
-  if (cutscenePlaying) {
-      return (
-          <Cutscene 
-            text={item.text}
-            rarityId={item.rarityId}
-            cutscenePhrase={item.cutscenePhrase}
-            onComplete={() => setCutscenePlaying(false)}
-          />
-      );
-  }
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md perspective-1000" onClick={onClose}>

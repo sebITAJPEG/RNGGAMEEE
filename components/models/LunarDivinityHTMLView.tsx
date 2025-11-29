@@ -29,7 +29,30 @@ export const LunarDivinityHTMLView = () => {
             justify-content: center;
             padding: 40px;
             box-sizing: border-box;
+            background-image: radial-gradient(circle at 50% 50%, #0a0a15 0%, #000000 70%);
+            animation: pulseBg 5s infinite ease-in-out;
         }
+
+        @keyframes pulseBg {
+            0%, 100% { box-shadow: inset 0 0 100px rgba(0,0,0,0.8); }
+            50% { box-shadow: inset 0 0 50px rgba(10, 20, 40, 0.5); }
+        }
+        
+        /* Star background for intro */
+        .intro-stars {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 160px 120px, #ffffff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.3;
+            animation: drift 100s linear infinite;
+        }
+        
+        @keyframes drift { from { transform: translateY(0); } to { transform: translateY(-200px); } }
 
         #intro-text {
             font-family: 'Cinzel', serif;
@@ -46,12 +69,30 @@ export const LunarDivinityHTMLView = () => {
             transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
             color: #e0eaff;
             text-shadow: 0 0 20px rgba(180, 200, 255, 0.5);
+            z-index: 10;
         }
 
         #intro-text.visible {
             opacity: 1;
             transform: scale(1);
             filter: blur(0px);
+            animation: slowZoom 5s forwards;
+        }
+
+        @keyframes slowZoom {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .shake-screen {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
         }
 
         .char {
@@ -66,11 +107,26 @@ export const LunarDivinityHTMLView = () => {
             transform: translateY(0);
             filter: blur(0px);
         }
+        
+        /* Text Glitch Effect */
+        .glitch {
+            animation: textGlitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+            color: #ffffff;
+        }
+        
+        @keyframes textGlitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); text-shadow: 2px 0 #0ff; }
+            40% { transform: translate(-2px, -2px); text-shadow: -2px 0 #f0f; }
+            60% { transform: translate(2px, 2px); text-shadow: 2px 0 #0ff; }
+            80% { transform: translate(2px, -2px); text-shadow: -2px 0 #f0f; }
+            100% { transform: translate(0); }
+        }
 
         #flash-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #aaccff;
+            background: radial-gradient(circle at center, #ffffff 0%, #dbeeff 50%, #88aaff 100%);
             z-index: 101;
             opacity: 0;
             pointer-events: none;
@@ -214,6 +270,7 @@ export const LunarDivinityHTMLView = () => {
 <body>
     <!-- CUTSCENE ELEMENTS -->
     <div id="intro-screen">
+        <div class="intro-stars"></div>
         <div id="intro-text"></div>
     </div>
     <div id="flash-overlay"></div>
@@ -283,44 +340,84 @@ export const LunarDivinityHTMLView = () => {
                 if(!this.ctx) return;
                 const now = this.ctx.currentTime;
                 
-                // Deep riser
+                // Deep riser (Square wave for more grit)
                 const osc = this.ctx.createOscillator();
-                osc.type = 'sawtooth';
+                osc.type = 'square';
                 osc.frequency.setValueAtTime(55, now);
-                osc.frequency.exponentialRampToValueAtTime(440, now + duration);
+                osc.frequency.exponentialRampToValueAtTime(110, now + duration);
                 
                 const g = this.ctx.createGain();
                 g.gain.setValueAtTime(0, now);
-                g.gain.linearRampToValueAtTime(0.2, now + duration * 0.8);
+                g.gain.linearRampToValueAtTime(0.1, now + duration * 0.5);
                 g.gain.linearRampToValueAtTime(0, now + duration);
                 
+                // High shimmer riser
+                const osc2 = this.ctx.createOscillator();
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(440, now);
+                osc2.frequency.exponentialRampToValueAtTime(1760, now + duration);
+                const g2 = this.ctx.createGain();
+                g2.gain.setValueAtTime(0, now);
+                g2.gain.linearRampToValueAtTime(0.05, now + duration * 0.8);
+                g2.gain.linearRampToValueAtTime(0, now + duration);
+
                 // Lowpass filter opening
                 const filter = this.ctx.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.setValueAtTime(100, now);
-                filter.frequency.exponentialRampToValueAtTime(5000, now + duration);
+                filter.frequency.exponentialRampToValueAtTime(8000, now + duration);
                 
                 osc.connect(filter);
+                osc2.connect(filter);
                 filter.connect(g);
+                filter.connect(g2);
                 g.connect(this.masterGain);
-                osc.start();
-                osc.stop(now + duration);
+                g2.connect(this.masterGain);
+                
+                osc.start(); osc.stop(now + duration);
+                osc2.start(); osc2.stop(now + duration);
             }
 
             playTypingSound() {
                 if(!this.ctx) return;
                 const now = this.ctx.currentTime;
-                // Delicate crystal tick
+                // Crystalline Tick
                 const osc = this.ctx.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(2000 + Math.random()*500, now);
-                osc.frequency.exponentialRampToValueAtTime(1000, now + 0.05);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(2000 + Math.random()*1000, now);
+                osc.frequency.exponentialRampToValueAtTime(500, now + 0.05);
                 const gain = this.ctx.createGain();
                 gain.gain.setValueAtTime(0.05, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
                 
-                osc.connect(gain); gain.connect(this.masterGain); 
+                // Echo
+                const delay = this.ctx.createDelay();
+                delay.delayTime.value = 0.1;
+                const feedback = this.ctx.createGain();
+                feedback.gain.value = 0.3;
+                
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                gain.connect(delay);
+                delay.connect(this.masterGain);
+                delay.connect(feedback);
+                feedback.connect(delay);
+                
                 osc.start(); osc.stop(now + 0.1);
+            }
+
+            playDeepThud() {
+                if(!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(60, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.5);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.connect(gain); gain.connect(this.masterGain);
+                osc.start(); osc.stop(now + 0.5);
             }
 
             playExplosion() {
@@ -335,8 +432,8 @@ export const LunarDivinityHTMLView = () => {
                 const noise = this.ctx.createBufferSource();
                 noise.buffer = buffer;
                 const noiseGain = this.ctx.createGain();
-                noiseGain.gain.setValueAtTime(0.5, now);
-                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+                noiseGain.gain.setValueAtTime(0.8, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 4.0);
                 
                 // Filter noise
                 const filter = this.ctx.createBiquadFilter();
@@ -352,12 +449,12 @@ export const LunarDivinityHTMLView = () => {
                 const sub = this.ctx.createOscillator();
                 sub.type = 'sine';
                 sub.frequency.setValueAtTime(100, now);
-                sub.frequency.exponentialRampToValueAtTime(30, now + 2.0);
+                sub.frequency.exponentialRampToValueAtTime(30, now + 3.0);
                 const subGain = this.ctx.createGain();
-                subGain.gain.setValueAtTime(0.8, now);
-                subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+                subGain.gain.setValueAtTime(1.0, now);
+                subGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
                 sub.connect(subGain); subGain.connect(this.masterGain);
-                sub.start(); sub.stop(now + 2.5);
+                sub.start(); sub.stop(now + 3.0);
             }
 
             startMusic() {
@@ -441,12 +538,11 @@ export const LunarDivinityHTMLView = () => {
 
         // --- CUTSCENE LOGIC ---
         const phrases = [
-            { text: "FROM THE DARK SIDE OF THE MOON...", color: "#aaccff" },
-            { text: "A SILENT WATCHER AWAKENS.", color: "#ffffff" },
-            { text: "BEYOND THE CRATERS...", color: "#88aaff" },
-            { text: "BEYOND THE VOID...", color: "#4466aa" },
-            { text: "PURE CELESTIAL LIGHT.", color: "#e0eaff" },
-            { text: "LUNAR DIVINITY", color: "#ffffff", glow: true }
+            { text: "THE COSMOS TREMBLES...", color: "#aaccff", glitch: true },
+            { text: "A DIVINE PRESENCE APPROACHES.", color: "#ffffff" },
+            { text: "FROM THE SILENT VOID...", color: "#88aaff" },
+            { text: "THE MOON GOD AWAKENS.", color: "#e0eaff", glow: true },
+            { text: "LUNAR DIVINITY", color: "#ffffff", glow: true, glitch: true }
         ];
 
         const introScreen = document.getElementById('intro-screen');
@@ -461,15 +557,21 @@ export const LunarDivinityHTMLView = () => {
         }, 500);
 
         async function playCutscene() {
-            const totalDuration = phrases.length * 3.5;
+            const totalDuration = phrases.length * 3.0; // Slightly faster pacing
             audioSystem.playIntroBuildUp(totalDuration);
 
             for (let i = 0; i < phrases.length; i++) {
                 const phrase = phrases[i];
                 introTextEl.className = ''; 
                 introTextEl.classList.remove('visible');
+                if(phrase.glitch) introTextEl.classList.add('glitch');
                 
-                if(i > 0) await new Promise(r => setTimeout(r, 600));
+                // Add shake effect for the final phrase
+                if (i === phrases.length - 1) {
+                    introScreen.classList.add('shake-screen');
+                }
+
+                if(i > 0) await new Promise(r => setTimeout(r, 400)); // Shorter gap between phrases
                 
                 introTextEl.innerHTML = '';
                 introTextEl.classList.add('visible');
@@ -490,14 +592,18 @@ export const LunarDivinityHTMLView = () => {
                     introTextEl.appendChild(span);
                     requestAnimationFrame(() => span.classList.add('visible'));
                     audioSystem.playTypingSound();
-                    await new Promise(r => setTimeout(r, 40));
+                    await new Promise(r => setTimeout(r, 35)); // Slightly faster typing
                 }
                 
-                await new Promise(r => setTimeout(r, 1500));
+                // Deep Thud on phrase completion
+                audioSystem.playDeepThud();
+                
+                // Hold time
+                await new Promise(r => setTimeout(r, 1200));
                 introTextEl.classList.remove('visible');
             }
 
-            await new Promise(r => setTimeout(r, 800));
+            await new Promise(r => setTimeout(r, 500));
 
             // Reveal
             audioSystem.playExplosion();
