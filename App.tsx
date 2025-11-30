@@ -66,7 +66,7 @@ export default function App() {
             totalMined: 0, totalGoldMined: 0, totalPrismMined: 0, bestOreMined: 0, bestGoldOreMined: 0, bestPrismOreMined: 0,
             miningSpeedLevel: 0, miningLuckLevel: 0, miningMultiLevel: 1,
             goldMiningSpeedLevel: 0, goldMiningLuckLevel: 0, goldMiningMultiLevel: 1,
-            prismMiningSpeedLevel: 0, prismMiningLuckLevel: 0, prismMiningLuckLevel: 0, prismMiningMultiLevel: 1,
+            prismMiningSpeedLevel: 0, prismMiningLuckLevel: 0, prismMiningMultiLevel: 1,
             goldDimensionUnlocked: false, prismDimensionUnlocked: false,
 
             totalFished: 0, bestFishCaught: 0, fishingSpeedLevel: 0, fishingLuckLevel: 0, fishingMultiLevel: 1,
