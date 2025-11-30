@@ -7,40 +7,39 @@ import {
   Stars,
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
-import { RarityId, ItemData, VariantId } from '../types';
-import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS } from '../constants';
+import { RarityId, ItemData, VariantId } from '@/types';
+import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS } from '@/constants';
 
-// Import all localized models
-import { BlackHoleModel } from './models/BlackHoleModel';
-// Removed LiquidLuckModel import
-// Removed SoundShardModel as it's replaced by HTML view
-import { StandardOreModel } from './models/StandardOreModel';
-import { HtmlModelView } from './models/HtmlModelView'; // Generic HTML View
-import { SolarPlasmaHTMLView } from './models/SolarPlasmaHTMLView';
-import { GoldenRatioHTMLView } from './models/GoldenRatioHTMLView';
-import { NeutroniumHTMLView } from './models/NeutroniumHTMLView';
-import { CrystallizedThoughtHTMLView } from './models/CrystallizedThoughtHTMLView';
-import { HypercubeFragmentHTMLView } from './models/HypercubeFragmentHTMLView';
-import { SoundShardHTMLView } from './models/SoundShardHTMLView';
-import { AntimatterHTMLView } from './models/AntimatterHTMLView';
-import { DarkMatterHTMLView } from './models/DarkMatterHTMLView';
-import { FrozenTimeHTMLView } from './models/FrozenTimeHTMLView'; // Add Frozen Time
-import { SolidLightHTMLView } from './models/SolidLightHTMLView';
-import { StrangeMatterHTMLView } from './models/StrangeMatterHTMLView';
-import { TheSpectrumHTMLView } from './models/TheSpectrumHTMLView';
-import { BlackHoleCoreHTMLView } from './models/BlackHoleCoreHTMLView';
-import { LucidLobsterHTMLView } from './models/LucidLobsterHTMLView';
-import { NightmareEelHTMLView } from './models/NightmareEelHTMLView';
-import { LunarDivinityHTMLView } from './models/LunarDivinityHTMLView';
-import { MoonItemHTMLView } from './models/MoonItemHTMLView';
-import { SingularityCrystalHTMLView } from './models/SingularityCrystalHTMLView';
+// --- 3D MODELS ---
+import { BlackHoleModel } from '@/components/models/BlackHoleModel';
+import { StandardOreModel } from '@/components/models/StandardOreModel';
 
+// --- HTML VIEWS (Direct Imports) ---
+import { SolarPlasmaView } from '@/components/htmlviews/SolarPlasmaView';
+import { GoldenRatioView } from '@/components/htmlviews/GoldenRatioView';
+import { NeutroniumView } from '@/components/htmlviews/NeutroniumView';
+import { CrystallizedThoughtView } from '@/components/htmlviews/CrystallizedThoughtView';
+import { AntimatterView } from '@/components/htmlviews/AntimatterView';
+import { DarkMatterView } from '@/components/htmlviews/DarkMatterView';
+import { FrozenTimeHTMLView } from '@/components/models/FrozenTimeHTMLView'; // Keep (Has Cutscene Logic)
+import { SolidLightView } from '@/components/htmlviews/SolidLightView';
+import { StrangeMatterView } from '@/components/htmlviews/StrangeMatterView';
+import { MoonItemView } from '@/components/htmlviews/MoonItemView';
+
+// --- COMPLEX MODEL WRAPPERS (With Cutscenes) ---
+import { HypercubeFragmentHTMLView } from '@/components/models/HypercubeFragmentHTMLView';
+import { SoundShardHTMLView } from '@/components/models/SoundShardHTMLView';
+import { TheSpectrumHTMLView } from '@/components/models/TheSpectrumHTMLView';
+import { BlackHoleCoreHTMLView } from '@/components/models/BlackHoleCoreHTMLView';
+import { LucidLobsterHTMLView } from '@/components/models/LucidLobsterHTMLView';
+import { NightmareEelHTMLView } from '@/components/models/NightmareEelHTMLView';
+import { LunarDivinityHTMLView } from '@/components/models/LunarDivinityHTMLView';
+import { SingularityCrystalHTMLView } from '@/components/models/SingularityCrystalHTMLView';
 
 // --- SCENE CONTENT ---
 
 const SceneContent: React.FC<{ item: ItemData; color: string; intensity: number }> = ({ item, color, intensity }) => {
   const isBlackHole = item.text === "Black Hole Core";
-  // Removed LiquidLuck Logic
 
   return (
     <>
@@ -129,7 +128,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
   // Generic Moon Check
   const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
   
-  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal; // Assume all special items are HTML views now
+  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal; 
   // @ts-ignore - isFullScreen might not be in ItemData type definition yet but passed from App
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
@@ -165,27 +164,27 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
         {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
-              <SolarPlasmaHTMLView skipCutscene={skipCutscene} />
+              <SolarPlasmaView />
             ) : isGoldenRatio ? (
-              <GoldenRatioHTMLView skipCutscene={skipCutscene} />
+              <GoldenRatioView />
             ) : isNeutronium ? (
-              <NeutroniumHTMLView skipCutscene={skipCutscene} />
+              <NeutroniumView />
             ) : isCrystallizedThought ? (
-              <CrystallizedThoughtHTMLView skipCutscene={skipCutscene} />
+              <CrystallizedThoughtView startSkipped={skipCutscene} />
             ) : isHypercubeFragment ? (
               <HypercubeFragmentHTMLView skipCutscene={skipCutscene} />
             ) : isSoundShard ? (
               <SoundShardHTMLView skipCutscene={skipCutscene} />
             ) : isAntimatter ? (
-              <AntimatterHTMLView skipCutscene={skipCutscene} />
+              <AntimatterView />
             ) : isDarkMatter ? (
-              <DarkMatterHTMLView skipCutscene={skipCutscene} />
+              <DarkMatterView startSkipped={skipCutscene} />
             ) : isFrozenTime ? (
               <FrozenTimeHTMLView skipCutscene={skipCutscene} />
             ) : isSolidLight ? (
-              <SolidLightHTMLView skipCutscene={skipCutscene} />
+              <SolidLightView />
             ) : isStrangeMatter ? (
-              <StrangeMatterHTMLView skipCutscene={skipCutscene} />
+              <StrangeMatterView />
             ) : isTheSpectrum ? (
               <TheSpectrumHTMLView skipCutscene={skipCutscene} />
             ) : isBlackHoleCore ? (
@@ -199,7 +198,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
             ) : isSingularityCrystal ? (
               <SingularityCrystalHTMLView skipCutscene={skipCutscene} />
             ) : isMoonItem ? (
-              <MoonItemHTMLView item={item} skipCutscene={skipCutscene} />
+              <MoonItemView item={item} />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
