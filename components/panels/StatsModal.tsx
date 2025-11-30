@@ -1,6 +1,7 @@
 import React from 'react';
 import { GameStats } from '../../types';
 import { getEquippedItemName, getBestResourceName } from '../../utils/gameHelpers';
+import { RARITY_TIERS } from '../../constants';
 
 interface Props {
     isOpen: boolean;
@@ -102,16 +103,16 @@ export const StatsModal: React.FC<Props> = ({
                     <div className="bg-black/40 p-4 rounded border border-purple-900/30 mb-4">
                         <h3 className="text-sm font-bold font-mono text-purple-400 mb-2 border-b border-purple-900/30 pb-1">BEST DISCOVERIES</h3>
                         <div className="grid grid-cols-1 gap-y-1 text-xs font-mono text-neutral-400">
-                            <div className="flex justify-between"><span>Rarest Object:</span> <span className="text-white">{/* Logic for best item name needed, currently stats.bestRarityFound is ID */} Tier {stats.bestRarityFound}</span></div>
+                            <div className="flex justify-between"><span>Rarest Object:</span> <span className="text-white">{RARITY_TIERS[stats.bestRarityFound]?.name || `Tier ${stats.bestRarityFound}`}</span></div>
                             {stats.bestMoonItemFound ? (
-                                <div className="flex justify-between"><span>Rarest Moon Object:</span> <span className="text-slate-300">ID: {stats.bestMoonItemFound}</span></div>
+                                <div className="flex justify-between"><span>Rarest Moon Object:</span> <span className="text-slate-300">{getBestResourceName('MOON', stats.bestMoonItemFound || 0)}</span></div>
                             ) : null}
-                            <div className="flex justify-between"><span>Rarest Prism Ore:</span> <span className="text-fuchsia-400">{getBestResourceName('ORE', stats.bestPrismOreMined || 0)}</span></div>
-                            <div className="flex justify-between"><span>Rarest Gold Ore:</span> <span className="text-yellow-400">{getBestResourceName('ORE', stats.bestGoldOreMined || 0)}</span></div>
+                            <div className="flex justify-between"><span>Rarest Prism Ore:</span> <span className="text-fuchsia-400">{getBestResourceName('PRISM_ORE', stats.bestPrismOreMined || 0)}</span></div>
+                            <div className="flex justify-between"><span>Rarest Gold Ore:</span> <span className="text-yellow-400">{getBestResourceName('GOLD_ORE', stats.bestGoldOreMined || 0)}</span></div>
                             <div className="flex justify-between"><span>Rarest Mine Ore:</span> <span className="text-orange-400">{getBestResourceName('ORE', stats.bestOreMined)}</span></div>
                             <div className="flex justify-between"><span>Rarest Fish:</span> <span className="text-cyan-400">{getBestResourceName('FISH', stats.bestFishCaught)}</span></div>
                             <div className="flex justify-between"><span>Rarest Harvest:</span> <span className="text-green-400">{getBestResourceName('PLANT', stats.bestPlantHarvested)}</span></div>
-                            <div className="flex justify-between"><span>Rarest Dream:</span> <span className="text-purple-400">ID: {stats.bestDreamFound}</span></div>
+                            <div className="flex justify-between"><span>Rarest Dream:</span> <span className="text-purple-400">{getBestResourceName('DREAM', stats.bestDreamFound)}</span></div>
                         </div>
                     </div>
 

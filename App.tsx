@@ -394,11 +394,20 @@ export default function App() {
         }
     };
 
-    const handleInspectResource = (item: { id: number; name: string; description: string }) => {
+    const handleInspectResource = (item: { id: number; name: string; description: string; rarityId?: number; dimension?: string }) => {
         let rarityId = RarityId.COMMON;
-        if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
-        else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
-        else rarityId = RarityId.MOON;
+        
+        if (item.dimension === 'PRISM') {
+             rarityId = (item.rarityId as RarityId) || RarityId.COMMON;
+        } else if (item.id > 2000 && !item.dimension) {
+             rarityId = RarityId.MOON;
+        } else if (item.rarityId) {
+             rarityId = item.rarityId as RarityId;
+        } else {
+             if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
+             else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
+             else rarityId = RarityId.MOON;
+        }
 
         audioService.playClick();
         setIsAutoSpinning(false);

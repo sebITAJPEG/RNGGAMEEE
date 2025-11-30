@@ -146,7 +146,8 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                     color: 'text-slate-300', 
                     glowColor: '#cbd5e1',
                     probability: m.probability,
-                    description: m.description
+                    description: m.description,
+                    rarityId: m.rarityId
                 }))}
                 isOpen={modalsState.isMoonInventoryOpen}
                 onClose={() => close('isMoonInventoryOpen')}

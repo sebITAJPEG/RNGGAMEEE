@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { PlantInventoryItem } from '../types';
-import { PLANTS } from '../constants';
+import { PlantInventoryItem, PlantRarityId } from '../types';
+import { PLANTS, PLANT_RARITY_TIERS } from '../constants';
 
 interface Props {
   items: PlantInventoryItem[];
@@ -53,20 +53,22 @@ export const PlantInventory: React.FC<Props> = ({ items, isOpen, onClose, onSell
                        if (!plant) return null;
                        const unitValue = Math.max(1, Math.floor(plant.probability / 4.5));
 
+                       // Resolve Rarity
+                       const rarity = plant.rarityId && PLANT_RARITY_TIERS[plant.rarityId as PlantRarityId] ? PLANT_RARITY_TIERS[plant.rarityId as PlantRarityId] : { name: plant.tierName, textColor: 'text-green-600', color: 'border-green-900/50' };
+
                        return (
                            <div 
                                 key={item.id} 
                                 className={`
-                                    p-3 rounded bg-black/40 border border-green-900/50 hover:bg-green-950/30 transition-all
+                                    p-3 rounded bg-black/40 border ${rarity.color || 'border-green-900/50'} hover:bg-green-950/30 transition-all
                                     flex flex-col items-center text-center gap-2 relative group
                                 `}
                                 style={{ 
-                                    borderColor: item.id > 15 ? plant.glowColor : undefined,
-                                    boxShadow: item.id > 20 ? `0 0 10px ${plant.glowColor}33` : 'none'
+                                    boxShadow: rarity.shadowColor ? `0 0 10px ${rarity.shadowColor}` : (item.id > 20 ? `0 0 10px ${plant.glowColor}33` : 'none')
                                 }}
                            >
-                                <div className="text-[10px] text-green-600 font-mono uppercase tracking-wider">
-                                    {plant.tierName}
+                                <div className={`text-[10px] ${rarity.textColor || 'text-green-600'} font-mono uppercase tracking-wider`}>
+                                    {rarity.name}
                                 </div>
                                 <div className={`font-bold ${plant.color} drop-shadow-md`}>
                                     {plant.name}

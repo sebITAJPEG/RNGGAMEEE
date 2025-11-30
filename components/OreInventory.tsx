@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { OreInventoryItem } from '../types';
-import { ORES } from '../constants';
+import { OreInventoryItem, OreRarityId, GoldRarityId, PrismRarityId } from '../types';
+import { ORES, GOLD_ORES, PRISM_ORES, ORE_RARITY_TIERS, GOLD_RARITY_TIERS, PRISM_RARITY_TIERS } from '../constants';
 
 interface Props {
   items: OreInventoryItem[];
@@ -21,7 +21,7 @@ export const OreInventory: React.FC<Props> = ({ items, isOpen, onClose, onSell }
   // Calculate Total Estimated Value
   let totalValue = 0;
   items.forEach(item => {
-      const ore = ORES.find(o => o.id === item.id);
+      const ore = ORES.find(o => o.id === item.id) || GOLD_ORES.find(o => o.id === item.id) || PRISM_ORES.find(o => o.id === item.id);
       if (ore) {
           const unitValue = Math.max(1, Math.floor(ore.probability / 5));
           totalValue += unitValue * item.count;
@@ -48,24 +48,36 @@ export const OreInventory: React.FC<Props> = ({ items, isOpen, onClose, onSell }
            ) : (
                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                    {sortedItems.map(item => {
-                       const ore = ORES.find(o => o.id === item.id);
+                       const ore = ORES.find(o => o.id === item.id) || GOLD_ORES.find(o => o.id === item.id) || PRISM_ORES.find(o => o.id === item.id);
                        if (!ore) return null;
                        const unitValue = Math.max(1, Math.floor(ore.probability / 5));
+
+                       // Resolve Rarity
+                       let rarity: any = { name: ore.tierName, textColor: 'text-neutral-500', color: 'border-neutral-700' };
+                       if (ore.rarityId) {
+                           if (ore.dimension === 'GOLD') {
+                               rarity = GOLD_RARITY_TIERS[ore.rarityId as GoldRarityId];
+                           } else if (ore.dimension === 'PRISM') {
+                               rarity = PRISM_RARITY_TIERS[ore.rarityId as PrismRarityId];
+                           } else {
+                               rarity = ORE_RARITY_TIERS[ore.rarityId as OreRarityId];
+                           }
+                       }
 
                        return (
                            <div 
                                 key={item.id} 
                                 className={`
-                                    p-3 rounded bg-neutral-800/50 border border-neutral-700 hover:bg-neutral-800 transition-all
+                                    p-3 rounded bg-neutral-800/50 border ${rarity.color || 'border-neutral-700'} hover:bg-neutral-800 transition-all
                                     flex flex-col items-center text-center gap-2 relative group
                                 `}
                                 style={{ 
-                                    borderColor: item.id > 15 ? ore.glowColor : undefined,
-                                    boxShadow: item.id > 20 ? `0 0 10px ${ore.glowColor}33` : 'none'
+                                    // Use rarity shadow color if available, fallback to item glowColor logic
+                                    boxShadow: rarity.shadowColor ? `0 0 10px ${rarity.shadowColor}` : (item.id > 20 ? `0 0 10px ${ore.glowColor}33` : 'none')
                                 }}
                            >
-                                <div className="text-[10px] text-neutral-500 font-mono uppercase tracking-wider">
-                                    {ore.tierName}
+                                <div className={`text-[10px] ${rarity.textColor || 'text-neutral-500'} font-mono uppercase tracking-wider`}>
+                                    {rarity.name}
                                 </div>
                                 <div className={`font-bold ${ore.color} drop-shadow-md`}>
                                     {ore.name}

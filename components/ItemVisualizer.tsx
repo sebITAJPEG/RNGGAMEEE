@@ -33,6 +33,7 @@ import { LucidLobsterHTMLView } from './models/LucidLobsterHTMLView';
 import { NightmareEelHTMLView } from './models/NightmareEelHTMLView';
 import { LunarDivinityHTMLView } from './models/LunarDivinityHTMLView';
 import { MoonItemHTMLView } from './models/MoonItemHTMLView';
+import { SingularityCrystalHTMLView } from './models/SingularityCrystalHTMLView';
 
 
 // --- SCENE CONTENT ---
@@ -122,11 +123,12 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
   const isLucidLobster = item.text === "Lucid Lobster";
   const isNightmareEel = item.text === "Nightmare Eel";
   const isLunarDivinity = item.text === "Lunar Divinity";
+  const isSingularityCrystal = item.text === "Singularity Crystal";
   
   // Generic Moon Check
   const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
   
-  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem; // Assume all special items are HTML views now
+  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal; // Assume all special items are HTML views now
   // @ts-ignore - isFullScreen might not be in ItemData type definition yet but passed from App
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
@@ -159,7 +161,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
             </button>
         )}
 
-        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem) && (
+        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
               <SolarPlasmaHTMLView />
@@ -193,6 +195,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
               <NightmareEelHTMLView />
             ) : isLunarDivinity ? (
               <LunarDivinityHTMLView />
+            ) : isSingularityCrystal ? (
+              <SingularityCrystalHTMLView />
             ) : isMoonItem ? (
               <MoonItemHTMLView item={item} />
             ) : (

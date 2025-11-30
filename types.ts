@@ -17,6 +17,142 @@ export enum RarityId {
     MOON = 99
 }
 
+export enum OreRarityId {
+    COMMON = 1,
+    UNCOMMON,
+    RARE,
+    PRECIOUS,
+    EPIC,
+    INDUSTRIAL_PLUS,
+    DENSE,
+    GEOMETRIC,
+    RADIOACTIVE,
+    VOLCANIC,
+    ELVEN,
+    ATLANTEAN,
+    DWARVEN,
+    RUNIC,
+    DARK,
+    LUNAR,
+    SOLAR,
+    INFERNAL,
+    DIVINE,
+    VOID,
+    FUTURE,
+    RESISTANT,
+    MANDALORIAN,
+    WAKANDAN,
+    INDESTRUCTIBLE,
+    ASGARDIAN,
+    ALIEN,
+    MASS_EFFECT,
+    TOXIC,
+    IMPOSSIBLE,
+    SPACE,
+    STELLAR,
+    QUANTUM,
+    ABYSSAL,
+    VOLATILE,
+    SINGULARITY,
+    PHOTONIC,
+    CHRONAL,
+    PSIONIC,
+    SONIC,
+    FOURTH_DIMENSION
+}
+
+export enum GoldRarityId {
+    GILDED = 1,
+    RADIANT,
+    DIVINE,
+    ABSOLUTE,
+    THE_GOLD
+}
+
+export enum PrismRarityId {
+    REFRACTIVE = 1,
+    CHROMATIC,
+    LUMINOUS,
+    SPECTRAL,
+    RADIANT,
+    DIMENSIONAL,
+    THE_SOURCE
+}
+
+export enum FishRarityId {
+    COMMON = 1,
+    TRASH,
+    UNCOMMON,
+    PREDATOR,
+    RARE,
+    DEEP,
+    CRYPTO,
+    MALWARE,
+    ABYSSAL,
+    ERROR,
+    SYSTEM,
+    AI,
+    COSMIC,
+    CRYPTID,
+    ELDRITCH,
+    LITERATURE,
+    POKEMON,
+    TEMPORAL,
+    QUANTUM,
+    SERVER,
+    BOSS,
+    CRITICAL,
+    DEV,
+    SKY,
+    MAGMA,
+    DREAM
+}
+
+export enum PlantRarityId {
+    COMMON = 1,
+    UNCOMMON,
+    RARE,
+    MAGICAL,
+    EPIC,
+    CELESTIAL,
+    VOID,
+    COSMIC,
+    SINGULARITY,
+    MYTHIC,
+    CHRONO,
+    REALITY,
+    GLITCH,
+    DIGITAL,
+    QUANTUM,
+    PRIMORDIAL,
+    DIVINE,
+    ALPHA,
+    CODE,
+    NETWORK,
+    MALWARE
+}
+
+export enum DreamRarityId {
+    SURFACE = 1,
+    LUCID,
+    SURREAL,
+    NIGHTMARE,
+    ABSTRACT
+}
+
+export enum MoonRarityId {
+    COMMON = 1,
+    UNCOMMON,
+    RARE,
+    EPIC,
+    LEGENDARY,
+    MYTHICAL,
+    DIVINE,
+    COSMIC,
+    INFINITE,
+    THE_MOON
+}
+
 export enum VariantId {
     NONE = 0,
     GILDED,      // x2
@@ -61,6 +197,7 @@ export interface ItemData {
 export interface MoonItem extends ItemData {
     id: number;
     probability: number; // 1 in X
+    rarityId?: MoonRarityId;
 }
 
 export interface Drop {
@@ -94,6 +231,7 @@ export interface Ore {
     glowColor: string; // CSS color for shadows
     tierName: string;
     dimension?: 'NORMAL' | 'GOLD' | 'PRISM'; // New field
+    rarityId?: OreRarityId | GoldRarityId | PrismRarityId;
 }
 
 export interface OreInventoryItem {
@@ -113,6 +251,7 @@ export interface Fish {
     color: string;
     glowColor: string;
     tierName: string;
+    rarityId?: FishRarityId;
 }
 
 export interface FishInventoryItem {
@@ -132,6 +271,7 @@ export interface Plant {
     color: string;
     glowColor: string;
     tierName: string;
+    rarityId?: PlantRarityId;
 }
 
 export interface PlantInventoryItem {
@@ -152,6 +292,7 @@ export interface Dream {
     color: string;
     glowColor: string;
     tierName: string; // "Lucid", "Nightmare", etc.
+    rarityId?: DreamRarityId;
 }
 
 export interface DreamInventoryItem {

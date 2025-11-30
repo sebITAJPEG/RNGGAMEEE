@@ -1,5 +1,6 @@
 import React from 'react';
-import { Ore, Fish, Plant, RarityId, VariantId } from '../types';
+import { Ore, Fish, Plant, RarityId, VariantId, OreRarityId, GoldRarityId, PrismRarityId, FishRarityId, PlantRarityId, MoonRarityId } from '../types';
+import { ORE_RARITY_TIERS, GOLD_RARITY_TIERS, PRISM_RARITY_TIERS, FISH_RARITY_TIERS, PLANT_RARITY_TIERS, MOON_RARITY_TIERS } from '../constants';
 
 interface BaseItem {
     id: number;
@@ -9,6 +10,8 @@ interface BaseItem {
     glowColor: string;
     probability: number;
     description: string; // Added description to interface
+    rarityId?: number;
+    dimension?: 'NORMAL' | 'GOLD' | 'PRISM';
 }
 
 interface InventoryItem {
@@ -81,17 +84,38 @@ export const ResourceInventory: React.FC<Props> = ({ items, definitions, isOpen,
                                 if (!def) return null;
                                 const unitValue = Math.max(1, Math.floor(def.probability / config.valueDivisor));
 
+                                // Resolve Rarity
+                                let rarity: any = { name: def.tierName, textColor: undefined, color: undefined, shadowColor: undefined };
+                                if (def.rarityId) {
+                                    // Heuristic to detect which rarity map to use based on config.title or item properties
+                                    if (config.title === "ORE SILO") {
+                                        if (def.dimension === 'GOLD') rarity = GOLD_RARITY_TIERS[def.rarityId as GoldRarityId];
+                                        else if (def.dimension === 'PRISM') rarity = PRISM_RARITY_TIERS[def.rarityId as PrismRarityId];
+                                        else rarity = ORE_RARITY_TIERS[def.rarityId as OreRarityId];
+                                    } else if (config.title === "CRYO TANK") {
+                                        rarity = FISH_RARITY_TIERS[def.rarityId as FishRarityId];
+                                    } else if (config.title === "GREENHOUSE") {
+                                        rarity = PLANT_RARITY_TIERS[def.rarityId as PlantRarityId];
+                                    } else if (config.title === "LUNAR VAULT") {
+                                        rarity = MOON_RARITY_TIERS[def.rarityId as MoonRarityId];
+                                    }
+                                }
+                                
+                                // Fallback colors if rarity lookup failed or missing
+                                const textColor = rarity?.textColor || 'opacity-70';
+                                const borderColor = rarity?.color || config.borderColor.replace('border-', 'border-opacity-30 border-');
+                                const shadowColor = rarity?.shadowColor;
+
                                 return (
                                     <div
                                         key={item.id}
                                         onClick={() => onInspect && onInspect(def)}
                                         className={`
-                                    p-3 rounded bg-background/40 border ${config.borderColor.replace('border-', 'border-opacity-30 border-')} hover:bg-text/5 transition-all
+                                    p-3 rounded bg-background/40 border ${borderColor} hover:bg-text/5 transition-all
                                     flex flex-col items-center text-center gap-2 relative group cursor-pointer
                                 `}
                                         style={{
-                                            borderColor: item.id > 15 ? def.glowColor : undefined,
-                                            boxShadow: item.id > 20 ? `0 0 10px ${def.glowColor}33` : 'none'
+                                            boxShadow: shadowColor ? `0 0 10px ${shadowColor}` : (item.id > 20 ? `0 0 10px ${def.glowColor}33` : 'none')
                                         }}
                                     >
                                         {onToggleLock && (
@@ -107,8 +131,8 @@ export const ResourceInventory: React.FC<Props> = ({ items, definitions, isOpen,
                                                 )}
                                             </button>
                                         )}
-                                        <div className={`text-[10px] font-mono uppercase tracking-wider opacity-70`} style={{ color: def.glowColor }}>
-                                            {def.tierName}
+                                        <div className={`text-[10px] ${textColor} font-mono uppercase tracking-wider`}>
+                                            {rarity?.name || def.tierName}
                                         </div>
                                         <div className={`font-bold ${def.color} drop-shadow-md`}>
                                             {def.name}

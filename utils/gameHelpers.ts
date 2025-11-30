@@ -1,6 +1,6 @@
 import { GameStats } from '../types';
 import { CRAFTABLE_ITEMS } from '../craftingData';
-import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, GOLD_ORES } from '../constants';
+import { ORES, FISH, PLANTS, DREAMS, MOON_ITEMS, GOLD_ORES, PRISM_ORES } from '../constants';
 
 export const getCraftingBonuses = (equippedItems: GameStats['equippedItems'], category: string) => {
     let bonusSpeed = 0;
@@ -33,10 +33,14 @@ export const getEquippedItemName = (equippedItems: GameStats['equippedItems'], c
     return item ? item.name : "None";
 };
 
-export const getBestResourceName = (type: 'ORE' | 'GOLD_ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'MOON', id: number) => {
+export const getBestResourceName = (type: 'ORE' | 'GOLD_ORE' | 'PRISM_ORE' | 'FISH' | 'PLANT' | 'DREAM' | 'MOON', id: number) => {
     if (id === 0) return "None";
-    if (type === 'ORE') return ORES.find(o => o.id === id)?.name || `Ore #${id}`;
+    if (type === 'ORE') {
+        // Fallback to other ores if finding by ID in standard ores fails (handles legacy saves or cross-contamination)
+        return ORES.find(o => o.id === id)?.name || GOLD_ORES.find(o => o.id === id)?.name || PRISM_ORES.find(o => o.id === id)?.name || `Ore #${id}`;
+    }
     if (type === 'GOLD_ORE') return GOLD_ORES.find(o => o.id === id)?.name || `Gold Ore #${id}`;
+    if (type === 'PRISM_ORE') return PRISM_ORES.find(o => o.id === id)?.name || `Prism Ore #${id}`;
     if (type === 'FISH') return FISH.find(f => f.id === id)?.name || `Fish #${id}`;
     if (type === 'PLANT') return PLANTS.find(p => p.id === id)?.name || `Plant #${id}`;
     if (type === 'DREAM') return DREAMS.find(d => d.id === id)?.name || `Dream #${id}`;

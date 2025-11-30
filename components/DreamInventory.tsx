@@ -1,6 +1,6 @@
 import React from 'react';
-import { DreamInventoryItem } from '../types';
-import { DREAMS } from '../constants';
+import { DreamInventoryItem, DreamRarityId } from '../types';
+import { DREAMS, DREAM_RARITY_TIERS } from '../constants';
 
 interface Props {
     items: DreamInventoryItem[];
@@ -49,20 +49,22 @@ export const DreamInventory: React.FC<Props> = ({ items, isOpen, onClose, onSell
                                 if (!dream) return null;
                                 const unitValue = Math.max(5, Math.floor(dream.probability / 3));
 
+                                // Resolve Rarity
+                                const rarity = dream.rarityId && DREAM_RARITY_TIERS[dream.rarityId as DreamRarityId] ? DREAM_RARITY_TIERS[dream.rarityId as DreamRarityId] : { name: dream.tierName, textColor: 'text-purple-600', color: 'border-purple-900/20' };
+
                                 return (
                                     <div
                                         key={item.id}
                                         className={`
-                                    p-3 rounded bg-purple-900/5 border border-purple-900/20 hover:bg-purple-900/20 transition-all
+                                    p-3 rounded bg-purple-900/5 border ${rarity.color || 'border-purple-900/20'} hover:bg-purple-900/20 transition-all
                                     flex flex-col items-center text-center gap-2 relative group
                                 `}
                                         style={{
-                                            borderColor: item.id > 30 ? dream.glowColor : undefined,
-                                            boxShadow: item.id > 30 ? `0 0 15px ${dream.glowColor}22` : 'none'
+                                            boxShadow: rarity.shadowColor ? `0 0 15px ${rarity.shadowColor}` : (item.id > 30 ? `0 0 15px ${dream.glowColor}22` : 'none')
                                         }}
                                     >
-                                        <div className="text-[10px] text-purple-600 font-mono uppercase tracking-wider">
-                                            {dream.tierName}
+                                        <div className={`text-[10px] ${rarity.textColor || 'text-purple-600'} font-mono uppercase tracking-wider`}>
+                                            {rarity.name}
                                         </div>
                                         <div className={`font-bold ${dream.color} drop-shadow-sm`}>
                                             {dream.name}

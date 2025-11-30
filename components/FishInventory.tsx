@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { FishInventoryItem } from '../types';
-import { FISH } from '../constants';
+import { FishInventoryItem, FishRarityId } from '../types';
+import { FISH, FISH_RARITY_TIERS } from '../constants';
 
 interface Props {
   items: FishInventoryItem[];
@@ -53,20 +53,22 @@ export const FishInventory: React.FC<Props> = ({ items, isOpen, onClose, onSell 
                        if (!fish) return null;
                        const unitValue = Math.max(1, Math.floor(fish.probability / 4));
 
+                       // Resolve Rarity
+                       const rarity = fish.rarityId && FISH_RARITY_TIERS[fish.rarityId as FishRarityId] ? FISH_RARITY_TIERS[fish.rarityId as FishRarityId] : { name: fish.tierName, textColor: 'text-cyan-600', color: 'border-cyan-900/50' };
+
                        return (
                            <div 
                                 key={item.id} 
                                 className={`
-                                    p-3 rounded bg-black/40 border border-cyan-900/50 hover:bg-cyan-950/30 transition-all
+                                    p-3 rounded bg-black/40 border ${rarity.color || 'border-cyan-900/50'} hover:bg-cyan-950/30 transition-all
                                     flex flex-col items-center text-center gap-2 relative group
                                 `}
                                 style={{ 
-                                    borderColor: item.id > 15 ? fish.glowColor : undefined,
-                                    boxShadow: item.id > 20 ? `0 0 10px ${fish.glowColor}33` : 'none'
+                                    boxShadow: rarity.shadowColor ? `0 0 10px ${rarity.shadowColor}` : (item.id > 20 ? `0 0 10px ${fish.glowColor}33` : 'none')
                                 }}
                            >
-                                <div className="text-[10px] text-cyan-600 font-mono uppercase tracking-wider">
-                                    {fish.tierName}
+                                <div className={`text-[10px] ${rarity.textColor || 'text-cyan-600'} font-mono uppercase tracking-wider`}>
+                                    {rarity.name}
                                 </div>
                                 <div className={`font-bold ${fish.color} drop-shadow-md`}>
                                     {fish.name}
