@@ -232,6 +232,7 @@ export interface Ore {
     tierName: string;
     dimension?: 'NORMAL' | 'GOLD' | 'PRISM'; // New field
     rarityId?: OreRarityId | GoldRarityId | PrismRarityId;
+    cutscenePhrase?: string;
 }
 
 export interface OreInventoryItem {

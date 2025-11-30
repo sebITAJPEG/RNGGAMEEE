@@ -7,20 +7,16 @@ export const SingularityCrystalHTMLView = () => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Singularity Crystal - Prismatic Containment</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Orbitron', sans-serif; }
         canvas { display: block; width: 100vw; height: 100vh; }
-        #loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: #a855f7; font-family: monospace; font-size: 1.2rem; pointer-events: none;
-            text-shadow: 0 0 10px #a855f7;
-            z-index: 10;
-        }
+        
         #hud {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; padding: 20px; box-sizing: border-box;
             display: flex; flex-direction: column; z-index: 20;
+            opacity: 0; transition: opacity 2s;
         }
         .panel {
             background: rgba(5, 5, 10, 0.85);
@@ -60,10 +56,104 @@ export const SingularityCrystalHTMLView = () => {
             letter-spacing: 1px;
         }
         .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
+
+        /* --- CINEMATIC CUTSCENE STYLES --- */
+        #cutscene-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            z-index: 100;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            pointer-events: none;
+            perspective: 1000px;
+        }
+
+        #phrase-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        
+        .cinema-phrase {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #fff;
+            text-align: center;
+            opacity: 0;
+            letter-spacing: 0.5rem;
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+            /* Removed position: absolute to let flexbox center it */
+            width: 100%;
+            transition: all 0.5s cubic-bezier(0.1, 0.7, 1.0, 0.1);
+        }
+
+        .cinema-phrase.visible {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+        }
+
+        .cinema-phrase.glitch {
+            animation: glitch-anim 0.3s infinite;
+            color: #ff00ff;
+            text-shadow: 2px 2px #00ffff;
+        }
+
+        .cinema-phrase.warp-in {
+            animation: warp-in 0.8s forwards cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .cinema-phrase.suck-out {
+            animation: suck-out 0.6s forwards cubic-bezier(0.7, 0, 0.8, 0.2);
+        }
+
+        @keyframes warp-in {
+            0% { transform: scale(3) translateZ(500px); opacity: 0; letter-spacing: 2rem; filter: blur(20px); }
+            100% { transform: scale(1) translateZ(0); opacity: 1; letter-spacing: 0.5rem; filter: blur(0px); }
+        }
+
+        @keyframes suck-out {
+            0% { transform: scale(1); opacity: 1; letter-spacing: 0.5rem; }
+            100% { transform: scale(0) rotate(90deg); opacity: 0; letter-spacing: -1rem; filter: blur(10px); }
+        }
+
+        @keyframes glitch-anim {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        #flash-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            z-index: 101;
+            opacity: 0;
+            pointer-events: none;
+            mix-blend-mode: exclusion; /* Creative inversion */
+        }
+        
+        .singularity-implosion {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 10px; height: 10px;
+            background: black;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 100px 50px rgba(138, 43, 226, 0.8);
+            z-index: 102;
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
-    <div id="loading">DESTABILIZING ORE MATRIX...</div>
+    <div id="cutscene-layer">
+        <div id="phrase-container"></div>
+        <div id="singularity-dot" class="singularity-implosion"></div>
+    </div>
+    <div id="flash-overlay"></div>
     
     <div id="hud">
         <div class="panel">
@@ -78,6 +168,21 @@ export const SingularityCrystalHTMLView = () => {
         </div>
     </div>
 
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errDiv = document.createElement('div');
+            errDiv.style.position = 'fixed';
+            errDiv.style.top = '0';
+            errDiv.style.left = '0';
+            errDiv.style.color = 'red';
+            errDiv.style.background = 'rgba(0,0,0,0.8)';
+            errDiv.style.zIndex = '9999';
+            errDiv.style.padding = '20px';
+            errDiv.style.fontFamily = 'monospace';
+            errDiv.innerText = 'Error: ' + message + ' at ' + lineno + ':' + colno;
+            document.body.appendChild(errDiv);
+        };
+    </script>
     <script type="importmap">
         {
             "imports": {
@@ -92,6 +197,94 @@ export const SingularityCrystalHTMLView = () => {
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- AUDIO ENGINE ---
+        class SingularityAudio {
+            constructor() {
+                this.ctx = null;
+                this.masterGain = null;
+                this.initialized = false;
+            }
+
+            init() {
+                if(this.initialized) return;
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.gain.value = 0.4;
+                    this.masterGain.connect(this.ctx.destination);
+                    this.initialized = true;
+                } catch(e) { console.warn("Audio init failed", e); }
+            }
+
+            playRumble(duration) {
+                if(!this.initialized) return;
+                const t = this.ctx.currentTime;
+                // Deep rumbles
+                for(let i=0; i<3; i++) {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = i===0 ? 'sine' : 'sawtooth';
+                    osc.frequency.setValueAtTime(50 + i*20, t);
+                    osc.frequency.exponentialRampToValueAtTime(10, t + duration);
+                    
+                    const g = this.ctx.createGain();
+                    g.gain.setValueAtTime(0, t);
+                    g.gain.linearRampToValueAtTime(0.1 / (i+1), t + 0.5);
+                    g.gain.linearRampToValueAtTime(0, t + duration);
+                    
+                    const f = this.ctx.createBiquadFilter();
+                    f.type = 'lowpass';
+                    f.frequency.setValueAtTime(200, t);
+                    
+                    osc.connect(f); f.connect(g); g.connect(this.masterGain);
+                    osc.start(t); osc.stop(t + duration);
+                }
+            }
+
+            playGlitch() {
+                if(!this.initialized) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(Math.random()*1000 + 100, t);
+                osc.frequency.exponentialRampToValueAtTime(Math.random()*100 + 50, t + 0.1);
+                const g = this.ctx.createGain();
+                g.gain.setValueAtTime(0.05, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+                osc.connect(g); g.connect(this.masterGain);
+                osc.start(t); osc.stop(t + 0.1);
+            }
+
+            playImplosion() {
+                if(!this.initialized) return;
+                const t = this.ctx.currentTime;
+                // Suck sound
+                const osc = this.ctx.createOscillator();
+                osc.frequency.setValueAtTime(100, t);
+                osc.frequency.exponentialRampToValueAtTime(800, t + 1.5);
+                const g = this.ctx.createGain();
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(0.3, t + 1.4);
+                g.gain.setValueAtTime(0, t + 1.5);
+                osc.connect(g); g.connect(this.masterGain);
+                osc.start(t); osc.stop(t + 1.5);
+
+                // Boom
+                setTimeout(() => {
+                    const osc2 = this.ctx.createOscillator();
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(50, this.ctx.currentTime);
+                    osc2.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2.0);
+                    const g2 = this.ctx.createGain();
+                    g2.gain.setValueAtTime(1.0, this.ctx.currentTime);
+                    g2.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 2.0);
+                    osc2.connect(g2); g2.connect(this.masterGain);
+                    osc2.start(this.ctx.currentTime); osc2.stop(this.ctx.currentTime + 2.0);
+                }, 1500);
+            }
+        }
+        const audio = new SingularityAudio();
 
         // --- 1. TEXTURE GENERATORS ---
         function createRingMaps() {
@@ -239,7 +432,7 @@ export const SingularityCrystalHTMLView = () => {
         // --- SCENE SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
-        camera.position.set(0, 2, 14);
+        camera.position.set(0, 50, 0); // Start very high for cinematic pan
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -253,6 +446,7 @@ export const SingularityCrystalHTMLView = () => {
         controls.dampingFactor = 0.05;
         controls.minDistance = 5;
         controls.maxDistance = 30;
+        controls.enabled = false;
 
         const centerLight = new THREE.PointLight(0xa855f7, 2, 50);
         scene.add(centerLight);
@@ -461,6 +655,7 @@ export const SingularityCrystalHTMLView = () => {
         const beamMat = new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
         const beams = new THREE.LineSegments(beamGeo, beamMat);
         scene.add(beams);
+        const beamAttr = beamGeo.attributes.position; // DEFINED GLOBALLY
 
         const sentinelBodyGeo = new THREE.OctahedronGeometry(0.5, 0);
 
@@ -604,32 +799,147 @@ export const SingularityCrystalHTMLView = () => {
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
 
+        // --- CUTSCENE SEQUENCER ---
+        const phrases = [
+            "DENSITY CRITICAL",
+            "REALITY FRACTURING",
+            "LIGHT CANNOT ESCAPE",
+            "EVENT HORIZON BREACHED"
+        ];
+        
+        let cutsceneStep = 0;
+        let cutsceneTimer = 0;
+        let inCutscene = true;
+        
+        const phraseContainer = document.getElementById('phrase-container');
+        const cutsceneLayer = document.getElementById('cutscene-layer');
+        const flashOverlay = document.getElementById('flash-overlay');
+        const singularityDot = document.getElementById('singularity-dot');
+        const hud = document.getElementById('hud');
+
+        function showPhrase(text, type='warp-in') {
+            phraseContainer.innerHTML = '';
+            const el = document.createElement('div');
+            el.className = \`cinema-phrase \${type}\`;
+            el.innerText = text;
+            
+            if(Math.random() > 0.7) el.classList.add('glitch');
+            
+            phraseContainer.appendChild(el);
+            setTimeout(() => el.classList.add('visible'), 50);
+            
+            audio.playGlitch();
+        }
+
         // --- ANIMATION ---
         const clock = new THREE.Clock();
+        
+        // Start after slight delay to ensure audio context is ready
+        setTimeout(() => {
+            audio.init();
+            audio.playRumble(5.0);
+        }, 500);
+
         function animate() {
+            const delta = clock.getDelta();
             const t = clock.getElapsedTime();
+            
+            if (inCutscene) {
+                cutsceneTimer += delta;
+                
+                // Sequencer
+                if (cutsceneStep === 0 && cutsceneTimer > 0.5) {
+                    showPhrase(phrases[0]);
+                    cutsceneStep++;
+                }
+                else if (cutsceneStep === 1 && cutsceneTimer > 2.0) {
+                    // Remove first phrase
+                    const old = phraseContainer.firstChild;
+                    if(old) {
+                        old.classList.remove('warp-in');
+                        old.classList.add('suck-out');
+                    }
+                    setTimeout(() => showPhrase(phrases[1]), 200);
+                    cutsceneStep++;
+                }
+                else if (cutsceneStep === 2 && cutsceneTimer > 3.5) {
+                    const old = phraseContainer.firstChild;
+                    if(old) {
+                        old.classList.remove('warp-in');
+                        old.classList.add('suck-out');
+                    }
+                    setTimeout(() => showPhrase(phrases[2]), 200);
+                    cutsceneStep++;
+                }
+                else if (cutsceneStep === 3 && cutsceneTimer > 5.0) {
+                    const old = phraseContainer.firstChild;
+                    if(old) {
+                        old.classList.remove('warp-in');
+                        old.classList.add('suck-out');
+                    }
+                    setTimeout(() => showPhrase(phrases[3], 'warp-in'), 200);
+                    
+                    // Singularity appears
+                    singularityDot.style.opacity = 1;
+                    singularityDot.style.transition = 'transform 1.5s cubic-bezier(0.8, 0, 0.2, 1)';
+                    setTimeout(() => {
+                        singularityDot.style.transform = 'translate(-50%, -50%) scale(500)'; // IMPLOSION
+                    }, 100);
+                    
+                    audio.playImplosion();
+                    cutsceneStep++;
+                }
+                else if (cutsceneStep === 4 && cutsceneTimer > 6.5) {
+                    // FLASH
+                    flashOverlay.style.opacity = 1;
+                    cutsceneLayer.style.display = 'none';
+                    cutsceneStep++;
+                }
+                else if (cutsceneStep === 5 && cutsceneTimer > 7.0) {
+                    // Reveal
+                    const fade = 1.0 - (cutsceneTimer - 7.0) * 0.5;
+                    flashOverlay.style.opacity = Math.max(0, fade);
+                    
+                    // Move camera
+                    const camProgress = Math.min(1, (cutsceneTimer - 7.0) / 2.0);
+                    camera.position.y = THREE.MathUtils.lerp(50, 2, camProgress);
+                    camera.position.z = THREE.MathUtils.lerp(0, 14, camProgress);
+                    camera.lookAt(0,0,0);
+
+                    if (fade <= 0) {
+                        inCutscene = false;
+                        flashOverlay.style.display = 'none';
+                        controls.enabled = true;
+                        hud.style.opacity = 1;
+                    }
+                } else if(cutsceneStep < 5) {
+                    // Camera subtle drift during text
+                    camera.position.y = 50 - cutsceneTimer * 2;
+                    camera.rotation.z = Math.sin(cutsceneTimer * 0.5) * 0.1;
+                }
+            } else {
+                controls.update();
+            }
+
+            // Object Animations
             crystalMat.uniforms.uTime.value = t;
-            shardMat.uniforms.uTime.value = t; // Update shards
-            electricMat.uniforms.uTime.value = t; // Update arcs
+            shardMat.uniforms.uTime.value = t; 
+            electricMat.uniforms.uTime.value = t;
             particlesMat.uniforms.uTime.value = t;
             nebulaMat.uniforms.uTime.value = t;
             sentinelMat.uniforms.uTime.value = t;
 
-            // Crystal
+            // Rotation
             crystal.rotation.y = t * 0.1;
             crystal.rotation.z = t * 0.05;
             crystal.position.y = Math.sin(t * 0.5) * 0.4;
             
-            // Shards (Counter rotation)
             shards.rotation.y = -t * 0.2; 
             shards.rotation.x = t * 0.05;
 
-            // Arcs match crystal pos but static rotation or slight drift
             arcs.position.copy(crystal.position);
             arcs.rotation.y = t * 0.2;
 
-            // Beams
-            const beamAttr = beamGeo.attributes.position;
             containmentGroup.rotation.y = -t * 0.05;
             sentinels.forEach((s, i) => {
                 s.group.position.y = Math.sin(t * 1.5 + i) * 0.8;
@@ -642,7 +952,6 @@ export const SingularityCrystalHTMLView = () => {
             });
             beamAttr.needsUpdate = true;
 
-            // Rings
             gyroGroup.rotation.x = t * 0.05;
             gyroGroup.rotation.y = t * 0.02;
             ring1.rotation.x = t * 0.15;
@@ -656,7 +965,6 @@ export const SingularityCrystalHTMLView = () => {
 
             beamMat.opacity = 0.3 + 0.2 * Math.sin(t * 10.0);
 
-            controls.update();
             composer.render();
             requestAnimationFrame(animate);
         }
@@ -668,7 +976,6 @@ export const SingularityCrystalHTMLView = () => {
             composer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        document.getElementById('loading').style.display = 'none';
         document.getElementById('resetBtn').addEventListener('click', () => {
             controls.reset();
         });
