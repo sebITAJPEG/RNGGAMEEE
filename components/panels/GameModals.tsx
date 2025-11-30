@@ -40,6 +40,7 @@ interface Props {
     handlers: {
         handleInspectItem: (item: any) => void;
         handleInspectResource: (item: any) => void;
+        handleInventoryInspectResource: (item: any) => void;
         toggleLock: (item: any) => void;
         toggleResourceLock: (type: any, id: number) => void;
         handleSellResources: (type: any) => void;
@@ -76,7 +77,7 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                 onClose={() => close('isOreInventoryOpen')}
                 onSell={() => { handlers.handleSellResources('ORES'); handlers.handleSellResources('GOLD_ORES'); handlers.handleSellResources('PRISM_ORES'); }}
                 onToggleLock={(item) => handlers.toggleResourceLock(item.id > 2000 ? 'PRISM_ORES' : item.id > 1000 ? 'GOLD_ORES' : 'ORES', item.id)}
-                onInspect={handlers.handleInspectResource}
+                onInspect={handlers.handleInventoryInspectResource}
                 config={{
                     title: "ORE SILO",
                     itemName: "RES",
@@ -96,7 +97,7 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                 onClose={() => close('isFishInventoryOpen')}
                 onSell={() => handlers.handleSellResources('FISH')}
                 onToggleLock={(item) => handlers.toggleResourceLock('FISH', item.id)}
-                onInspect={handlers.handleInspectResource}
+                onInspect={handlers.handleInventoryInspectResource}
                 config={{
                     title: "CRYO TANK",
                     itemName: "SPECIMENS",
@@ -116,7 +117,7 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                 onClose={() => close('isPlantInventoryOpen')}
                 onSell={() => handlers.handleSellResources('PLANTS')}
                 onToggleLock={(item) => handlers.toggleResourceLock('PLANTS', item.id)}
-                onInspect={handlers.handleInspectResource}
+                onInspect={handlers.handleInventoryInspectResource}
                 config={{
                     title: "GREENHOUSE",
                     itemName: "PLANTS",
@@ -153,7 +154,7 @@ export const GameModals: React.FC<Props> = ({ stats, inventory, miningGame, gold
                 onClose={() => close('isMoonInventoryOpen')}
                 onSell={handlers.handleSellMoonItems}
                 onToggleLock={(item) => handlers.toggleResourceLock('MOON', item.id)}
-                onInspect={handlers.handleInspectResource}
+                onInspect={handlers.handleInventoryInspectResource}
                 config={{
                     title: "LUNAR VAULT",
                     itemName: "SAMPLES",

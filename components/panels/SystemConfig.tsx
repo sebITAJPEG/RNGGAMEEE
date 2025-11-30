@@ -51,6 +51,10 @@ interface Props {
 
     // Achievement Data for Unlock All
     achievements: { id: string }[];
+
+    // Game Settings
+    gameSettings?: { skipInventoryCutscenes: boolean; skipAllCutscenes: boolean; };
+    setGameSettings?: React.Dispatch<React.SetStateAction<{ skipInventoryCutscenes: boolean; skipAllCutscenes: boolean; }>>;
 }
 
 export const SystemConfig: React.FC<Props> = ({
@@ -64,7 +68,8 @@ export const SystemConfig: React.FC<Props> = ({
     overrideBalance, setOverrideBalance, overrideWins, setOverrideWins,
     handleSetBalance, handleSetWins,
     setInventory, setMoonInventory, setOreInventory, setGoldOreInventory, setPrismOreInventory, setFishInventory, setPlantInventory, setDreamInventory,
-    achievements
+    achievements,
+    gameSettings, setGameSettings
 }) => {
     const [debugItemSearch, setDebugItemSearch] = useState('');
     const [selectedDebugItem, setSelectedDebugItem] = useState<any>(null);
@@ -191,6 +196,34 @@ export const SystemConfig: React.FC<Props> = ({
                 <div className="space-y-8">
                     {/* THEME CONFIG */}
                     <div className="space-y-2 pt-2">
+                        <div className="text-sm font-mono text-white font-bold">GAME SETTINGS</div>
+                        <div className="space-y-2">
+                            {gameSettings && setGameSettings && (
+                                <>
+                                    <label className="flex items-center justify-between text-xs text-neutral-400 cursor-pointer p-2 border border-neutral-800 rounded hover:bg-neutral-900/50">
+                                        <span>SKIP CUTSCENES IN INVENTORY</span>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={gameSettings.skipInventoryCutscenes} 
+                                            onChange={(e) => setGameSettings(prev => ({ ...prev, skipInventoryCutscenes: e.target.checked }))}
+                                            className="accent-green-500"
+                                        />
+                                    </label>
+                                    <label className="flex items-center justify-between text-xs text-neutral-400 cursor-pointer p-2 border border-neutral-800 rounded hover:bg-neutral-900/50">
+                                        <span>ALWAYS SKIP CUTSCENES</span>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={gameSettings.skipAllCutscenes} 
+                                            onChange={(e) => setGameSettings(prev => ({ ...prev, skipAllCutscenes: e.target.checked }))}
+                                            className="accent-green-500"
+                                        />
+                                    </label>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-border">
                         <div className="text-sm font-mono text-white font-bold">THEME CONFIG</div>
                         <div className="grid grid-cols-2 gap-2">
                             {THEMES.map(theme => (

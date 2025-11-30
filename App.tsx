@@ -37,6 +37,12 @@ export default function App() {
     const [volume, setVolume] = useState(0.4);
     const { activeSequence, triggerSequence } = useBuildUpSequence();
 
+    // Settings
+    const [gameSettings, setGameSettings] = useState(() => {
+        const saved = localStorage.getItem('textbound_game_settings');
+        return saved ? JSON.parse(saved) : { skipInventoryCutscenes: false, skipAllCutscenes: false };
+    });
+
     // New state for muting only mining sounds
     const [isMiningMuted, setIsMiningMuted] = useState(false);
 
@@ -107,7 +113,7 @@ export default function App() {
         isStatsOpen: false, isUnlockConditionsOpen: false
     });
 
-    const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId, isFullScreen?: boolean }) | null>(null);
+    const [inspectedItem, setInspectedItem] = useState<(ItemData & { rarityId: RarityId, variantId?: VariantId, isFullScreen?: boolean, skipCutscene?: boolean }) | null>(null);
 
     // Config State
     const [autoSpinSpeed, setAutoSpinSpeed] = useState(SPEED_TIERS[stats.speedLevel]?.ms || 250);
@@ -138,6 +144,7 @@ export default function App() {
     useEffect(() => { localStorage.setItem('textbound_gold_ore_inventory', JSON.stringify(goldOreInventory)); }, [goldOreInventory]);
     useEffect(() => { localStorage.setItem('textbound_prism_ore_inventory', JSON.stringify(prismOreInventory)); }, [prismOreInventory]);
     useEffect(() => { localStorage.setItem('textbound_settings_autostop', autoStopRarity.toString()); }, [autoStopRarity]);
+    useEffect(() => { localStorage.setItem('textbound_game_settings', JSON.stringify(gameSettings)); }, [gameSettings]);
     useEffect(() => { applyTheme(currentTheme); localStorage.setItem('textbound_theme', currentTheme); }, [currentTheme]);
 
     const trophyLuckMult = getTrophyMultiplier(stats.ticTacToeWins || 0);
@@ -323,16 +330,17 @@ export default function App() {
     };
 
     // ... (Rest of handlers remain unchanged)
-    const toggleResourceLock = (type: 'ORES' | 'GOLD_ORES' | 'FISH' | 'PLANTS' | 'MOON', id: number) => {
+    const toggleResourceLock = (type: 'ORES' | 'GOLD_ORES' | 'PRISM_ORES' | 'FISH' | 'PLANTS' | 'MOON', id: number) => {
         if (type === 'ORES') normalMiningGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
         else if (type === 'GOLD_ORES') goldMiningGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
+        else if (type === 'PRISM_ORES') prismMiningGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
         else if (type === 'FISH') fishingGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
         else if (type === 'PLANTS') harvestingGame.setInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
         else if (type === 'MOON') setMoonInventory(prev => prev.map(i => i.id === id ? { ...i, locked: !i.locked } : i));
         audioService.playClick();
     };
 
-    const handleSellResources = (type: 'ORES' | 'GOLD_ORES' | 'FISH' | 'PLANTS') => {
+    const handleSellResources = (type: 'ORES' | 'GOLD_ORES' | 'PRISM_ORES' | 'FISH' | 'PLANTS') => {
         let totalValue = 0;
         let setInv: any;
         let currentInv: any[];
@@ -349,6 +357,11 @@ export default function App() {
             setInv = goldMiningGame.setInventory;
             defs = GOLD_ORES;
             divisor = 2;
+        } else if (type === 'PRISM_ORES') {
+            currentInv = prismMiningGame.inventory;
+            setInv = prismMiningGame.setInventory;
+            defs = PRISM_ORES;
+            divisor = 5;
         }
         else if (type === 'FISH') { currentInv = fishingGame.inventory; setInv = fishingGame.setInventory; defs = FISH; divisor = 4; }
         else { currentInv = harvestingGame.inventory; setInv = harvestingGame.setInventory; defs = PLANTS; divisor = 4.5; }
@@ -411,7 +424,42 @@ export default function App() {
 
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ text: item.name, description: item.description, rarityId: rarityId, variantId: VariantId.NONE, isFullScreen: true });
+        setInspectedItem({ 
+            text: item.name, 
+            description: item.description, 
+            rarityId: rarityId, 
+            variantId: VariantId.NONE, 
+            isFullScreen: true,
+            skipCutscene: gameSettings.skipAllCutscenes // Use global setting
+        });
+        setModalsState(prev => ({ ...prev, isOreInventoryOpen: false, isFishInventoryOpen: false, isPlantInventoryOpen: false, isIndexOpen: false, isMoonInventoryOpen: false }));
+    };
+
+    const handleInventoryInspectResource = (item: { id: number; name: string; description: string; rarityId?: number; dimension?: string }) => {
+        let rarityId = RarityId.COMMON;
+        
+        if (item.dimension === 'PRISM') {
+             rarityId = (item.rarityId as RarityId) || RarityId.COMMON;
+        } else if (item.id > 2000 && !item.dimension) {
+             rarityId = RarityId.MOON;
+        } else if (item.rarityId) {
+             rarityId = item.rarityId as RarityId;
+        } else {
+             if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
+             else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
+             else rarityId = RarityId.MOON;
+        }
+
+        audioService.playClick();
+        setIsAutoSpinning(false);
+        setInspectedItem({ 
+            text: item.name, 
+            description: item.description, 
+            rarityId: rarityId, 
+            variantId: VariantId.NONE, 
+            isFullScreen: true,
+            skipCutscene: gameSettings.skipInventoryCutscenes // Use Inventory setting
+        });
         setModalsState(prev => ({ ...prev, isOreInventoryOpen: false, isFishInventoryOpen: false, isPlantInventoryOpen: false, isIndexOpen: false, isMoonInventoryOpen: false }));
     };
 
@@ -477,7 +525,14 @@ export default function App() {
     const handleIndexSelectItem = (item: ItemData, rarityId: RarityId) => {
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ text: item.text, description: item.description, rarityId: rarityId, cutscenePhrase: item.cutscenePhrase, isFullScreen: false });
+        setInspectedItem({ 
+            text: item.text, 
+            description: item.description, 
+            rarityId: rarityId, 
+            cutscenePhrase: item.cutscenePhrase, 
+            isFullScreen: false,
+            skipCutscene: gameSettings.skipInventoryCutscenes // Use Inventory setting
+        });
     };
 
     const toggleLock = (item: InventoryItem) => {
@@ -623,7 +678,8 @@ export default function App() {
                         rarityId: bestDrop.rarityId, 
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
-                        isFullScreen: true 
+                        isFullScreen: true,
+                        skipCutscene: gameSettings.skipAllCutscenes
                     });
                 });
             } else if (bestDrop.text === "Nightmare Eel") {
@@ -634,7 +690,8 @@ export default function App() {
                         rarityId: bestDrop.rarityId, 
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
-                        isFullScreen: true 
+                        isFullScreen: true,
+                        skipCutscene: gameSettings.skipAllCutscenes
                     });
                 });
             } else if (bestDrop.text === "Lunar Divinity") {
@@ -645,7 +702,8 @@ export default function App() {
                         rarityId: bestDrop.rarityId, 
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
-                        isFullScreen: true 
+                        isFullScreen: true,
+                        skipCutscene: gameSettings.skipAllCutscenes
                     });
                 });
             } else {
@@ -655,11 +713,12 @@ export default function App() {
                     rarityId: bestDrop.rarityId, 
                     variantId: bestDrop.variantId,
                     cutscenePhrase: bestDrop.cutscenePhrase,
-                    isFullScreen: true 
+                    isFullScreen: true,
+                    skipCutscene: gameSettings.skipAllCutscenes
                 });
             }
         }
-    }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.equippedItems, trophyLuckMult, autoStopRarity, isMoon]);
+    }, [stats.totalRolls, stats.multiRollLevel, stats.entropy, luckMultiplier, stats.luckLevel, stats.equippedItems, trophyLuckMult, autoStopRarity, isMoon, gameSettings.skipAllCutscenes]);
 
     const savedHandleRoll = useRef(handleRoll);
     useEffect(() => { savedHandleRoll.current = handleRoll; }, [handleRoll]);
@@ -678,7 +737,15 @@ export default function App() {
     const handleInspectItem = (item: InventoryItem) => {
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ text: item.text, description: item.description, rarityId: item.rarityId, variantId: item.variantId, cutscenePhrase: '', isFullScreen: true });
+        setInspectedItem({ 
+            text: item.text, 
+            description: item.description, 
+            rarityId: item.rarityId, 
+            variantId: item.variantId, 
+            cutscenePhrase: '', 
+            isFullScreen: true,
+            skipCutscene: gameSettings.skipInventoryCutscenes // Use Inventory setting
+        });
         setModalsState(prev => ({ ...prev, isInventoryOpen: false }));
     };
 
@@ -717,7 +784,7 @@ export default function App() {
     return (
         <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : activeSequence === 'LUNAR' ? 'animate-lunar-buildup' : ''}`}>
             {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
-            {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} />}
+            {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} skipCutscene={inspectedItem.skipCutscene} />}
             {isMoon && (
                 <div className="absolute inset-0 pointer-events-none z-0">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,_rgba(255,255,255,0.1),transparent_70%)]" />
@@ -840,7 +907,7 @@ export default function App() {
                 modalsState={modalsState}
                 setModalsState={setModalsState}
                 handlers={{
-                    handleInspectItem, handleInspectResource, toggleLock, toggleResourceLock,
+                    handleInspectItem, handleInspectResource, handleInventoryInspectResource, toggleLock, toggleResourceLock,
                     handleSellResources, handleSellDreams, handleSellMoonItems, handleCraftItem, handleEquipItem,
                     handleUnequipItem, handleIndexSelectItem, setStats
                 }}
@@ -887,6 +954,8 @@ export default function App() {
                 setPlantInventory={harvestingGame.setInventory}
                 setDreamInventory={dreamingGame.setInventory}
                 achievements={ACHIEVEMENTS}
+                gameSettings={gameSettings}
+                setGameSettings={setGameSettings}
             />
 
             <StatsModal

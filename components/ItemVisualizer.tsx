@@ -74,9 +74,10 @@ const SceneContent: React.FC<{ item: ItemData; color: string; intensity: number 
 interface Props {
   item: ItemData & { rarityId: RarityId, variantId?: VariantId };
   onClose: () => void;
+  skipCutscene?: boolean;
 }
 
-export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
+export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = false }) => {
   const tier = RARITY_TIERS[item.rarityId];
   const variant = VARIANTS[item.variantId || 0]; // Default to NONE
   const hasVariant = (item.variantId ?? 0) !== 0;
@@ -164,41 +165,41 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose }) => {
         {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
-              <SolarPlasmaHTMLView />
+              <SolarPlasmaHTMLView skipCutscene={skipCutscene} />
             ) : isGoldenRatio ? (
-              <GoldenRatioHTMLView />
+              <GoldenRatioHTMLView skipCutscene={skipCutscene} />
             ) : isNeutronium ? (
-              <NeutroniumHTMLView />
+              <NeutroniumHTMLView skipCutscene={skipCutscene} />
             ) : isCrystallizedThought ? (
-              <CrystallizedThoughtHTMLView />
+              <CrystallizedThoughtHTMLView skipCutscene={skipCutscene} />
             ) : isHypercubeFragment ? (
-              <HypercubeFragmentHTMLView />
+              <HypercubeFragmentHTMLView skipCutscene={skipCutscene} />
             ) : isSoundShard ? (
-              <SoundShardHTMLView />
+              <SoundShardHTMLView skipCutscene={skipCutscene} />
             ) : isAntimatter ? (
-              <AntimatterHTMLView />
+              <AntimatterHTMLView skipCutscene={skipCutscene} />
             ) : isDarkMatter ? (
-              <DarkMatterHTMLView />
+              <DarkMatterHTMLView skipCutscene={skipCutscene} />
             ) : isFrozenTime ? (
-              <FrozenTimeHTMLView />
+              <FrozenTimeHTMLView skipCutscene={skipCutscene} />
             ) : isSolidLight ? (
-              <SolidLightHTMLView />
+              <SolidLightHTMLView skipCutscene={skipCutscene} />
             ) : isStrangeMatter ? (
-              <StrangeMatterHTMLView />
+              <StrangeMatterHTMLView skipCutscene={skipCutscene} />
             ) : isTheSpectrum ? (
-              <TheSpectrumHTMLView />
+              <TheSpectrumHTMLView skipCutscene={skipCutscene} />
             ) : isBlackHoleCore ? (
-              <BlackHoleCoreHTMLView />
+              <BlackHoleCoreHTMLView skipCutscene={skipCutscene} />
             ) : isLucidLobster ? (
-              <LucidLobsterHTMLView />
+              <LucidLobsterHTMLView skipCutscene={skipCutscene} />
             ) : isNightmareEel ? (
-              <NightmareEelHTMLView />
+              <NightmareEelHTMLView skipCutscene={skipCutscene} />
             ) : isLunarDivinity ? (
-              <LunarDivinityHTMLView />
+              <LunarDivinityHTMLView skipCutscene={skipCutscene} />
             ) : isSingularityCrystal ? (
-              <SingularityCrystalHTMLView />
+              <SingularityCrystalHTMLView skipCutscene={skipCutscene} />
             ) : isMoonItem ? (
-              <MoonItemHTMLView item={item} />
+              <MoonItemHTMLView item={item} skipCutscene={skipCutscene} />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
