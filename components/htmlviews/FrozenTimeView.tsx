@@ -355,7 +355,7 @@ export const FrozenTimeView = () => {
         scene.fog = new THREE.FogExp2(0x050011, 0.025);
 
         const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 0, 9);
+        camera.position.set(0, 0, 23);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
