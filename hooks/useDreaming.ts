@@ -12,6 +12,7 @@ interface GlobalCallbacks {
     onUpdateStats: (count: number, bestId: number) => void;
     onCrash: () => void;
     onWake: (count: number) => void;
+    onFind?: (item: Dream) => void;
 }
 
 export function useDreaming(config: DreamingConfig, callbacks: GlobalCallbacks) {
@@ -170,6 +171,10 @@ export function useDreaming(config: DreamingConfig, callbacks: GlobalCallbacks) 
             setLastDream(dream);
             setSessionLoot(prev => [...prev, dream]);
             setDepth(d => d + 1);
+
+            if (callbacks.onFind) {
+                callbacks.onFind(dream);
+            }
 
             audioService.playRollSound();
 

@@ -14,6 +14,8 @@ import { useBuildUpSequence } from './hooks/useBuildUpSequence';
 import { THEMES, applyTheme } from './themes';
 
 import { HypercubeBuildup } from './components/buildups/HypercubeBuildup';
+import { LucidLobsterBuildup } from './components/buildups/LucidLobsterBuildup';
+import { WakingLifeBuildup } from './components/buildups/WakingLifeBuildup';
 import { SpectrumStyles } from './components/SpectrumEffects';
 import { LunarStyles } from './components/LunarEffects';
 import { LeftPanel } from './components/panels/LeftPanel';
@@ -200,6 +202,14 @@ export default function App() {
                 triggerSequence('HYPERCUBE', () => {
                     handleInspectResource(item);
                 });
+            } else if (item.name === "Lucid Lobster") {
+                triggerSequence('LUCID', () => {
+                    handleInspectResource(item);
+                });
+            } else if (item.name === "Waking Life") {
+                triggerSequence('WAKING_LIFE', () => {
+                    handleInspectResource(item);
+                });
             } else {
                 handleInspectResource(item);
             }
@@ -305,7 +315,8 @@ export default function App() {
     }, {
         onUpdateStats: (count, bestId) => setStats(prev => ({ ...prev, totalDreamt: (prev.totalDreamt || 0) + count, bestDreamFound: Math.max(prev.bestDreamFound || 0, bestId) })),
         onCrash: () => { },
-        onWake: (count) => { }
+        onWake: (count) => { },
+        onFind: (item) => handleSubGameFind({ id: item.id, name: item.name, description: item.description, rarityId: item.rarityId })
     });
 
     useEffect(() => {
@@ -665,6 +676,8 @@ export default function App() {
 
         if (bestDrop.text === "Lucid Lobster") {
             audioService.playLucidSound();
+        } else if (bestDrop.text === "Waking Life") {
+             // Waking Life Sound
         } else if (!isMoon) {
             audioService.playBoom(bestDrop.rarityId);
         } else {
@@ -712,6 +725,18 @@ export default function App() {
                 });
             } else if (bestDrop.text === "Hypercube Fragment") {
                 triggerSequence('HYPERCUBE', () => {
+                    setInspectedItem({ 
+                        text: bestDrop.text, 
+                        description: bestDrop.description, 
+                        rarityId: bestDrop.rarityId, 
+                        variantId: bestDrop.variantId,
+                        cutscenePhrase: bestDrop.cutscenePhrase,
+                        isFullScreen: true,
+                        skipCutscene: gameSettings.skipAllCutscenes
+                    });
+                });
+            } else if (bestDrop.text === "Waking Life") {
+                triggerSequence('WAKING_LIFE', () => {
                     setInspectedItem({ 
                         text: bestDrop.text, 
                         description: bestDrop.description, 
@@ -800,6 +825,8 @@ export default function App() {
     return (
         <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : activeSequence === 'LUNAR' ? 'animate-lunar-buildup' : ''}`}>
             {activeSequence === 'HYPERCUBE' && <HypercubeBuildup />}
+            {activeSequence === 'LUCID' && <LucidLobsterBuildup />}
+            {activeSequence === 'WAKING_LIFE' && <WakingLifeBuildup />}
             {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
             {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} skipCutscene={inspectedItem.skipCutscene} />}
             {isMoon && (

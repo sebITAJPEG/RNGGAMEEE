@@ -39,6 +39,7 @@ import { NightmareEelHTMLView } from '@/components/models/NightmareEelHTMLView';
 import { LunarDivinityHTMLView } from '@/components/models/LunarDivinityHTMLView';
 import { SingularityCrystalHTMLView } from '@/components/models/SingularityCrystalHTMLView';
 import { SolidLightHTMLView } from '@/components/models/SolidLightHTMLView';
+import { WakingLifeHTMLView } from '@/components/models/WakingLifeHTMLView';
 
 // --- SCENE CONTENT ---
 
@@ -143,11 +144,12 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
   const isNightmareEel = item.text === "Nightmare Eel";
   const isLunarDivinity = item.text === "Lunar Divinity";
   const isSingularityCrystal = item.text === "Singularity Crystal";
+  const isWakingLife = item.text === "Waking Life";
   
   // Generic Moon Check
   const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
   
-  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal; 
+  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife; 
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
   const isOre = !!oreData;
@@ -176,7 +178,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
             </button>
         )}
 
-        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal) && (
+        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
               <SolarPlasmaView />
@@ -212,6 +214,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
               <LunarDivinityHTMLView skipCutscene={skipCutscene} />
             ) : isSingularityCrystal ? (
               <SingularityCrystalHTMLView skipCutscene={skipCutscene} />
+            ) : isWakingLife ? (
+              <WakingLifeHTMLView skipCutscene={skipCutscene} />
             ) : isMoonItem ? (
               <MoonItemView item={item} />
             ) : (

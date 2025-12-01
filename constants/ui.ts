@@ -4,6 +4,7 @@ export const SPECIAL_HTML_ITEMS = [
     "Black Hole Core", "Sound Shard",
     "Solar Plasma", "The Golden Ratio", "Neutronium", "Crystallized Thought", "Hypercube Fragment", "Antimatter", "Dark Matter",
     "Frozen Time", "Solid Light", "Strange Matter", "The Spectrum", "Lucid Lobster", "Nightmare Eel", "Lunar Divinity", "Singularity Crystal",
+    "Waking Life",
 ];
 
 export const TRANSLATIONS: Record<Language, {

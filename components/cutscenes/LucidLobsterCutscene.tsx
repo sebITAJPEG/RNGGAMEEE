@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 interface Props {
     onComplete: () => void;
@@ -20,325 +20,391 @@ export const LucidLobsterCutscene: React.FC<Props> = ({ onComplete }) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucid Lobster Cutscene</title>
-    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;500;700&family=Comfortaa:wght@300;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <title>The Lucid Entity</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050a14; font-family: 'Comfortaa', cursive; }
-        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
-
-        /* --- UI --- */
-        #intro-screen {
-            position: fixed;
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Cinzel', serif; }
+        canvas { display: block; }
+        
+        #ui-layer {
+            position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 10, 20, 0.9);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
             pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10;
         }
 
-        #intro-text {
-            font-family: 'Quicksand', sans-serif;
-            font-size: 3.5rem;
-            color: #b0c4de;
-            text-align: center;
-            letter-spacing: 2px;
-            z-index: 101;
-            text-shadow: 0 0 10px rgba(176, 196, 222, 0.5);
-            min-height: 4rem;
+        .text-glitch {
+            color: #fff;
+            font-size: 3rem;
+            font-weight: 700;
+            text-shadow: 2px 2px #ff00ff;
+            opacity: 0;
+            letter-spacing: 0.5rem;
+            transform: scale(0.8);
+            transition: opacity 0.5s ease-in;
         }
         
-        .char {
-            display: inline-block;
-            opacity: 0;
-            transform: scale(2);
-            filter: blur(10px);
-            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .char.visible {
+        .visible {
             opacity: 1;
             transform: scale(1);
-            filter: blur(0px);
+            animation: shake 0.2s infinite;
         }
 
-        .shake-screen {
-            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-        }
         @keyframes shake {
-            10%, 90% { transform: translate3d(-4px, 0, 0) rotate(-1deg); }
-            20%, 80% { transform: translate3d(8px, 0, 0) rotate(2deg); }
-            30%, 50%, 70% { transform: translate3d(-16px, 0, 0) rotate(-2deg); }
-            40%, 60% { transform: translate3d(16px, 0, 0) rotate(1deg); }
+            0% { transform: translate(0,0) scale(1); }
+            25% { transform: translate(-2px,2px) scale(1.02); }
+            50% { transform: translate(2px,-2px) scale(0.98); }
+            75% { transform: translate(-2px,-2px) scale(1.01); }
+            100% { transform: translate(0,0) scale(1); }
         }
 
-        #flash-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; pointer-events: none; z-index: 200; opacity: 0;
+        #flash {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            mix-blend-mode: exclusion;
+            transition: opacity 0.1s linear;
         }
-        
-        #click-to-start {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 300; display: flex; justify-content: center; align-items: center;
-            background: rgba(0,0,0,0.5); color: white; font-size: 1.5rem; cursor: pointer;
-        }
-
     </style>
     <script type="importmap">
         {
             "imports": {
                 "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "tone": "https://cdn.jsdelivr.net/npm/tone@14.7.77/+esm"
             }
         }
     </script>
 </head>
 <body>
-    <div id="click-to-start">CLICK TO INITIALIZE</div>
-    <div id="flash-overlay"></div>
-    <div id="intro-screen">
-        <div id="intro-text"></div>
+    <div id="ui-layer">
+        <div id="main-text" class="text-glitch"></div>
     </div>
+    <div id="flash"></div>
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
+        import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+        import * as Tone from 'tone';
 
-        // --- AUDIO ENGINE (TONE.JS) ---
-        let boomSynth, glitchSynth, riseSynth, typeSynth, reverb, delay;
-        let isAudioInit = false;
+        // --- AUDIO ENGINE ---
+        class CosmicAudio {
+            constructor() {
+                this.initialized = false;
+            }
 
-        async function initAudio() {
-            if (isAudioInit) return;
-            await Tone.start();
-            
-            reverb = new Tone.Reverb(3).toDestination();
-            reverb.wet.value = 0.5;
-            
-            delay = new Tone.PingPongDelay("8n", 0.2).connect(reverb);
-            
-            boomSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.05,
-                octaves: 10,
-                oscillator: { type: "sine" },
-                envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: "exponential" }
-            }).connect(reverb);
-            
-            glitchSynth = new Tone.NoiseSynth({
-                noise: { type: "pink" },
-                envelope: { attack: 0.01, decay: 0.1, sustain: 0 }
-            }).connect(new Tone.BitCrusher(4).toDestination());
-            
-            riseSynth = new Tone.MonoSynth({
-                oscillator: { type: "sawtooth" },
-                envelope: { attack: 0.1, decay: 0.1, sustain: 1, release: 1 },
-                filterEnvelope: { attack: 3, decay: 0, sustain: 1, release: 0.5, baseFrequency: 200, octaves: 4 }
-            }).toDestination();
-            
-            typeSynth = new Tone.MembraneSynth({
-                pitchDecay: 0.01, octaves: 2, envelope: { attack: 0.001, decay: 0.1, sustain: 0 }
-            }).toDestination();
-            
-            isAudioInit = true;
-            document.getElementById('click-to-start').style.display = 'none';
-            runScript();
-        }
+            async init() {
+                if (this.initialized) return;
+                await Tone.start();
+                this.initialized = true;
 
-        function playSound(type) {
-            if (!isAudioInit) return;
-            
-            if (type === 'type') {
-                typeSynth.triggerAttackRelease("C6", "32n");
-            } else if (type === 'glitch') {
-                glitchSynth.triggerAttackRelease("16n");
-            } else if (type === 'boom') {
-                boomSynth.triggerAttackRelease("C1", "1n");
-            } else if (type === 'rise') {
-                riseSynth.triggerAttackRelease("C2", "3m");
-                riseSynth.frequency.rampTo("C5", 3);
+                this.reverb = new Tone.Reverb({ decay: 10, wet: 0.7 }).toDestination();
+                this.delay = new Tone.PingPongDelay("8n", 0.4).connect(this.reverb);
+                this.crusher = new Tone.BitCrusher(4).connect(this.reverb);
+
+                // 1. Alien Voice (Grainy)
+                this.voice = new Tone.MetalSynth({
+                    harmonicity: 5.1,
+                    modulationIndex: 32,
+                    resonance: 4000,
+                    octaves: 1.5
+                }).connect(this.delay);
+                this.voice.volume.value = -12;
+
+                // 2. Cosmic Drone
+                this.drone = new Tone.PolySynth(Tone.FMSynth, {
+                    harmonicity: 3,
+                    modulationIndex: 10,
+                    oscillator: { type: "sawtooth" },
+                    envelope: { attack: 2, decay: 1, sustain: 1, release: 4 }
+                }).connect(this.reverb);
+                this.drone.volume.value = -15;
+
+                // 3. Shepard Riser (Simulated)
+                this.riser = new Tone.Oscillator(50, "sawtooth").connect(this.reverb);
+                this.riser2 = new Tone.Oscillator(100, "sawtooth").connect(this.reverb);
+                this.riser.volume.value = -20;
+                this.riser2.volume.value = -20;
+
+                // 4. Impact
+                this.impact = new Tone.MembraneSynth().connect(this.crusher);
+                this.impact.volume.value = 0;
+            }
+
+            playDrone() {
+                if(!this.initialized) return;
+                this.drone.triggerAttack(["C2", "G2", "C3", "F#3"]);
+            }
+
+            playVoice() {
+                if(!this.initialized) return;
+                const now = Tone.now();
+                // Random alien chatter
+                for(let i=0; i<5; i++) {
+                    this.voice.triggerAttackRelease(Math.random()*1000 + 200, "32n", now + i*0.1);
+                }
+            }
+
+            startRiser() {
+                if(!this.initialized) return;
+                const now = Tone.now();
+                this.riser.start();
+                this.riser2.start();
+                this.riser.frequency.exponentialRampToValueAtTime(1000, now + 5);
+                this.riser2.frequency.exponentialRampToValueAtTime(2000, now + 5);
+                this.riser.volume.linearRampToValueAtTime(-5, now + 4);
+                this.riser2.volume.linearRampToValueAtTime(-5, now + 4);
+            }
+
+            playDrop() {
+                if(!this.initialized) return;
+                this.impact.triggerAttackRelease("C1", "1n");
+                this.voice.triggerAttackRelease("C5", "8n");
+            }
+
+            stop() {
+                if(!this.initialized) return;
+                this.drone.releaseAll();
+                this.riser.stop();
+                this.riser2.stop();
             }
         }
+        const audio = new CosmicAudio();
 
-        document.getElementById('click-to-start').addEventListener('click', initAudio);
-
-        // --- THREE JS SETUP ---
+        // --- SCENE SETUP ---
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050a14, 0.03);
-        
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 100;
+        camera.position.set(0, 0, 10);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        // --- WARP TUNNEL ---
-        const tunnelGeo = new THREE.CylinderGeometry(10, 2, 200, 32, 32, true);
-        const tunnelMat = new THREE.MeshBasicMaterial({ 
-            color: 0x4400ff, wireframe: true, transparent: true, opacity: 0.3, side: THREE.DoubleSide 
-        });
-        const tunnel = new THREE.Mesh(tunnelGeo, tunnelMat);
-        tunnel.rotation.x = Math.PI / 2;
-        scene.add(tunnel);
-
-        // --- STARS ---
-        const starsGeo = new THREE.BufferGeometry();
-        const starsCount = 5000;
-        const posArray = new Float32Array(starsCount * 3);
-        for(let i=0; i<starsCount*3; i++) posArray[i] = (Math.random() - 0.5) * 400;
-        starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const starsMat = new THREE.PointsMaterial({ size: 0.2, color: 0xffffff });
-        const stars = new THREE.Points(starsGeo, starsMat);
-        scene.add(stars);
-
-        // --- BINARY RAIN ---
-        const binaryGroup = new THREE.Group();
-        scene.add(binaryGroup);
-        const zeroGeo = new THREE.TorusGeometry(0.5, 0.1, 4, 8);
-        const oneGeo = new THREE.BoxGeometry(0.2, 1, 0.2);
-        const binaryMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
-        const binaries = [];
-        
-        for(let i=0; i<100; i++) {
-            const isZero = Math.random() > 0.5;
-            const mesh = new THREE.Mesh(isZero ? zeroGeo : oneGeo, binaryMat);
-            mesh.position.set((Math.random()-0.5)*50, (Math.random()-0.5)*50, Math.random()*200 - 100);
-            mesh.userData = { speed: Math.random() * 2 + 1 };
-            binaryGroup.add(mesh);
-            binaries.push(mesh);
-        }
-
-        // --- COMPOSER ---
+        // --- POST PROCESSING ---
         const composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
         
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 2.0, 0.5, 0.1);
         composer.addPass(bloomPass);
-        
+
         const glitchPass = new GlitchPass();
         glitchPass.enabled = false;
         composer.addPass(glitchPass);
 
-        // --- ANIMATION STATE ---
-        let frame = 0;
-        let speed = 20.0;
-
-        // --- CUTSCENE SCRIPT ---
-        const introText = document.getElementById('intro-text');
-        const flashOverlay = document.getElementById('flash-overlay');
-        const phrases = ["WAKE UP.", "THE SIMULATION IS BREAKING.", "AWARENESS DETECTED.", "PREPARE FOR ASCENSION.", "LUCID LOBSTER"];
-
-        function scrambleText(element, finalString) {
-            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
-            let iterations = 0;
-            const interval = setInterval(() => {
-                element.innerText = finalString.split("").map((letter, index) => {
-                    if(index < iterations) return finalString[index];
-                    return chars[Math.floor(Math.random() * chars.length)];
-                }).join("");
-                
-                if(iterations >= finalString.length) clearInterval(interval);
-                iterations += 1/2; 
-            }, 30);
-        }
-
-        async function runScript() {
-            playSound('rise');
-            
-            for(let i=0; i<phrases.length; i++) {
-                introText.innerHTML = '';
-                const p = phrases[i];
-                
-                const wrapper = document.createElement('span');
-                introText.appendChild(wrapper);
-                scrambleText(wrapper, p);
-                
-                for(let k=0; k<5; k++) setTimeout(() => playSound('type'), k*100);
-
-                document.body.classList.add('shake-screen');
-                setTimeout(() => document.body.classList.remove('shake-screen'), 200);
-                
-                tunnel.material.color.setHex(0xff00ff);
-                setTimeout(() => tunnel.material.color.setHex(0x4400ff), 200);
-
-                speed += 30; 
-                
-                if (i === phrases.length - 2) {
-                    glitchPass.enabled = true;
-                    playSound('glitch');
+        // Custom "Dream Warp" Shader
+        const warpShader = {
+            uniforms: {
+                tDiffuse: { value: null },
+                uTime: { value: 0 },
+                uAmount: { value: 0.0 }
+            },
+            vertexShader: \`
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
-                await new Promise(r => setTimeout(r, 1500));
+            \`,
+            fragmentShader: \`
+                uniform sampler2D tDiffuse;
+                uniform float uTime;
+                uniform float uAmount;
+                varying vec2 vUv;
                 
-                if (i < phrases.length - 1) {
-                    introText.style.transform = "scale(1.5)";
-                    introText.style.opacity = "0";
-                    introText.style.filter = "blur(20px)";
-                    introText.style.transition = "all 0.3s";
+                void main() {
+                    vec2 uv = vUv;
+                    // Spiral distortion
+                    vec2 center = vec2(0.5);
+                    float d = distance(uv, center);
+                    float angle = atan(uv.y - 0.5, uv.x - 0.5);
+                    float distort = sin(d * 10.0 - uTime * 2.0) * uAmount * 0.1;
                     
-                    await new Promise(r => setTimeout(r, 300));
-                    introText.innerHTML = '';
-                    introText.style.transform = "scale(1)";
-                    introText.style.opacity = "1";
-                    introText.style.filter = "none";
-                    introText.style.transition = "none";
+                    uv.x += cos(angle) * distort;
+                    uv.y += sin(angle) * distort;
+                    
+                    // Chromatic Aberration
+                    float r = texture2D(tDiffuse, uv + vec2(uAmount * 0.02, 0.0)).r;
+                    float g = texture2D(tDiffuse, uv).g;
+                    float b = texture2D(tDiffuse, uv - vec2(uAmount * 0.02, 0.0)).b;
+                    
+                    gl_FragColor = vec4(r, g, b, 1.0);
                 }
-            }
-            
-            // --- THE DROP ---
-            flashOverlay.style.transition = 'opacity 0.1s';
-            flashOverlay.style.opacity = 1;
-            playSound('boom');
-            
-            setTimeout(() => {
-                window.parent.postMessage('LUCID_LOBSTER_CUTSCENE_COMPLETE', '*');
-            }, 500);
-        }
+            \`
+        };
+        const warpPass = new ShaderPass(warpShader);
+        composer.addPass(warpPass);
+
+        // --- GEOMETRY (THE ENTITY) ---
+        const entityGroup = new THREE.Group();
+        scene.add(entityGroup);
+
+        // 1. The Eye (Central)
+        const eyeGeo = new THREE.SphereGeometry(1, 64, 64);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Black pupil
+        const eye = new THREE.Mesh(eyeGeo, eyeMat);
+        // Iris ring
+        const irisGeo = new THREE.TorusGeometry(1.2, 0.2, 16, 64);
+        const irisMat = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true });
+        const iris = new THREE.Mesh(irisGeo, irisMat);
+        entityGroup.add(eye);
+        entityGroup.add(iris);
+
+        // 2. The Claws (Abstract)
+        const clawGroup = new THREE.Group();
+        entityGroup.add(clawGroup);
         
-        // --- RENDER LOOP ---
+        for(let i=0; i<2; i++) {
+            const side = i === 0 ? 1 : -1;
+            const armPoints = [];
+            for(let j=0; j<10; j++) armPoints.push(new THREE.Vector3(side * j * 0.5, -j * 0.5, 0));
+            const armCurve = new THREE.CatmullRomCurve3(armPoints);
+            const armGeo = new THREE.TubeGeometry(armCurve, 20, 0.2, 8, false);
+            const armMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.5 });
+            const arm = new THREE.Mesh(armGeo, armMat);
+            
+            // Claw Pincer
+            const pincerGeo = new THREE.ConeGeometry(0.5, 2, 8);
+            const pincer = new THREE.Mesh(pincerGeo, new THREE.MeshBasicMaterial({ color: 0xff00ff }));
+            pincer.position.set(side * 5, -5, 0);
+            pincer.rotation.z = side * -0.5;
+            
+            arm.add(pincer);
+            clawGroup.add(arm);
+        }
+
+        // 3. Sacred Geometry Background
+        const ringCount = 5;
+        const rings = [];
+        for(let i=0; i<ringCount; i++) {
+            const geo = new THREE.TorusGeometry(3 + i * 2, 0.05, 16, 100);
+            const mat = new THREE.MeshBasicMaterial({ color: 0x4444ff });
+            const ring = new THREE.Mesh(geo, mat);
+            ring.rotation.x = Math.random() * Math.PI;
+            ring.userData = { speed: (Math.random() - 0.5) * 0.5 };
+            scene.add(ring);
+            rings.push(ring);
+        }
+
+        // 4. Stars
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 2000;
+        const starPos = new Float32Array(starCount * 3);
+        for(let i=0; i<starCount*3; i++) starPos[i] = (Math.random() - 0.5) * 50;
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 0.05, color: 0xffffff }));
+        scene.add(stars);
+
+        // --- SEQUENCE ---
+        const mainText = document.getElementById('main-text');
+        const flash = document.getElementById('flash');
+
+        const state = {
+            phase: 0,
+            pulse: 0
+        };
+
+        const sequence = [
+            { t: 0.5, action: () => {
+                audio.init().then(() => audio.playDrone());
+                mainText.innerText = "YOU ARE STILL DREAMING";
+                mainText.classList.add('visible');
+            }},
+            { t: 3.0, action: () => {
+                state.phase = 1; // Eye Open
+                audio.playVoice();
+                mainText.classList.remove('visible');
+                // Iris colors shift
+                irisMat.color.setHex(0xffffff);
+            }},
+            { t: 5.0, action: () => {
+                state.phase = 2; // Riser
+                audio.startRiser();
+                mainText.innerText = "WAKE UP";
+                mainText.style.color = "#ff0000";
+                mainText.style.fontSize = "5rem";
+                mainText.classList.add('visible');
+                warpPass.uniforms.uAmount.value = 0.5;
+            }},
+            { t: 8.0, action: () => {
+                state.phase = 3; // Drop
+                audio.playDrop();
+                flash.style.opacity = 1;
+                glitchPass.enabled = true;
+                glitchPass.goWild = true;
+            }},
+            { t: 9.0, action: () => {
+                audio.stop();
+                window.parent.postMessage('LUCID_LOBSTER_CUTSCENE_COMPLETE', '*');
+            }}
+        ];
+
+        let seqIdx = 0;
+        const clock = new THREE.Clock();
+
         function animate() {
             requestAnimationFrame(animate);
-            frame++;
-            
-            tunnel.rotation.y += 0.05;
-            tunnel.rotation.z += 0.01;
-            tunnel.material.opacity = 0.3 + Math.sin(frame * 0.1) * 0.2;
-            
-            const positions = stars.geometry.attributes.position.array;
-            for(let i=0; i<starsCount; i++) {
-                positions[i*3 + 2] += speed;
-                if(positions[i*3 + 2] > 200) positions[i*3 + 2] = -400;
+            const dt = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+
+            if (seqIdx < sequence.length && elapsed >= sequence[seqIdx].t) {
+                sequence[seqIdx].action();
+                seqIdx++;
             }
-            stars.geometry.attributes.position.needsUpdate = true;
+
+            // Visual Logic
+            warpPass.uniforms.uTime.value = elapsed;
             
-            binaries.forEach(b => {
-                b.position.z += speed * 1.5 * b.userData.speed;
-                if(b.position.z > 100) b.position.z = -200;
-                b.rotation.x += 0.1;
-                b.rotation.y += 0.1;
+            // Entity Animation
+            entityGroup.rotation.y = Math.sin(elapsed * 0.2) * 0.2;
+            iris.scale.setScalar(1 + Math.sin(elapsed * 5) * 0.1);
+            
+            // Rings
+            rings.forEach(r => {
+                r.rotation.x += r.userData.speed * dt;
+                r.rotation.y += r.userData.speed * dt * 0.5;
             });
 
-            camera.position.x = (Math.random() - 0.5) * (speed * 0.01);
-            camera.position.y = (Math.random() - 0.5) * (speed * 0.01);
-            camera.rotation.z = Math.sin(frame * 0.05) * 0.1;
-            
+            // Camera
+            if (state.phase === 0) {
+                camera.position.z = 10 - elapsed * 0.5;
+            } else if (state.phase === 1) {
+                camera.position.z = THREE.MathUtils.lerp(camera.position.z, 5, dt);
+                warpPass.uniforms.uAmount.value = THREE.MathUtils.lerp(warpPass.uniforms.uAmount.value, 0.2, dt);
+            } else if (state.phase === 2) {
+                // Shake
+                camera.position.x = (Math.random() - 0.5) * 0.5;
+                camera.position.y = (Math.random() - 0.5) * 0.5;
+                warpPass.uniforms.uAmount.value += dt * 0.5;
+            }
+
             composer.render();
         }
-        animate();
 
+        setTimeout(() => {
+            animate();
+            audio.init();
+        }, 100);
+
+        window.addEventListener('click', () => audio.init());
         window.addEventListener('resize', () => {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            camera.aspect = w / h;
+            camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
-            renderer.setSize(w, h);
-            composer.setSize(w, h);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
         });
+
     </script>
 </body>
 </html>`;
