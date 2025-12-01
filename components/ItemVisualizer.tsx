@@ -8,7 +8,11 @@ import {
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import { RarityId, ItemData, VariantId } from '@/types';
-import { RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS } from '@/constants';
+import { 
+    RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS,
+    ORE_RARITY_TIERS, GOLD_RARITY_TIERS, PRISM_RARITY_TIERS, 
+    FISH_RARITY_TIERS, PLANT_RARITY_TIERS, DREAM_RARITY_TIERS, MOON_RARITY_TIERS 
+} from '@/constants';
 
 // --- 3D MODELS ---
 import { BlackHoleModel } from '@/components/models/BlackHoleModel';
@@ -35,7 +39,6 @@ import { LucidLobsterHTMLView } from '@/components/models/LucidLobsterHTMLView';
 import { NightmareEelHTMLView } from '@/components/models/NightmareEelHTMLView';
 import { LunarDivinityHTMLView } from '@/components/models/LunarDivinityHTMLView';
 import { SingularityCrystalHTMLView } from '@/components/models/SingularityCrystalHTMLView';
-
 
 // --- SCENE CONTENT ---
 
@@ -72,13 +75,28 @@ const SceneContent: React.FC<{ item: ItemData; color: string; intensity: number 
 };
 
 interface Props {
-  item: ItemData & { rarityId: RarityId, variantId?: VariantId };
+  item: ItemData & { rarityId: RarityId, variantId?: VariantId, isFullScreen?: boolean };
   onClose: () => void;
   skipCutscene?: boolean;
 }
 
 export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = false }) => {
-  const tier = RARITY_TIERS[item.rarityId];
+  // --- FIX: Robust Rarity Resolution ---
+  // Tries to find the rarity in the main tier list first.
+  // If not found (e.g., "Stellar" or "Radioactive" ore IDs), it searches the specific lists.
+  const tier = useMemo(() => {
+      const rId = item.rarityId;
+      return RARITY_TIERS[rId] || 
+             ORE_RARITY_TIERS[rId as any] || 
+             GOLD_RARITY_TIERS[rId as any] ||
+             PRISM_RARITY_TIERS[rId as any] ||
+             FISH_RARITY_TIERS[rId as any] || 
+             PLANT_RARITY_TIERS[rId as any] ||
+             DREAM_RARITY_TIERS[rId as any] ||
+             MOON_RARITY_TIERS[rId as any] ||
+             RARITY_TIERS[RarityId.COMMON]; // Safe fallback
+  }, [item.rarityId]);
+
   const variant = VARIANTS[item.variantId || 0]; // Default to NONE
   const hasVariant = (item.variantId ?? 0) !== 0;
 
@@ -130,13 +148,13 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
   const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
   
   const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal; 
-  // @ts-ignore - isFullScreen might not be in ItemData type definition yet but passed from App
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
   const isOre = !!oreData;
   const modelColor = oreData ? oreData.glowColor : '#888';
-  const borderClass = hasVariant ? variant.borderClass : tier.color;
-  const intensity = (tier.id / 2) + (variant.multiplier > 1 ? 2 : 0);
+  const borderClass = hasVariant ? variant.borderClass : (tier.color || 'border-gray-600');
+  // Safe access to tier.id for intensity calculation
+  const intensity = ((tier as any).id ? (tier as any).id / 2 : 5) + (variant.multiplier > 1 ? 2 : 0);
 
   const containerClasses = isFullScreen
     ? "fixed inset-0 w-full h-full z-[100] bg-black"
