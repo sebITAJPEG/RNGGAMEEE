@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 interface Props {
     onComplete: () => void;
@@ -20,292 +20,440 @@ export const TheSpectrumCutscene: React.FC<Props> = ({ onComplete }) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Spectrum Cutscene</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <title>The Spectrum</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000000;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* --- CUTSCENE & UI STYLES --- */
-        #intro-screen {
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Cinzel', serif; }
+        
+        #canvas-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #000000;
-            z-index: 100;
-            display: flex; 
-            align-items: center;
+            z-index: 0;
+        }
+
+        #ui-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            display: flex;
             justify-content: center;
-            padding: 40px;
-            box-sizing: border-box;
+            align-items: center;
+            pointer-events: none;
         }
 
-        #intro-text {
-            font-family: 'Cinzel', serif;
-            font-size: 48px;
-            line-height: 1.2;
+        .phrase {
+            color: #e0e0e0;
+            font-size: 2.2rem;
             text-align: center;
-            max-width: 90%;
-            text-transform: uppercase;
-            letter-spacing: 8px;
-            font-weight: 700;
             opacity: 0;
-            transform: scale(1.2);
-            filter: blur(10px);
-            transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-            color: #ffffff;
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            transform: translateY(30px) scale(0.95);
+            transition: opacity 2s cubic-bezier(0.2, 0.8, 0.2, 1), transform 2s cubic-bezier(0.2, 0.8, 0.2, 1);
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+            max-width: 80%;
+            line-height: 1.6;
+            letter-spacing: 0.05em;
         }
-
-        #intro-text.visible {
+        
+        .phrase.visible {
             opacity: 1;
-            transform: scale(1);
-            filter: blur(0px);
+            transform: translateY(0) scale(1);
         }
 
-        .shake-screen {
-            animation: screenShake 0.1s infinite;
+        .phrase.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+            filter: blur(8px);
+            transition: opacity 1.5s ease, transform 1.5s ease, filter 1.5s ease;
         }
 
-        @keyframes screenShake {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(-2px, 2px) rotate(-0.5deg); }
-            50% { transform: translate(2px, -2px) rotate(0.5deg); }
-            75% { transform: translate(-2px, -2px) rotate(0deg); }
-            100% { transform: translate(2px, 2px) rotate(0deg); }
-        }
-
-        /* Rainbow Character for Title */
-        @keyframes textGlow {
-            0% { text-shadow: 0 0 5px currentColor; }
-            50% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
-            100% { text-shadow: 0 0 5px currentColor; }
-        }
-
-        .char {
+        .highlight {
+            color: #ffd700;
+            font-style: italic;
+            font-family: 'Playfair Display', serif;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            position: relative;
             display: inline-block;
-            animation: vibrate 0.1s infinite, textGlow 2s infinite;
-            text-shadow: 0 0 10px currentColor;
-            opacity: 0;
-            transform: scale(3);
-            filter: blur(10px);
-            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .highlight::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(120deg, transparent 0%, transparent 40%, rgba(255,255,255,0.8) 50%, transparent 60%, transparent 100%);
+            background-size: 200% 100%;
+            background-position: 100% 0;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: shine 4s infinite;
         }
 
-        .char.visible {
+        @keyframes shine {
+            0% { background-position: 100% 0; }
+            20% { background-position: 0% 0; }
+            100% { background-position: 0% 0; }
+        }
+
+        .rainbow-text {
+            background: linear-gradient(to right, #ff9999, #ffcc99, #ffff99, #99ff99, #99ffff, #9999ff, #cc99ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 700;
+            font-size: 1.3em;
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.4));
+            animation: shimmer 5s infinite linear;
+            background-size: 300% auto;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 0% center; }
+            100% { background-position: 300% center; }
+        }
+
+        #final-title {
+            font-size: 6rem;
+            font-weight: 700;
+            letter-spacing: 0.8rem;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 40px rgba(255,255,255,0.3));
+            animation: rainbow-flow 8s linear infinite;
+            background-size: 400% 100%;
+        }
+
+        @keyframes rainbow-flow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        #final-title.visible {
             opacity: 1;
             transform: scale(1);
-            filter: blur(0px);
         }
 
-        @keyframes vibrate {
-            0% { transform: translate(0, 0); }
-            25% { transform: translate(-1px, 1px); }
-            50% { transform: translate(1px, -1px); }
-            75% { transform: translate(-1px, -1px); }
-            100% { transform: translate(0, 0); }
-        }
-
-        #flash-overlay {
+        #flash {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: white;
-            z-index: 101;
+            background: white;
+            z-index: 100;
             opacity: 0;
             pointer-events: none;
-            display: none;
+            transition: opacity 2.5s ease-in-out;
+            mix-blend-mode: overlay;
         }
     </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "tone": "https://cdn.jsdelivr.net/npm/tone@14.7.77/+esm"
+            }
+        }
+    </script>
 </head>
 <body>
-    <div id="intro-screen">
-        <div id="intro-text"></div>
+    <div id="canvas-container"></div>
+    <div id="ui-layer">
+        <div id="text-container" class="phrase"></div>
     </div>
-    <div id="flash-overlay"></div>
+    <div id="flash"></div>
 
-    <script>
-        // --- AUDIO ENGINE ---
-        class SpectrumAudio {
+    <script type="module">
+        import * as THREE from 'three';
+        import * as Tone from 'tone';
+
+        // --- AUDIO (ELEGANT & SPATIAL) ---
+        class ElegantAudio {
             constructor() {
-                this.ctx = null;
-                this.masterGain = null;
-            }
-            
-            init() {
-                if(this.ctx) return;
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                this.ctx = new AudioContext();
-                
-                this.masterGain = this.ctx.createGain();
-                this.masterGain.gain.value = 0.5;
-                this.masterGain.connect(this.ctx.destination);
+                this.initialized = false;
             }
 
-            // EPIC BUILD UP SOUND (Riser)
-            playIntroBuildUp(duration) {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
-                
-                const freqs = [55, 110, 220];
-                freqs.forEach(f => {
-                    const osc = this.ctx.createOscillator();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(f, now);
-                    osc.frequency.exponentialRampToValueAtTime(f * 4, now + duration);
-                    
-                    const g = this.ctx.createGain();
-                    g.gain.setValueAtTime(0, now);
-                    g.gain.linearRampToValueAtTime(0.1, now + duration * 0.5);
-                    g.gain.linearRampToValueAtTime(0.3, now + duration - 0.1);
-                    g.gain.linearRampToValueAtTime(0, now + duration); // Cut at explosion
-                    
-                    const filter = this.ctx.createBiquadFilter();
-                    filter.type = 'lowpass';
-                    filter.frequency.setValueAtTime(100, now);
-                    filter.frequency.exponentialRampToValueAtTime(10000, now + duration);
-                    
-                    osc.connect(filter);
-                    filter.connect(g);
-                    g.connect(this.masterGain);
-                    osc.start();
-                    osc.stop(now + duration);
+            async init() {
+                if (this.initialized) return;
+                await Tone.start();
+                this.initialized = true;
+
+                this.reverb = new Tone.Reverb({ decay: 12, wet: 0.7 }).toDestination();
+                this.delay = new Tone.PingPongDelay("4n", 0.3).connect(this.reverb);
+
+                // 1. Choir / Pad (Rich, Stereo)
+                this.pad = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "fatcustom", partials: [0.5, 1, 0.5, 0.2], spread: 30, count: 3 },
+                    envelope: { attack: 2, decay: 3, sustain: 0.8, release: 5 }
+                }).connect(this.reverb);
+                this.pad.volume.value = -14;
+
+                // 2. Glass Chimes (Spatial)
+                this.chimes = new Tone.PolySynth(Tone.FMSynth, {
+                    harmonicity: 3.01,
+                    modulationIndex: 10,
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 2, sustain: 0, release: 2 },
+                    modulation: { type: "square" },
+                    modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0, release: 0.5 }
                 });
+                this.chimePanner = new Tone.Panner3D({ panningModel: 'HRTF' }).connect(this.delay);
+                this.chimes.connect(this.chimePanner);
+                this.chimes.volume.value = -12;
+
+                // 3. Deep Bass Swell
+                this.bass = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 4, decay: 2, sustain: 1, release: 6 }
+                }).connect(this.reverb);
+                this.bass.volume.value = -6;
+                
+                // 4. Wind/Texture
+                this.noise = new Tone.Noise("pink").connect(new Tone.Filter(200, "lowpass").connect(this.reverb));
+                this.noise.volume.value = -25;
+                this.noise.start();
             }
 
-            playTypingSound() {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(800 + Math.random()*400, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'highpass'; filter.frequency.value = 1000;
-                osc.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination); 
-                osc.start(); osc.stop(now + 0.1);
+            playChord(notes) {
+                if(!this.initialized) return;
+                this.pad.triggerAttackRelease(notes, "2n");
             }
 
-            playExplosion() {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const bufferSize = this.ctx.sampleRate * 2; 
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-                const noiseGain = this.ctx.createGain();
-                noiseGain.gain.setValueAtTime(1.0, now);
-                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
-                noise.connect(noiseGain); noiseGain.connect(this.masterGain); 
-                noise.start();
+            playChime(note, pan = 0) {
+                if(!this.initialized) return;
+                this.chimePanner.positionX.rampTo(pan, 0.1);
+                this.chimes.triggerAttackRelease(note, "8n");
+            }
 
-                const sub = this.ctx.createOscillator();
-                sub.type = 'sine';
-                sub.frequency.setValueAtTime(150, now);
-                sub.frequency.exponentialRampToValueAtTime(10, now + 2.0);
-                const subGain = this.ctx.createGain();
-                subGain.gain.setValueAtTime(1.0, now);
-                subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
-                sub.connect(subGain); subGain.connect(this.masterGain);
-                sub.start(); sub.stop(now + 2.5);
+            playSwell() {
+                if(!this.initialized) return;
+                this.bass.triggerAttackRelease("C1", "2n");
+            }
+
+            playFinale() {
+                if(!this.initialized) return;
+                const now = Tone.now();
+                const notes = ["C4", "E4", "G4", "B4", "C5", "E5", "G5", "B5", "C6"];
+                notes.forEach((n, i) => {
+                    const pan = Math.sin(i);
+                    this.chimePanner.positionX.setValueAtTime(pan * 2, now + i * 0.15);
+                    this.chimes.triggerAttackRelease(n, "8n", now + i * 0.15);
+                });
+                this.pad.triggerAttackRelease(["C3", "G3", "C4", "E4", "G4", "B4", "C5"], "1n", now);
+                this.bass.triggerAttackRelease("C1", "1n", now);
             }
         }
+        const audio = new ElegantAudio();
 
-        const audio = new SpectrumAudio();
+        // --- VISUALS (ENHANCED SHADER) ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 1;
 
-        // --- CUTSCENE LOGIC ---
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const uniforms = {
+            uTime: { value: 0 },
+            uColor1: { value: new THREE.Color(0x000000) }, 
+            uColor2: { value: new THREE.Color(0x0f0518) }, // Darker purple
+            uColor3: { value: new THREE.Color(0x002233) }, // Deep teal
+            uMouse: { value: new THREE.Vector2(0,0) }
+        };
+
+        const geometry = new THREE.PlaneGeometry(2, 2);
+        const material = new THREE.ShaderMaterial({
+            uniforms: uniforms,
+            vertexShader: \`
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = vec4(position, 1.0);
+                }
+            \`,
+            fragmentShader: \`
+                uniform float uTime;
+                uniform vec3 uColor1;
+                uniform vec3 uColor2;
+                uniform vec3 uColor3;
+                varying vec2 vUv;
+
+                // FBM Noise
+                float rand(vec2 n) { 
+                    return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+                }
+                float noise(vec2 p){
+                    vec2 ip = floor(p);
+                    vec2 u = fract(p);
+                    u = u*u*(3.0-2.0*u);
+                    float res = mix(
+                        mix(rand(ip), rand(ip+vec2(1.0,0.0)), u.x),
+                        mix(rand(ip+vec2(0.0,1.0)), rand(ip+vec2(1.0,1.0)), u.x), u.y);
+                    return res*res;
+                }
+                float fbm(vec2 x) {
+                    float v = 0.0;
+                    float a = 0.5;
+                    vec2 shift = vec2(100.0);
+                    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50));
+                    for (int i = 0; i < 5; ++i) {
+                        v += a * noise(x);
+                        x = rot * x * 2.0 + shift;
+                        a *= 0.5;
+                    }
+                    return v;
+                }
+
+                void main() {
+                    vec2 uv = vUv;
+                    float time = uTime * 0.05;
+                    
+                    // Domain Warping
+                    vec2 q = vec2(0.);
+                    q.x = fbm( uv + 0.00*time );
+                    q.y = fbm( uv + vec2(1.0));
+
+                    vec2 r = vec2(0.);
+                    r.x = fbm( uv + 1.0*q + vec2(1.7,9.2)+ 0.15*time );
+                    r.y = fbm( uv + 1.0*q + vec2(8.3,2.8)+ 0.126*time);
+
+                    float f = fbm(uv+r);
+
+                    vec3 color = mix(uColor1, uColor2, clamp((f*f)*4.0,0.0,1.0));
+                    color = mix(color, uColor3, clamp(length(q),0.0,1.0));
+                    color = mix(color, vec3(0.1,0.4,0.6), clamp(length(r.x),0.0,1.0));
+
+                    // Subtle Stars
+                    float stars = pow(rand(uv * 20.0), 50.0) * (0.5 + 0.5 * sin(uTime * 2.0 + uv.x * 100.0));
+                    
+                    gl_FragColor = vec4(color + stars, 1.0);
+                }
+            \`
+        });
+        const plane = new THREE.Mesh(geometry, material);
+        scene.add(plane);
+
+        // --- STARDUST PARTICLES ---
+        const particleCount = 1000;
+        const posArray = new Float32Array(particleCount * 3);
+        const sizesArray = new Float32Array(particleCount);
+        
+        for(let i=0; i<particleCount; i++) {
+            posArray[i*3] = (Math.random() - 0.5) * 5;
+            posArray[i*3+1] = (Math.random() - 0.5) * 5;
+            posArray[i*3+2] = (Math.random() - 0.5) * 2 + 0.5; // Slight depth
+            sizesArray[i] = Math.random();
+        }
+        
+        const starsGeo = new THREE.BufferGeometry();
+        starsGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        starsGeo.setAttribute('size', new THREE.BufferAttribute(sizesArray, 1));
+        
+        const starsMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 } },
+            vertexShader: \`
+                attribute float size;
+                varying float vAlpha;
+                uniform float uTime;
+                void main() {
+                    vec3 pos = position;
+                    pos.y += sin(uTime * 0.1 + pos.x) * 0.1; 
+                    vAlpha = 0.5 + 0.5 * sin(uTime * 2.0 + size * 10.0);
+                    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                    gl_PointSize = size * 40.0 / -mvPosition.z;
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            \`,
+            fragmentShader: \`
+                varying float vAlpha;
+                void main() {
+                    float d = distance(gl_PointCoord, vec2(0.5));
+                    if(d > 0.5) discard;
+                    float alpha = smoothstep(0.5, 0.0, d) * vAlpha;
+                    gl_FragColor = vec4(1.0, 1.0, 1.0, alpha * 0.5);
+                }
+            \`,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        
+        const stars = new THREE.Points(starsGeo, starsMat);
+        scene.add(stars);
+
+        // --- SEQUENCE ---
+        const textContainer = document.getElementById('text-container');
         const phrases = [
-            { text: "BENEATH A BILLION TONNES OF STONE...", color: "#888888" },
-            { text: "A LEGEND SLEEPS.", color: "#ffffff" },
-            { text: "ANCIENT TEXTS SPEAK OF A TEAR...", color: "#aaaaff" },
-            { text: "OF PRIMORDIAL LIGHT.", color: "#ffffaa" },
-            { text: "THE AIR HUMS WITH ARCANE ENERGY.", color: "#ffaaeb" },
-            { text: "BEHOLD...", color: "#ffffff" },
-            { text: "THE SPECTRUM", color: "rainbow" },
-            { text: "AN IRIDESCENT SHARD OF INFINITY.", color: "#aaffff" }
+            { text: "Beneath a billion tonnes of stone...", chord: ["C3", "G3", "C4"] },
+            { text: "A legend <span class='highlight'>sleeps</span>.", chord: ["F3", "A3", "C4"] },
+            { text: "The air hums with arcane energy.", chord: ["G3", "B3", "D4"] },
+            { text: "Pure light, fractured by time.", chord: ["E3", "G3", "B3"] },
+            { text: "Behold the <span class='rainbow-text'>infinite</span>...", chord: ["C3", "E3", "G3", "C4", "E4"] }
         ];
-        
-        const introScreen = document.getElementById('intro-screen');
-        const introTextEl = document.getElementById('intro-text');
-        const flashOverlay = document.getElementById('flash-overlay');
-        
-        setTimeout(() => {
-            try { audio.init(); } catch(e) {}
-            playCutscene();
-        }, 500);
 
-        async function playCutscene() {
-            const totalDuration = phrases.length * 3.0 + 1.0;
-            audio.playIntroBuildUp(totalDuration); 
+        async function playSequence() {
+            try { await audio.init(); } catch(e){}
+            
+            // Initial silence/fade in
+            await new Promise(r => setTimeout(r, 1000));
+            audio.playSwell();
 
             for (let i = 0; i < phrases.length; i++) {
-                const phrase = phrases[i];
+                const p = phrases[i];
+                textContainer.innerHTML = p.text;
+                textContainer.className = 'phrase visible';
                 
-                introTextEl.className = ''; 
-                introTextEl.classList.remove('visible');
+                audio.playChord(p.chord);
+                if (i % 2 === 0) audio.playChime("C6", Math.random()*2-1);
                 
-                if(i > 0) await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 3500)); // Read time
                 
-                introTextEl.innerHTML = '';
-                introTextEl.classList.add('visible'); 
-                
-                const text = phrase.text;
-                const isRainbow = phrase.color === 'rainbow';
-                
-                for(let c=0; c < text.length; c++) {
-                    const char = text[c];
-                    const span = document.createElement('span');
-                    
-                    if (char === ' ') {
-                        span.className = 'space';
-                        span.innerHTML = '&nbsp;';
-                    } else {
-                        span.textContent = char;
-                        span.className = 'char';
-                        
-                        if (isRainbow) {
-                            const hue = (c / text.length) * 360;
-                            span.style.color = \`hsl(\${hue}, 100%, 70%)\`;
-                            span.style.textShadow = \`0 0 20px hsl(\${hue}, 100%, 50%)\`;
-                        } else {
-                            span.style.color = phrase.color;
-                            span.style.textShadow = \`0 0 20px \${phrase.color}\`;
-                        }
-                    }
-                    
-                    introTextEl.appendChild(span);
-                    
-                    requestAnimationFrame(() => span.classList.add('visible'));
-                    
-                    audio.playTypingSound();
-                    await new Promise(r => setTimeout(r, 30));
-                }
-                
-                if (i > phrases.length / 2) introScreen.classList.add('shake-screen');
-                
-                await new Promise(r => setTimeout(r, 1500));
-                introTextEl.classList.remove('visible');
+                textContainer.className = 'phrase fade-out';
+                await new Promise(r => setTimeout(r, 1500)); // Fade out time
             }
 
-            await new Promise(r => setTimeout(r, 800));
-
-            audio.playExplosion();
-            flashOverlay.style.display = 'block';
+            // Final Reveal
+            await new Promise(r => setTimeout(r, 500));
+            textContainer.innerHTML = "<div id='final-title'>THE SPECTRUM</div>";
+            textContainer.className = 'phrase visible';
+            requestAnimationFrame(() => document.getElementById('final-title').classList.add('visible'));
             
-            requestAnimationFrame(() => {
-                flashOverlay.style.opacity = 1;
-                setTimeout(() => {
-                    window.parent.postMessage('THE_SPECTRUM_CUTSCENE_COMPLETE', '*');
-                }, 100);
-            });
+            audio.playFinale();
+            
+            // Animate background faster
+            const flash = document.getElementById('flash');
+            
+            await new Promise(r => setTimeout(r, 4000));
+            
+            flash.style.opacity = 1;
+            
+            await new Promise(r => setTimeout(r, 3000));
+            window.parent.postMessage('THE_SPECTRUM_CUTSCENE_COMPLETE', '*');
         }
+
+        // Animation Loop
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+            uniforms.uTime.value = t;
+            starsMat.uniforms.uTime.value = t;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Start
+        setTimeout(playSequence, 100);
+        window.addEventListener('click', () => audio.init());
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
     </script>
 </body>
 </html>`;

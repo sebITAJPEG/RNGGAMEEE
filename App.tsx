@@ -13,6 +13,7 @@ import { useDreaming } from './hooks/useDreaming';
 import { useBuildUpSequence } from './hooks/useBuildUpSequence';
 import { THEMES, applyTheme } from './themes';
 
+import { HypercubeBuildup } from './components/buildups/HypercubeBuildup';
 import { SpectrumStyles } from './components/SpectrumEffects';
 import { LunarStyles } from './components/LunarEffects';
 import { LeftPanel } from './components/panels/LeftPanel';
@@ -193,6 +194,10 @@ export default function App() {
                 });
             } else if (item.name === "Lunar Divinity") {
                 triggerSequence('LUNAR', () => {
+                    handleInspectResource(item);
+                });
+            } else if (item.name === "Hypercube Fragment") {
+                triggerSequence('HYPERCUBE', () => {
                     handleInspectResource(item);
                 });
             } else {
@@ -389,7 +394,7 @@ export default function App() {
 
         if (totalValue > 0) {
             audioService.playCoinWin(5);
-            setStats(prev => ({ ...prev, balance: prev.balance + totalValue }));
+            setStats(prev => ({ ...prev, moonBalance: (prev.moonBalance || 0) + totalValue }));
             setMoonInventory(prev => prev.filter(i => i.locked));
         }
     };
@@ -599,13 +604,12 @@ export default function App() {
             setMoonInventory(prev => {
                 const next = [...prev];
                 drops.forEach(drop => {
-                    if (drop.rarityId === RarityId.MOON) {
-                        const def = MOON_ITEMS.find(m => m.text === drop.text);
-                        if (def) {
-                            const existing = next.find(i => i.id === def.id);
-                            if (existing) existing.count += 1;
-                            else next.push({ id: def.id, count: 1, discoveredAt: Date.now() });
-                        }
+                    // Removed restrictive check, rely on lookup
+                    const def = MOON_ITEMS.find(m => m.text === drop.text);
+                    if (def) {
+                        const existing = next.find(i => i.id === def.id);
+                        if (existing) existing.count += 1;
+                        else next.push({ id: def.id, count: 1, discoveredAt: Date.now() });
                     }
                 });
                 return next;
@@ -706,6 +710,18 @@ export default function App() {
                         skipCutscene: gameSettings.skipAllCutscenes
                     });
                 });
+            } else if (bestDrop.text === "Hypercube Fragment") {
+                triggerSequence('HYPERCUBE', () => {
+                    setInspectedItem({ 
+                        text: bestDrop.text, 
+                        description: bestDrop.description, 
+                        rarityId: bestDrop.rarityId, 
+                        variantId: bestDrop.variantId,
+                        cutscenePhrase: bestDrop.cutscenePhrase,
+                        isFullScreen: true,
+                        skipCutscene: gameSettings.skipAllCutscenes
+                    });
+                });
             } else {
                 setInspectedItem({ 
                     text: bestDrop.text, 
@@ -783,6 +799,7 @@ export default function App() {
 
     return (
         <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : activeSequence === 'LUNAR' ? 'animate-lunar-buildup' : ''}`}>
+            {activeSequence === 'HYPERCUBE' && <HypercubeBuildup />}
             {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
             {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} skipCutscene={inspectedItem.skipCutscene} />}
             {isMoon && (

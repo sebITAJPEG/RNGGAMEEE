@@ -57,7 +57,7 @@ export const NeutroniumView = () => {
         scene.fog = new THREE.FogExp2(0x000000, 0.002);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3, 14);
+        camera.position.set(0, 3, 100);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -68,6 +68,7 @@ export const NeutroniumView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.dampingFactor = 0.05;
         controls.enablePan = false;
         controls.minDistance = 5;

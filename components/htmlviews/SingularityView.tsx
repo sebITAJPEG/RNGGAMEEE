@@ -267,7 +267,7 @@ export const SingularityView = () => {
         // --- SCENE SETUP ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
-        camera.position.set(0, 2, 14); // Final Position
+        camera.position.set(0, 2, 50); // Final Position
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -278,6 +278,7 @@ export const SingularityView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.dampingFactor = 0.05;
         controls.minDistance = 5;
         controls.maxDistance = 30;

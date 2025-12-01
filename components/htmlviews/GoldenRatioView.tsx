@@ -86,8 +86,7 @@ export const GoldenRatioView = () => {
         controls.autoRotate = true;
         controls.autoRotateSpeed = 1.0;
         controls.enablePan = false;
-        controls.minDistance = 5;
-        controls.maxDistance = 30;
+        controls.enableZoom = false;
 
         const coreGroup = new THREE.Group();
         scene.add(coreGroup);

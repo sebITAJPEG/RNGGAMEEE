@@ -21,359 +21,478 @@ export const LunarDivinityCutscene: React.FC<Props> = ({ onComplete }) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lunar Divinity Cutscene</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@1,400&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #050510;
-            font-family: 'Cinzel', serif;
-        }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Cinzel', serif; }
         
-        /* --- CUTSCENE UI --- */
-        #intro-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #020205;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            box-sizing: border-box;
-            background-image: radial-gradient(circle at 50% 50%, #0a0a15 0%, #000000 70%);
-            animation: pulseBg 5s infinite ease-in-out;
-        }
-
-        @keyframes pulseBg {
-            0%, 100% { box-shadow: inset 0 0 100px rgba(0,0,0,0.8); }
-            50% { box-shadow: inset 0 0 50px rgba(10, 20, 40, 0.5); }
-        }
-        
-        /* Star background for intro */
-        .intro-stars {
+        #scene {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
-                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 160px 120px, #ffffff, rgba(0,0,0,0));
-            background-repeat: repeat;
-            background-size: 200px 200px;
-            opacity: 0.3;
-            animation: drift 100s linear infinite;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            background: radial-gradient(circle at center, #050510 0%, #000 100%);
+            overflow: hidden;
         }
-        
-        @keyframes drift { from { transform: translateY(0); } to { transform: translateY(-200px); } }
 
-        #intro-text {
-            font-family: 'Cinzel', serif;
-            font-size: 42px;
-            line-height: 1.4;
-            text-align: center;
-            max-width: 90%;
-            text-transform: uppercase;
-            letter-spacing: 6px;
-            font-weight: 500;
-            opacity: 0;
-            transform: scale(1.1);
-            filter: blur(10px);
-            transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-            color: #e0eaff;
-            text-shadow: 0 0 20px rgba(180, 200, 255, 0.5);
+        /* --- THE MOON --- */
+        #moon-container {
+            position: absolute;
+            width: 300px; height: 300px;
             z-index: 10;
+            filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
         }
 
-        #intro-text.visible {
-            opacity: 1;
-            transform: scale(1);
-            filter: blur(0px);
-            animation: slowZoom 5s forwards;
+        #moon {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            background-image: 
+                radial-gradient(circle at 30% 30%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 20%),
+                radial-gradient(circle at 70% 60%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 30%),
+                radial-gradient(circle at 40% 80%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 15%),
+                url('https://www.transparenttextures.com/patterns/stardust.png'); /* Noise texture */
+            box-shadow: inset -20px -20px 50px rgba(0,0,0,0.5), 0 0 50px rgba(255,255,255,0.1);
+            transition: all 1s;
+            position: relative;
+            overflow: hidden;
         }
 
-        @keyframes slowZoom {
-            from { transform: scale(1); }
-            to { transform: scale(1.05); }
+        #eclipse-shadow {
+            position: absolute;
+            top: 50%; left: 150%;
+            width: 105%; height: 105%;
+            border-radius: 50%;
+            background-color: #000;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 30px 10px rgba(0,0,0,0.8);
+            transition: left 5s ease-in-out;
+            z-index: 2;
         }
 
-        .shake-screen {
-            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
+        /* Corona Effect */
+        #corona {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            box-shadow: 0 0 0 0 rgba(255,255,255,0);
+            transition: all 0.5s;
+            z-index: 1;
         }
-
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-
-        .char {
-            display: inline-block;
-            opacity: 0;
-            transform: translateY(10px);
-            filter: blur(5px);
-            transition: all 0.1s ease-out;
-        }
-        .char.visible {
-            opacity: 1;
-            transform: translateY(0);
-            filter: blur(0px);
+        #corona.active {
+            box-shadow: 0 0 50px 20px rgba(255, 255, 255, 0.8), 0 0 100px 50px rgba(100, 200, 255, 0.5);
+            animation: pulse-corona 2s infinite alternate;
         }
         
-        /* Text Glitch Effect */
-        .glitch {
-            animation: textGlitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
-            color: #ffffff;
-        }
-        
-        @keyframes textGlitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); text-shadow: 2px 0 #0ff; }
-            40% { transform: translate(-2px, -2px); text-shadow: -2px 0 #f0f; }
-            60% { transform: translate(2px, 2px); text-shadow: 2px 0 #0ff; }
-            80% { transform: translate(2px, -2px); text-shadow: -2px 0 #f0f; }
-            100% { transform: translate(0); }
+        @keyframes pulse-corona {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
         }
 
-        #flash-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at center, #ffffff 0%, #dbeeff 50%, #88aaff 100%);
-            z-index: 101;
+        /* --- DIVINE RAYS --- */
+        .ray {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 100vw; height: 100vw;
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.1) 10deg, transparent 20deg);
+            transform: translate(-50%, -50%);
+            z-index: 5;
             opacity: 0;
+            transition: opacity 2s;
+            mask-image: radial-gradient(circle, transparent 150px, black 300px);
+        }
+        .ray.active {
+            animation: rotate-rays 60s linear infinite;
+            opacity: 1;
+        }
+
+        /* --- CLOUDS --- */
+        .cloud-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20;
+            opacity: 0.5;
             pointer-events: none;
-            display: none;
         }
+
+        /* --- TEXT --- */
+        #text-container {
+            position: absolute;
+            z-index: 50;
+            text-align: center;
+            width: 100%;
+            top: 75%;
+            perspective: 500px;
+        }
+        
+        .phrase {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            opacity: 0;
+            transition: opacity 1s, transform 1s, letter-spacing 2s;
+            transform: rotateX(20deg) translateY(50px);
+            letter-spacing: 0px;
+            font-weight: 700;
+        }
+        .phrase.visible {
+            opacity: 1;
+            transform: rotateX(0deg) translateY(0);
+            letter-spacing: 10px;
+        }
+
+        /* --- FLASH --- */
+        #flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            z-index: 100;
+            transition: opacity 3s cubic-bezier(0.1, 0.9, 0.2, 1);
+            pointer-events: none;
+        }
+        
+        /* --- PARTICLES --- */
+        .particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        @keyframes rotate-rays {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        .shake {
+            animation: shake-anim 0.5s cubic-bezier(.36,.07,.19,.97) both infinite;
+        }
+        @keyframes shake-anim {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+            40%, 60% { transform: translate3d(8px, 0, 0); }
+        }
+
     </style>
 </head>
 <body>
-    <div id="intro-screen">
-        <div class="intro-stars"></div>
-        <div id="intro-text"></div>
+    <div id="scene">
+        <div class="cloud-layer" id="clouds"></div>
+        <div id="moon-container">
+            <div id="corona"></div>
+            <div id="moon"></div>
+            <div id="eclipse-shadow"></div>
+        </div>
+        <div id="rays-bg" class="ray"></div>
+        <div id="rays-fg" class="ray" style="animation-direction: reverse; width: 80vw; height: 80vw;"></div>
+        <div id="text-container"></div>
     </div>
-    <div id="flash-overlay"></div>
+    <div id="flash"></div>
 
     <script>
-        // --- AUDIO ENGINE (Simplified for Cutscene) ---
-        class LunarAudio {
-            constructor() {
-                this.ctx = null;
-                this.masterGain = null;
-                this.initialized = false;
+        // --- AUDIO ENGINE ---
+        let audioCtx;
+        let masterGain;
+        let reverbNode;
+
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.5;
+            masterGain.connect(audioCtx.destination);
+            
+            // Richer Reverb
+            const sr = audioCtx.sampleRate;
+            const len = sr * 6.0; 
+            const impulse = audioCtx.createBuffer(2, len, sr);
+            for (let c = 0; c < 2; c++) {
+                const d = impulse.getChannelData(c);
+                for (let i = 0; i < len; i++) {
+                    d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.5);
+                }
             }
+            reverbNode = audioCtx.createConvolver();
+            reverbNode.buffer = impulse;
+            reverbNode.connect(masterGain);
+            
+        } catch(e) { console.warn("Audio init failed"); }
 
-            init() {
-                if (this.ctx) return;
+        function playChoir(freqs, duration) {
+            if(!audioCtx) return;
+            const t = audioCtx.currentTime;
+            
+            freqs.forEach((f, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                // Complex wave for voice-like timbre
+                const real = new Float32Array([0, 1, 0.5, 0.3, 0.1]);
+                const imag = new Float32Array([0, 0, 0, 0, 0]);
+                const wave = audioCtx.createPeriodicWave(real, imag);
+                osc.setPeriodicWave(wave);
+                osc.frequency.value = f;
                 
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                this.ctx = new AudioContext();
+                // Detune for chorus
+                osc.detune.value = (Math.random() - 0.5) * 20;
                 
-                this.masterGain = this.ctx.createGain();
-                this.masterGain.gain.value = 0.3; 
-                this.masterGain.connect(this.ctx.destination);
-            }
-
-            playIntroBuildUp(duration) {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
+                // Slow swell
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.05 / freqs.length, t + duration * 0.3);
+                gain.gain.setValueAtTime(0.05 / freqs.length, t + duration * 0.7);
+                gain.gain.linearRampToValueAtTime(0, t + duration);
                 
-                // Deep riser (Square wave for more grit)
-                const osc = this.ctx.createOscillator();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(55, now);
-                osc.frequency.exponentialRampToValueAtTime(110, now + duration);
-                
-                const g = this.ctx.createGain();
-                g.gain.setValueAtTime(0, now);
-                g.gain.linearRampToValueAtTime(0.1, now + duration * 0.5);
-                g.gain.linearRampToValueAtTime(0, now + duration);
-                
-                // High shimmer riser
-                const osc2 = this.ctx.createOscillator();
-                osc2.type = 'sawtooth';
-                osc2.frequency.setValueAtTime(440, now);
-                osc2.frequency.exponentialRampToValueAtTime(1760, now + duration);
-                const g2 = this.ctx.createGain();
-                g2.gain.setValueAtTime(0, now);
-                g2.gain.linearRampToValueAtTime(0.05, now + duration * 0.8);
-                g2.gain.linearRampToValueAtTime(0, now + duration);
-
-                // Lowpass filter opening
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(100, now);
-                filter.frequency.exponentialRampToValueAtTime(8000, now + duration);
-                
-                osc.connect(filter);
-                osc2.connect(filter);
-                filter.connect(g);
-                filter.connect(g2);
-                g.connect(this.masterGain);
-                g2.connect(this.masterGain);
-                
-                osc.start(); osc.stop(now + duration);
-                osc2.start(); osc2.stop(now + duration);
-            }
-
-            playTypingSound() {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
-                // Crystalline Tick
-                const osc = this.ctx.createOscillator();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(2000 + Math.random()*1000, now);
-                osc.frequency.exponentialRampToValueAtTime(500, now + 0.05);
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.05, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-                
-                // Echo
-                const delay = this.ctx.createDelay();
-                delay.delayTime.value = 0.1;
-                const feedback = this.ctx.createGain();
-                feedback.gain.value = 0.3;
+                // Panning
+                const panner = audioCtx.createStereoPanner();
+                panner.pan.value = (i / freqs.length) * 2 - 1;
                 
                 osc.connect(gain);
-                gain.connect(this.masterGain);
-                gain.connect(delay);
-                delay.connect(this.masterGain);
-                delay.connect(feedback);
-                feedback.connect(delay);
+                gain.connect(panner);
+                panner.connect(reverbNode);
                 
-                osc.start(); osc.stop(now + 0.1);
-            }
-
-            playDeepThud() {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(60, now);
-                osc.frequency.exponentialRampToValueAtTime(30, now + 0.5);
-                const gain = this.ctx.createGain();
-                gain.gain.setValueAtTime(0.5, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                osc.connect(gain); gain.connect(this.masterGain);
-                osc.start(); osc.stop(now + 0.5);
-            }
-
-            playExplosion() {
-                if(!this.ctx) return;
-                const now = this.ctx.currentTime;
-                
-                // White noise burst (ethereal)
-                const bufferSize = this.ctx.sampleRate * 2; 
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-                const noiseGain = this.ctx.createGain();
-                noiseGain.gain.setValueAtTime(0.8, now);
-                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 4.0);
-                
-                // Filter noise
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'highpass';
-                filter.frequency.value = 500;
-                
-                noise.connect(filter);
-                filter.connect(noiseGain);
-                noiseGain.connect(this.masterGain);
-                noise.start();
-
-                // Low thud
-                const sub = this.ctx.createOscillator();
-                sub.type = 'sine';
-                sub.frequency.setValueAtTime(100, now);
-                sub.frequency.exponentialRampToValueAtTime(30, now + 3.0);
-                const subGain = this.ctx.createGain();
-                subGain.gain.setValueAtTime(1.0, now);
-                subGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
-                sub.connect(subGain); subGain.connect(this.masterGain);
-                sub.start(); sub.stop(now + 3.0);
-            }
-        }
-
-        const audioSystem = new LunarAudio();
-
-        // --- CUTSCENE LOGIC ---
-        const phrases = [
-            { text: "THE COSMOS TREMBLES...", color: "#aaccff", glitch: true },
-            { text: "A DIVINE PRESENCE APPROACHES.", color: "#ffffff" },
-            { text: "FROM THE SILENT VOID...", color: "#88aaff" },
-            { text: "THE MOON GOD AWAKENS.", color: "#e0eaff", glow: true },
-            { text: "LUNAR DIVINITY", color: "#ffffff", glow: true, glitch: true }
-        ];
-
-        const introScreen = document.getElementById('intro-screen');
-        const introTextEl = document.getElementById('intro-text');
-        const flashOverlay = document.getElementById('flash-overlay');
-
-        setTimeout(() => {
-            try { audioSystem.init(); } catch(e) {}
-            playCutscene();
-        }, 500);
-
-        async function playCutscene() {
-            const totalDuration = phrases.length * 3.0;
-            audioSystem.playIntroBuildUp(totalDuration);
-
-            for (let i = 0; i < phrases.length; i++) {
-                const phrase = phrases[i];
-                introTextEl.className = ''; 
-                introTextEl.classList.remove('visible');
-                if(phrase.glitch) introTextEl.classList.add('glitch');
-                
-                if (i === phrases.length - 1) {
-                    introScreen.classList.add('shake-screen');
-                }
-
-                if(i > 0) await new Promise(r => setTimeout(r, 400));
-                
-                introTextEl.innerHTML = '';
-                introTextEl.classList.add('visible');
-                
-                const text = phrase.text;
-                
-                for(let c=0; c < text.length; c++) {
-                    const char = text[c];
-                    const span = document.createElement('span');
-                    if (char === ' ') {
-                        span.innerHTML = '&nbsp;';
-                    } else {
-                        span.textContent = char;
-                        span.className = 'char';
-                        span.style.color = phrase.color;
-                        if(phrase.glow) span.style.textShadow = "0 0 20px #ffffff, 0 0 40px #aaccff";
-                    }
-                    introTextEl.appendChild(span);
-                    requestAnimationFrame(() => span.classList.add('visible'));
-                    audioSystem.playTypingSound();
-                    await new Promise(r => setTimeout(r, 35));
-                }
-                
-                audioSystem.playDeepThud();
-                
-                await new Promise(r => setTimeout(r, 1200));
-                introTextEl.classList.remove('visible');
-            }
-
-            await new Promise(r => setTimeout(r, 500));
-
-            // Reveal
-            audioSystem.playExplosion();
-            flashOverlay.style.display = 'block';
-            
-            requestAnimationFrame(() => {
-                flashOverlay.style.opacity = 1;
-                
-                setTimeout(() => {
-                    // Signal completion
-                    window.parent.postMessage('LUNAR_DIVINITY_CUTSCENE_COMPLETE', '*');
-                }, 1000);
+                osc.start(t);
+                osc.stop(t + duration);
             });
         }
+
+        function playRumble() {
+            if(!audioCtx) return;
+            const t = audioCtx.currentTime;
+            
+            const osc = audioCtx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(40, t);
+            osc.frequency.linearRampToValueAtTime(30, t + 10);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.2, t + 2);
+            gain.gain.linearRampToValueAtTime(0, t + 10);
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 100;
+            
+            osc.connect(filter); filter.connect(gain); gain.connect(masterGain);
+            osc.start(t); osc.stop(t + 10);
+        }
+        
+        function playChimeCluster() {
+            if(!audioCtx) return;
+            const t = audioCtx.currentTime;
+            for(let i=0; i<5; i++) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.value = 1000 + Math.random() * 2000;
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0, t + i*0.1);
+                gain.gain.linearRampToValueAtTime(0.1, t + i*0.1 + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + i*0.1 + 2.0);
+                osc.connect(gain); gain.connect(reverbNode);
+                osc.start(t + i*0.1); osc.stop(t + i*0.1 + 2.0);
+            }
+        }
+
+        function playAscensionSwell() {
+            if(!audioCtx) return;
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(110, t);
+            osc.frequency.exponentialRampToValueAtTime(880, t + 5.0);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.exponentialRampToValueAtTime(0.3, t + 4.5);
+            gain.gain.linearRampToValueAtTime(0, t + 5.0);
+            
+            osc.connect(gain); gain.connect(reverbNode);
+            osc.start(t); osc.stop(t + 5.0);
+        }
+        
+        function playTextImpact() {
+            if(!audioCtx) return;
+            const t = audioCtx.currentTime;
+            // Low boom
+            const osc = audioCtx.createOscillator();
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
+            
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.8, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            
+            osc.connect(gain); gain.connect(masterGain);
+            osc.start(t); osc.stop(t + 0.5);
+        }
+        
+        function playShakeRumble() {
+             if(!audioCtx) return;
+             const t = audioCtx.currentTime;
+             // Noise rumble
+             const bufSize = audioCtx.sampleRate * 2;
+             const buffer = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+             const data = buffer.getChannelData(0);
+             for(let i=0; i<bufSize; i++) data[i] = Math.random() * 2 - 1;
+             
+             const noise = audioCtx.createBufferSource();
+             noise.buffer = buffer;
+             
+             const filter = audioCtx.createBiquadFilter();
+             filter.type = 'lowpass';
+             filter.frequency.value = 150;
+             
+             const gain = audioCtx.createGain();
+             gain.gain.setValueAtTime(0.5, t);
+             gain.gain.linearRampToValueAtTime(0, t + 2.0);
+             
+             noise.connect(filter); filter.connect(gain); gain.connect(masterGain);
+             noise.start(t);
+        }
+
+        // --- PARTICLE SYSTEM ---
+        const scene = document.getElementById('scene');
+        const cloudsContainer = document.getElementById('clouds');
+        
+        function createParticle(x, y, type) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            
+            if (type === 'star') {
+                const size = Math.random() * 2;
+                p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.left = x + '%'; p.style.top = y + '%';
+                p.style.opacity = Math.random();
+            } else if (type === 'mote') {
+                p.style.width = '4px'; p.style.height = '4px';
+                p.style.background = 'radial-gradient(circle, white 0%, transparent 70%)';
+                p.style.left = x + '%'; p.style.top = y + '%';
+            }
+            
+            scene.appendChild(p);
+            return p;
+        }
+        
+        // Init Background Stars
+        for(let i=0; i<150; i++) {
+            createParticle(Math.random()*100, Math.random()*100, 'star');
+        }
+        
+        // Animated Motes
+        const motes = [];
+        function spawnMote() {
+            const mote = createParticle(Math.random()*100, 110, 'mote');
+            const speed = 0.5 + Math.random();
+            motes.push({ el: mote, y: 110, speed: speed, offset: Math.random() * 100 });
+        }
+        
+        function animateMotes() {
+            for(let i=0; i<motes.length; i++) {
+                const m = motes[i];
+                m.y -= m.speed;
+                const xParams = Math.sin(m.y * 0.05 + m.offset) * 5;
+                m.el.style.top = m.y + '%';
+                m.el.style.transform = \`translateX(\${xParams}px)\`;
+                m.el.style.opacity = Math.min(1, (110 - m.y) / 20) * Math.max(0, (m.y + 10) / 20); // Fade in/out
+                
+                if(m.y < -10) {
+                    m.el.remove();
+                    motes.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animateMotes);
+        }
+        animateMotes();
+        setInterval(spawnMote, 100);
+
+        // --- CLOUDS ---
+        // Simple moving fog
+        for(let i=0; i<3; i++) {
+            const c = document.createElement('div');
+            c.style.position = 'absolute';
+            c.style.width = '200%';
+            c.style.height = '200%';
+            c.style.top = '-50%';
+            c.style.left = '-50%';
+            c.style.background = 'radial-gradient(circle, transparent 40%, rgba(10,20,40,0.4) 100%)';
+            c.style.filter = 'blur(50px)';
+            c.style.animation = \`cloud-spin \${60 + i*20}s linear infinite\`;
+            c.style.opacity = 0.3;
+            cloudsContainer.appendChild(c);
+        }
+        const style = document.createElement('style');
+        style.innerHTML = \`@keyframes cloud-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }\`;
+        document.head.appendChild(style);
+
+
+        // --- SEQUENCE LOGIC ---
+        const moon = document.getElementById('moon');
+        const shadow = document.getElementById('eclipse-shadow');
+        const corona = document.getElementById('corona');
+        const textContainer = document.getElementById('text-container');
+        const flash = document.getElementById('flash');
+        const ray1 = document.getElementById('rays-bg');
+        const ray2 = document.getElementById('rays-fg');
+
+        function showText(text) {
+            textContainer.innerHTML = '';
+            const el = document.createElement('div');
+            el.className = 'phrase';
+            el.innerText = text;
+            textContainer.appendChild(el);
+            void el.offsetWidth;
+            el.classList.add('visible');
+            playTextImpact(); // Sound effect
+            setTimeout(() => { el.classList.remove('visible'); }, 3500);
+        }
+
+        setTimeout(() => {
+            if(audioCtx) audioCtx.resume();
+            
+            // Phase 1: Approach (0s - 4s)
+            playRumble();
+            // Cm Chord
+            playChoir([130.81, 155.56, 196.00], 6);
+            showText("THE COSMOS ALIGNS");
+            
+            // Move shadow
+            setTimeout(() => {
+                shadow.style.left = '50%'; // Center it (Eclipse)
+            }, 100);
+
+            // Phase 2: Totality (4s - 9s)
+            setTimeout(() => {
+                moon.style.backgroundColor = '#000';
+                shadow.style.boxShadow = '0 0 10px 2px #fff'; // Diamond ring effect start
+                
+                // Add more voices (Cm9)
+                playChoir([233.08, 293.66, 523.25], 6);
+                playChimeCluster();
+                
+                corona.classList.add('active');
+                showText("IN PERFECT SHADOW");
+            }, 4000);
+
+            // Phase 3: Revelation (9s - 14s)
+            setTimeout(() => {
+                ray1.classList.add('active');
+                ray2.classList.add('active');
+                playAscensionSwell();
+                playShakeRumble(); // Shake sound
+                document.getElementById('scene').classList.add('shake'); // Screen shake
+                showText("DIVINITY AWAKENS");
+            }, 9000);
+
+            // Phase 4: Flash (14s)
+            setTimeout(() => {
+                flash.style.opacity = 1;
+                setTimeout(() => {
+                    try { window.parent.postMessage('LUNAR_DIVINITY_CUTSCENE_COMPLETE', '*'); } catch(e){}
+                }, 1500);
+            }, 13500);
+
+        }, 500);
+
     </script>
 </body>
 </html>`;

@@ -195,7 +195,7 @@ export const NightmareEelView = () => {
         const scene = new THREE.Scene();
         
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3, 10);
+        camera.position.set(0, 3, 50);
         camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true }); // Enable AA for better model look
@@ -518,7 +518,7 @@ export const NightmareEelView = () => {
         // --- CONTROLS ---
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.enableZoom = true;
+        controls.enableZoom = false;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.5;
         controls.minDistance = 5;

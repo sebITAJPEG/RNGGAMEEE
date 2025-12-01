@@ -236,29 +236,9 @@ export const SolidLightView = () => {
             font-size: 0.6rem;
         }
 
-        #audio-init {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #00ffff;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: opacity 0.5s;
-        }
-        #audio-init:hover {
-            color: #fff;
-            text-shadow: 0 0 10px #00ffff;
-        }
     </style>
 </head>
 <body>
-
-    <div id="audio-init">CLICK TO INITIALIZE SYSTEM AUDIO</div>
     <div id="loading">GENERATING PHOTON MATRIX...</div>
     <div id="warning-alert">CRITICAL MASS</div>
 
@@ -362,11 +342,6 @@ export const SolidLightView = () => {
             lfoOsc.start();
 
             isAudioInit = true;
-
-            // Hide overlay
-            const overlay = document.getElementById('audio-init');
-            overlay.style.opacity = 0;
-            setTimeout(() => overlay.remove(), 500);
         }
 
         // Trigger random "Spark" sounds
@@ -392,7 +367,7 @@ export const SolidLightView = () => {
             osc.stop(audioContext.currentTime + 0.15);
         }
 
-        document.getElementById('audio-init').addEventListener('click', initAudio);
+        setTimeout(initAudio, 500);
 
 
         // --- SCENE SETUP ---
@@ -401,7 +376,7 @@ export const SolidLightView = () => {
         scene.fog = new THREE.FogExp2(0x050508, 0.02);
 
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 0, 6);
+        camera.position.set(0, 0, 25); // Start far away
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -411,9 +386,13 @@ export const SolidLightView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.enablePan = false;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.5;
+        controls.minDistance = 3;
+        controls.maxDistance = 15;
+        controls.enabled = false; // Disable for intro
 
         // Interaction State
         const mouse = new THREE.Vector2();
@@ -736,9 +715,20 @@ export const SolidLightView = () => {
         const START_PHASE_2 = 15.0; // Start Phase 2 at 15s
         const END_PHASE_2 = 30.0;   // End Phase 2 at 30s (Duration 15s)
 
+        let introComplete = false;
+
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
+
+            // --- CAMERA INTRO ---
+            if (!introComplete) {
+                camera.position.z += (9 - camera.position.z) * 0.02; // Smooth lerp
+                if (Math.abs(camera.position.z - 9) < 0.1) {
+                    introComplete = true;
+                    controls.enabled = true;
+                }
+            }
 
             // --- PHASE CALCULATIONS ---
             let currentPhase = 0;

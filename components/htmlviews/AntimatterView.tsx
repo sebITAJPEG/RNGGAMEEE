@@ -98,6 +98,7 @@ export const AntimatterView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.enablePan = false;
         controls.minDistance = 3;
         controls.maxDistance = 15;

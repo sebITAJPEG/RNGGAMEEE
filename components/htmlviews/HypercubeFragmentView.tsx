@@ -68,6 +68,8 @@ export const HypercubeFragmentView = () => {
             background: rgba(0, 255, 255, 0.1);
         }
 
+        canvas { display: block; width: 100%; height: 100%; }
+
         /* Audio hint */
         #audio-hint {
             position: absolute;
@@ -136,16 +138,21 @@ export const HypercubeFragmentView = () => {
         camera.position.copy(startPos);
         camera.lookAt(0, 0, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(1); // Force 1x for performance/smoothness
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         container.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.enableZoom = false;
+        controls.zoomSpeed = 1.0; 
+        controls.rotateSpeed = 0.8;
         controls.enablePan = false;
+        controls.minDistance = 1.5;
+        controls.maxDistance = 100;
         controls.enabled = false; 
 
         // --- AUDIO ENGINE ---
@@ -362,7 +369,8 @@ export const HypercubeFragmentView = () => {
         // Post Processing
         const composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.0, 0.3, 0.05));
+        // Use half-res for bloom to improve performance
+        composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth/2, window.innerHeight/2), 1.0, 0.3, 0.05));
         const aberrationPass = new ShaderPass({
             uniforms: { tDiffuse: { value: null }, amount: { value: 0.003 } },
             vertexShader: \`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }\`,

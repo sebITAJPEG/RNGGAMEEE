@@ -369,8 +369,7 @@ export const FrozenTimeView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.minDistance = 5;
-        controls.maxDistance = 15;
+        controls.enableZoom = false;
         controls.enablePan = false;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.5;

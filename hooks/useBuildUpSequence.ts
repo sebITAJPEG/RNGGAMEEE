@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { audioService } from '../services/audioService';
 
-export type BuildUpType = 'SPECTRUM' | 'NIGHTMARE' | 'LUNAR';
+export type BuildUpType = 'SPECTRUM' | 'NIGHTMARE' | 'LUNAR' | 'HYPERCUBE';
 
 export const useBuildUpSequence = () => {
     const [activeSequence, setActiveSequence] = useState<BuildUpType | null>(null);
@@ -14,6 +14,8 @@ export const useBuildUpSequence = () => {
             audioService.playNightmareBuildup();
         } else if (type === 'LUNAR') {
             audioService.playLunarBuildup();
+        } else if (type === 'HYPERCUBE') {
+            // Audio for Hypercube handled by component or service
         }
         
         setTimeout(() => {

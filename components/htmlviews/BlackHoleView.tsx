@@ -191,7 +191,7 @@ export const BlackHoleView = () => {
         // --- SCENE ---
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 6);
+        camera.position.set(0, 2, 60);
         
         const renderer = new THREE.WebGLRenderer({ antialias: false }); 
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -200,6 +200,7 @@ export const BlackHoleView = () => {
         
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 2.0;
         controls.minDistance = 4.0;

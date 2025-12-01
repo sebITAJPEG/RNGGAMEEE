@@ -128,6 +128,7 @@ export const StrangeMatterView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.8;
         controls.enablePan = false;

@@ -93,7 +93,7 @@ export const MoonItemView: React.FC<Props> = ({ item }) => {
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSpeed = 0.8;
+        controls.enableDamping = true; controls.enableZoom = false; controls.autoRotate = true; controls.autoRotateSpeed = 0.8;
 
         // MOON
         const moonGeo = new THREE.SphereGeometry(3, 64, 64);

@@ -26,7 +26,6 @@ import { CrystallizedThoughtView } from '@/components/htmlviews/CrystallizedThou
 import { AntimatterView } from '@/components/htmlviews/AntimatterView';
 import { DarkMatterView } from '@/components/htmlviews/DarkMatterView';
 import { FrozenTimeHTMLView } from '@/components/models/FrozenTimeHTMLView'; // Keep (Has Cutscene Logic)
-import { SolidLightView } from '@/components/htmlviews/SolidLightView';
 import { StrangeMatterView } from '@/components/htmlviews/StrangeMatterView';
 import { MoonItemView } from '@/components/htmlviews/MoonItemView';
 
@@ -39,6 +38,7 @@ import { LucidLobsterHTMLView } from '@/components/models/LucidLobsterHTMLView';
 import { NightmareEelHTMLView } from '@/components/models/NightmareEelHTMLView';
 import { LunarDivinityHTMLView } from '@/components/models/LunarDivinityHTMLView';
 import { SingularityCrystalHTMLView } from '@/components/models/SingularityCrystalHTMLView';
+import { SolidLightHTMLView } from '@/components/models/SolidLightHTMLView';
 
 // --- SCENE CONTENT ---
 
@@ -69,7 +69,7 @@ const SceneContent: React.FC<{ item: ItemData; color: string; intensity: number 
         </EffectComposer>
       )}
 
-      <OrbitControls enablePan={false} autoRotate autoRotateSpeed={isBlackHole ? 0.5 : 2} />
+      <OrbitControls makeDefault enablePan={false} enableZoom={false} autoRotate autoRotateSpeed={isBlackHole ? 0.5 : 2} enableDamping />
     </>
   );
 };
@@ -164,10 +164,6 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 backdrop-blur-md perspective-1000" onClick={onClose}>
       <motion.div
         ref={ref}
-        style={!isFullScreen ? { rotateX, rotateY, transformStyle: "preserve-3d" } : {}}
-        // @ts-ignore
-        onPointerMove={!isFullScreen ? handlePointerMove : undefined}
-        onMouseLeave={!isFullScreen ? handleMouseLeave : undefined}
         onClick={(e) => e.stopPropagation()}
         className={containerClasses}
       >
@@ -201,7 +197,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
             ) : isFrozenTime ? (
               <FrozenTimeHTMLView skipCutscene={skipCutscene} />
             ) : isSolidLight ? (
-              <SolidLightView />
+              <SolidLightHTMLView skipCutscene={skipCutscene} />
             ) : isStrangeMatter ? (
               <StrangeMatterView />
             ) : isTheSpectrum ? (
@@ -219,7 +215,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
             ) : isMoonItem ? (
               <MoonItemView item={item} />
             ) : (
-              <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }}>
+              <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }} dpr={[1, 2]}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
               </Canvas>
             )}  

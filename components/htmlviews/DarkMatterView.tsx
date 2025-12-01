@@ -674,7 +674,7 @@ export const DarkMatterView: React.FC<Props> = ({ startSkipped = false }) => {
         
         // CAMERA INTRO SETTINGS
         const initialCamPos = new THREE.Vector3(0, 20, 40); // High and far
-        const targetCamPos = new THREE.Vector3(0, 0, 7);    // Final inspection pos
+        const targetCamPos = new THREE.Vector3(0, 0, 20);    // Final inspection pos
         
         if (startSkipped) {
             camera.position.copy(targetCamPos);
@@ -693,6 +693,7 @@ export const DarkMatterView: React.FC<Props> = ({ startSkipped = false }) => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.autoRotate = false; 
         controls.enablePan = false;
         controls.enabled = startSkipped; // Enable if skipped

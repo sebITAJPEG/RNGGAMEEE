@@ -578,18 +578,25 @@ export const TheSpectrumView = () => {
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 300);
         const startPos = new THREE.Vector3(0, -10, 30); 
-        const endPos = new THREE.Vector3(0, 0, 18);
+        const endPos = new THREE.Vector3(0, 0, 60);
         camera.position.copy(endPos);
         camera.lookAt(0, 0, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(1);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.0;
         document.body.appendChild(renderer.domElement);
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
+        controls.dampingFactor = 0.05;
+        controls.zoomSpeed = 0.5;
+        controls.rotateSpeed = 0.5;
+        controls.minDistance = 5;
+        controls.maxDistance = 50;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.5;
         controls.enablePan = false;

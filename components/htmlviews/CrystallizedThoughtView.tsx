@@ -577,6 +577,7 @@ export const CrystallizedThoughtView: React.FC<Props> = ({ startSkipped = false 
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.dampingFactor = 0.05;
         controls.autoRotate = startSkipped; // Enable if skipped
         controls.autoRotateSpeed = 1.0;

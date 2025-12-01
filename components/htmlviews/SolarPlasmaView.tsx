@@ -65,6 +65,7 @@ export const SolarPlasmaView = () => {
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
+        controls.enableZoom = false;
         controls.dampingFactor = 0.05;
         controls.autoRotate = true;
         controls.autoRotateSpeed = 0.5;
