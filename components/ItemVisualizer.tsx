@@ -8,10 +8,10 @@ import {
 } from '@react-three/drei';
 import { EffectComposer, Bloom, Noise, Vignette } from '@react-three/postprocessing';
 import { RarityId, ItemData, VariantId } from '@/types';
-import { 
-    RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS,
-    ORE_RARITY_TIERS, GOLD_RARITY_TIERS, PRISM_RARITY_TIERS, 
-    FISH_RARITY_TIERS, PLANT_RARITY_TIERS, DREAM_RARITY_TIERS, MOON_RARITY_TIERS 
+import {
+  RARITY_TIERS, VARIANTS, ORES, GOLD_ORES, SPECIAL_HTML_ITEMS,
+  ORE_RARITY_TIERS, GOLD_RARITY_TIERS, PRISM_RARITY_TIERS,
+  FISH_RARITY_TIERS, PLANT_RARITY_TIERS, DREAM_RARITY_TIERS, MOON_RARITY_TIERS
 } from '@/constants';
 
 // --- 3D MODELS ---
@@ -40,6 +40,8 @@ import { LunarDivinityHTMLView } from '@/components/models/LunarDivinityHTMLView
 import { SingularityCrystalHTMLView } from '@/components/models/SingularityCrystalHTMLView';
 import { SolidLightHTMLView } from '@/components/models/SolidLightHTMLView';
 import { WakingLifeHTMLView } from '@/components/models/WakingLifeHTMLView';
+import { NonEuclideanGeodeHTMLView } from '@/components/models/NonEuclideanGeodeHTMLView';
+import { InfraredIngotHTMLView } from '@/components/models/InfraredIngotHTMLView';
 
 // --- SCENE CONTENT ---
 
@@ -62,7 +64,7 @@ const SceneContent: React.FC<{ item: ItemData; color: string; intensity: number 
             <Bloom luminanceThreshold={0} mipmapBlur intensity={1.5} radius={0.6} />
             <Noise opacity={0.1} />
             <Vignette eskil={false} offset={0.1} darkness={1.1} />
-          </EffectComposer>
+          </EffectComposer >
         </>
       ) : (
         <EffectComposer>
@@ -86,16 +88,16 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
   // Tries to find the rarity in the main tier list first.
   // If not found (e.g., "Stellar" or "Radioactive" ore IDs), it searches the specific lists.
   const tier = useMemo(() => {
-      const rId = item.rarityId;
-      return RARITY_TIERS[rId] || 
-             ORE_RARITY_TIERS[rId as any] || 
-             GOLD_RARITY_TIERS[rId as any] ||
-             PRISM_RARITY_TIERS[rId as any] ||
-             FISH_RARITY_TIERS[rId as any] || 
-             PLANT_RARITY_TIERS[rId as any] ||
-             DREAM_RARITY_TIERS[rId as any] ||
-             MOON_RARITY_TIERS[rId as any] ||
-             RARITY_TIERS[RarityId.COMMON]; // Safe fallback
+    const rId = item.rarityId;
+    return RARITY_TIERS[rId] ||
+      ORE_RARITY_TIERS[rId as any] ||
+      GOLD_RARITY_TIERS[rId as any] ||
+      PRISM_RARITY_TIERS[rId as any] ||
+      FISH_RARITY_TIERS[rId as any] ||
+      PLANT_RARITY_TIERS[rId as any] ||
+      DREAM_RARITY_TIERS[rId as any] ||
+      MOON_RARITY_TIERS[rId as any] ||
+      RARITY_TIERS[RarityId.COMMON]; // Safe fallback
   }, [item.rarityId]);
 
   const variant = VARIANTS[item.variantId || 0]; // Default to NONE
@@ -145,11 +147,13 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
   const isLunarDivinity = item.text === "Lunar Divinity";
   const isSingularityCrystal = item.text === "Singularity Crystal";
   const isWakingLife = item.text === "Waking Life";
-  
+  const isNonEuclideanGeode = item.text === "Non-Euclidean Geode";
+  const isInfraredIngot = item.text === "Infrared Ingot";
+
   // Generic Moon Check
   const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
-  
-  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife; 
+
+  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife || isNonEuclideanGeode || isInfraredIngot;
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
   const isOre = !!oreData;
@@ -170,15 +174,15 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
         className={containerClasses}
       >
         {isFullScreen && (
-            <button 
-                onClick={onClose}
-                className="absolute top-4 right-4 z-[110] text-white/50 hover:text-white text-2xl font-bold p-2 bg-black/20 hover:bg-black/50 rounded-full transition-colors w-10 h-10 flex items-center justify-center"
-            >
-                ✕
-            </button>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-[110] text-white/50 hover:text-white text-2xl font-bold p-2 bg-black/20 hover:bg-black/50 rounded-full transition-colors w-10 h-10 flex items-center justify-center"
+          >
+            ✕
+          </button>
         )}
 
-        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife) && (
+        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife || isNonEuclideanGeode) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
               <SolarPlasmaView />
@@ -216,13 +220,17 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
               <SingularityCrystalHTMLView skipCutscene={skipCutscene} />
             ) : isWakingLife ? (
               <WakingLifeHTMLView skipCutscene={skipCutscene} />
+            ) : isNonEuclideanGeode ? (
+              <NonEuclideanGeodeHTMLView onClose={onClose} />
+            ) : isInfraredIngot ? (
+              <InfraredIngotHTMLView skipCutscene={skipCutscene} />
             ) : isMoonItem ? (
               <MoonItemView item={item} />
             ) : (
               <Canvas camera={{ position: [0, 0, 6], fov: 45 }} gl={{ antialias: false, alpha: true }} dpr={[1, 2]}>
                 <SceneContent item={item} color={modelColor} intensity={intensity} />
               </Canvas>
-            )}  
+            )}
           </div>
         )}
 

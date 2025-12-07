@@ -58,7 +58,7 @@ export const StatsModal: React.FC<Props> = ({
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-2">
-                    
+
                     <StatSection title="GENERAL GEAR" color="white">
                         <StatRow label="BOOST" value={getEquippedItemName(stats.equippedItems, 'GENERAL', 'BOOST')} valueColor="text-yellow-200" />
                         <StatRow label="MULTI" value={getEquippedItemName(stats.equippedItems, 'GENERAL', 'MULTI')} valueColor="text-purple-300" />
@@ -120,19 +120,19 @@ export const StatsModal: React.FC<Props> = ({
                     <div className="bg-black/40 p-4 rounded border border-neutral-700/50 mb-4">
                         <h3 className="text-sm font-bold font-mono text-white mb-2 border-b border-neutral-700/50 pb-1">LIFETIME STATS</h3>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs font-mono text-neutral-400">
-                            <StatRow label="Mine Rolls" value={stats.totalMined.toLocaleString()} />
-                            <StatRow label="Gold Rolls" value={stats.totalGoldMined.toLocaleString()} />
-                            <StatRow label="Prism Rolls" value={stats.totalPrismMined.toLocaleString()} />
-                            <StatRow label="Fish Caught" value={stats.totalFished.toLocaleString()} />
-                            <StatRow label="Plants Harvested" value={stats.totalHarvested.toLocaleString()} />
-                            <StatRow label="Dreams Entered" value={stats.totalDreamt.toLocaleString()} />
+                            <StatRow label="Mine Rolls" value={(stats.totalMined || 0).toLocaleString()} />
+                            <StatRow label="Gold Rolls" value={(stats.totalGoldMined || 0).toLocaleString()} />
+                            <StatRow label="Prism Rolls" value={(stats.totalPrismMined || 0).toLocaleString()} />
+                            <StatRow label="Fish Caught" value={(stats.totalFished || 0).toLocaleString()} />
+                            <StatRow label="Plants Harvested" value={(stats.totalHarvested || 0).toLocaleString()} />
+                            <StatRow label="Dreams Entered" value={(stats.totalDreamt || 0).toLocaleString()} />
                             {/* Note: Specific roll counts for sub-categories like 'Gold Mine Rolls' or 'Moon Rolls' might not be tracked separately in current GameStats structure unless we infer or add them. 
                                 I will display what is available or sum them if possible. 
                                 'Moon Rolls' isn't explicitly tracked as a counter in GameStats yet, only totalRolls which includes moon rolls if in moon mode? 
                                 Actually App.tsx updates totalRolls for both. 
                                 I'll add what we have.
                             */}
-                             <StatRow label="Total Rolls" value={stats.totalRolls.toLocaleString()} />
+                            <StatRow label="Total Rolls" value={(stats.totalRolls || 0).toLocaleString()} />
                         </div>
                     </div>
 

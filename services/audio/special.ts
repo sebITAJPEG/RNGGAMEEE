@@ -32,7 +32,7 @@ export const playSpectrumBuildup = (core: AudioCore) => {
         const rumble = ctx.createOscillator();
         const rumbleGain = ctx.createGain();
         const rumbleFilter = ctx.createBiquadFilter();
-        
+
         rumble.type = 'sawtooth';
         rumbleFilter.type = 'lowpass';
         rumbleFilter.frequency.setValueAtTime(100, t);
@@ -43,7 +43,7 @@ export const playSpectrumBuildup = (core: AudioCore) => {
         rumbleGain.connect(masterGain);
 
         rumble.frequency.setValueAtTime(30, t);
-        rumble.frequency.linearRampToValueAtTime(8, t + duration); 
+        rumble.frequency.linearRampToValueAtTime(8, t + duration);
 
         rumbleGain.gain.setValueAtTime(0, t);
         rumbleGain.gain.linearRampToValueAtTime(0.2, t + duration);
@@ -54,12 +54,12 @@ export const playSpectrumBuildup = (core: AudioCore) => {
 
         // 3. Spectrum Scatter (Random high notes accelerating)
         const noteCount = 40;
-        for(let i = 0; i < noteCount; i++) {
+        for (let i = 0; i < noteCount; i++) {
             // Exponential time distribution (more notes at the end)
             const progress = i / noteCount;
-            const timeOffset = Math.pow(progress, 2) * duration; 
+            const timeOffset = Math.pow(progress, 2) * duration;
             const noteTime = t + timeOffset;
-            
+
             const noteOsc = ctx.createOscillator();
             const noteGain = ctx.createGain();
             noteOsc.connect(noteGain);
@@ -67,7 +67,7 @@ export const playSpectrumBuildup = (core: AudioCore) => {
 
             noteOsc.type = 'sine';
             noteOsc.frequency.value = 400 + Math.random() * 1000 + (progress * 2000);
-            
+
             noteGain.gain.setValueAtTime(0, noteTime);
             noteGain.gain.linearRampToValueAtTime(0.1, noteTime + 0.05);
             noteGain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.15);
@@ -117,10 +117,10 @@ export const playLunarBuildup = (core: AudioCore) => {
 
         // 2. High Shimmer (Sparkles)
         const shimmerCount = 30;
-        for(let i = 0; i < shimmerCount; i++) {
+        for (let i = 0; i < shimmerCount; i++) {
             const timeOffset = (i / shimmerCount) * duration;
             const noteTime = t + timeOffset;
-            
+
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
@@ -165,17 +165,17 @@ export const playLucidSound = (core: AudioCore) => {
 
     try {
         const t = ctx.currentTime;
-        
+
         // Dreamy swell
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(masterGain);
-        
+
         osc.type = 'sine';
         osc.frequency.setValueAtTime(200, t);
         osc.frequency.exponentialRampToValueAtTime(800, t + 2.0);
-        
+
         // Tremolo
         const lfo = ctx.createOscillator();
         lfo.frequency.value = 10;
@@ -189,25 +189,25 @@ export const playLucidSound = (core: AudioCore) => {
         gain.gain.setValueAtTime(0, t);
         gain.gain.linearRampToValueAtTime(0.3, t + 1.0);
         gain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
-        
+
         osc.start(t);
         osc.stop(t + 2.5);
 
         // Sparkles
-        for(let i=0; i<10; i++) {
+        for (let i = 0; i < 10; i++) {
             setTimeout(() => {
-                if(!ctx || !masterGain) return;
+                if (!ctx || !masterGain) return;
                 const spark = ctx.createOscillator();
                 const sGain = ctx.createGain();
                 spark.connect(sGain);
                 sGain.connect(masterGain);
-                
+
                 spark.type = 'triangle';
                 spark.frequency.setValueAtTime(1000 + Math.random() * 2000, ctx.currentTime);
-                
+
                 sGain.gain.setValueAtTime(0.05, ctx.currentTime);
                 sGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-                
+
                 spark.start();
                 spark.stop(ctx.currentTime + 0.1);
             }, i * 200);
@@ -306,7 +306,7 @@ export const setSignalProximity = (core: AudioCore, proximity: number) => {
 export const stopSignalScan = (core: AudioCore) => {
     const { ctx } = core;
     if (!ctx) return;
-    
+
     try {
         if (signalOsc) {
             if (signalGain && ctx) {
@@ -391,11 +391,11 @@ export const playNightmareBuildup = (core: AudioCore) => {
         drone.stop(t + duration + 0.1);
 
         // 2. High pitched "screams" / metallic noises
-        for(let i=0; i<8; i++) {
+        for (let i = 0; i < 8; i++) {
             const time = t + (Math.random() * duration * 0.8);
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            
+
             osc.frequency.setValueAtTime(2000 + Math.random() * 2000, time);
             osc.frequency.exponentialRampToValueAtTime(100, time + 0.3); // rapid drop
             osc.type = 'sawtooth';
@@ -414,8 +414,8 @@ export const playNightmareBuildup = (core: AudioCore) => {
         const bufferSize = ctx.sampleRate * duration;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
-        for(let i=0; i<bufferSize; i++) data[i] = Math.random() * 2 - 1;
-        
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
         const noise = ctx.createBufferSource();
         noise.buffer = buffer;
         const noiseGain = ctx.createGain();
@@ -437,4 +437,110 @@ export const playNightmareBuildup = (core: AudioCore) => {
         noise.stop(t + duration + 0.1);
 
     } catch (e) { }
+};
+
+// Non-Euclidean Ambience Controller
+const neAudio = {
+    drone: null as OscillatorNode | null,
+    modulator: null as OscillatorNode | null,
+    gain: null as GainNode | null,
+    lfo: null as OscillatorNode | null,
+    timeoutId: null as any,
+
+    stop(core: AudioCore) {
+        if (this.timeoutId) {
+            clearTimeout(this.timeoutId);
+            this.timeoutId = null;
+        }
+
+        const ctx = core.ctx;
+        if (!ctx) return;
+
+        // Fade out
+        if (this.gain) {
+            try {
+                this.gain.gain.cancelScheduledValues(ctx.currentTime);
+                this.gain.gain.setValueAtTime(this.gain.gain.value, ctx.currentTime);
+                this.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+            } catch (e) { }
+        }
+
+        // Hard stop after fade
+        this.timeoutId = setTimeout(() => {
+            try { if (this.drone) { this.drone.stop(); this.drone.disconnect(); } } catch (e) { }
+            try { if (this.modulator) { this.modulator.stop(); this.modulator.disconnect(); } } catch (e) { }
+            try { if (this.lfo) { this.lfo.stop(); this.lfo.disconnect(); } } catch (e) { }
+            try { if (this.gain) { this.gain.disconnect(); } } catch (e) { }
+
+            this.drone = null;
+            this.modulator = null;
+            this.lfo = null;
+            this.gain = null;
+            this.timeoutId = null;
+        }, 600);
+    },
+
+    start(core: AudioCore) {
+        if (!core.ensureContext()) return;
+        const { ctx, masterGain } = core;
+        if (!ctx || !masterGain) return;
+
+        // Stop any existing sound first (cancels previous timeout)
+        this.stop(core);
+        if (this.timeoutId) clearTimeout(this.timeoutId); // Double ensure
+
+        try {
+            const t = ctx.currentTime;
+
+            this.drone = ctx.createOscillator();
+            this.modulator = ctx.createOscillator();
+            this.gain = ctx.createGain();
+            const modGain = ctx.createGain();
+            this.lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+
+            // Connections
+            this.drone.connect(this.gain);
+            this.gain.connect(masterGain);
+
+            this.modulator.connect(modGain);
+            modGain.connect(this.drone.frequency);
+
+            this.lfo.connect(lfoGain);
+            lfoGain.connect(modGain.gain);
+
+            // Settings
+            this.drone.type = 'sine';
+            this.drone.frequency.setValueAtTime(60, t);
+
+            this.modulator.type = 'sawtooth';
+            this.modulator.frequency.setValueAtTime(110, t);
+
+            this.lfo.type = 'sine';
+            this.lfo.frequency.value = 0.2;
+
+            lfoGain.gain.value = 500;
+            modGain.gain.value = 200;
+
+            // Fade in
+            this.gain.gain.setValueAtTime(0, t);
+            this.gain.gain.linearRampToValueAtTime(0.15, t + 2.0);
+
+            // Start
+            this.drone.start(t);
+            this.modulator.start(t);
+            this.lfo.start(t);
+
+        } catch (e) {
+            console.warn("Audio start error", e);
+        }
+    }
+};
+
+export const startNonEuclideanAmbience = (core: AudioCore) => {
+    neAudio.start(core);
+};
+
+export const stopNonEuclideanAmbience = (core: AudioCore) => {
+    neAudio.stop(core);
 };

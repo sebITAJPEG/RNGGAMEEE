@@ -47,6 +47,9 @@ class AudioService {
     public setSignalProximity(p: number) { special.setSignalProximity(audioCore, p); }
     public stopSignalScan() { special.stopSignalScan(audioCore); }
     public playSignalLock() { special.playSignalLock(audioCore); }
+
+    public startNonEuclideanAmbience() { special.startNonEuclideanAmbience(audioCore); }
+    public stopNonEuclideanAmbience() { special.stopNonEuclideanAmbience(audioCore); }
 }
 
 export const audioService = new AudioService();

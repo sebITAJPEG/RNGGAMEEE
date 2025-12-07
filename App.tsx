@@ -15,7 +15,9 @@ import { THEMES, applyTheme } from './themes';
 
 import { HypercubeBuildup } from './components/buildups/HypercubeBuildup';
 import { LucidLobsterBuildup } from './components/buildups/LucidLobsterBuildup';
+import { NonEuclideanBuildup } from './components/buildups/NonEuclideanBuildup';
 import { WakingLifeBuildup } from './components/buildups/WakingLifeBuildup';
+import { InfraredBuildup } from './components/buildups/InfraredBuildup';
 import { SpectrumStyles } from './components/SpectrumEffects';
 import { LunarStyles } from './components/LunarEffects';
 import { LeftPanel } from './components/panels/LeftPanel';
@@ -210,12 +212,19 @@ export default function App() {
                 triggerSequence('WAKING_LIFE', () => {
                     handleInspectResource(item);
                 });
+            } else if (item.name === "Non-Euclidean Geode") {
+                triggerSequence('NON_EUCLIDEAN', () => {
+                    handleInspectResource(item);
+                });
+            } else if (item.name === "Infrared Ingot") {
+                triggerSequence('INFRARED', () => {
+                    handleInspectResource(item);
+                });
             } else {
                 handleInspectResource(item);
             }
         }
     };
-
     // NOTE: We pass a wrapper function for playing sound that checks the mute state
     const playNormalMineSound = () => { if (!isMiningMuted) audioService.playMineSound(); };
     const playGoldMineSound = () => { if (!isMiningMuted) audioService.playGoldMineSound(); };
@@ -425,26 +434,26 @@ export default function App() {
 
     const handleInspectResource = (item: { id: number; name: string; description: string; rarityId?: number; dimension?: string }) => {
         let rarityId = RarityId.COMMON;
-        
+
         if (item.dimension === 'PRISM') {
-             rarityId = (item.rarityId as RarityId) || RarityId.COMMON;
+            rarityId = (item.rarityId as RarityId) || RarityId.COMMON;
         } else if (item.id > 2000 && !item.dimension) {
-             rarityId = RarityId.MOON;
+            rarityId = RarityId.MOON;
         } else if (item.rarityId) {
-             rarityId = item.rarityId as RarityId;
+            rarityId = item.rarityId as RarityId;
         } else {
-             if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
-             else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
-             else rarityId = RarityId.MOON;
+            if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
+            else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
+            else rarityId = RarityId.MOON;
         }
 
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ 
-            text: item.name, 
-            description: item.description, 
-            rarityId: rarityId, 
-            variantId: VariantId.NONE, 
+        setInspectedItem({
+            text: item.name,
+            description: item.description,
+            rarityId: rarityId,
+            variantId: VariantId.NONE,
             isFullScreen: true,
             skipCutscene: gameSettings.skipAllCutscenes // Use global setting
         });
@@ -453,26 +462,26 @@ export default function App() {
 
     const handleInventoryInspectResource = (item: { id: number; name: string; description: string; rarityId?: number; dimension?: string }) => {
         let rarityId = RarityId.COMMON;
-        
+
         if (item.dimension === 'PRISM') {
-             rarityId = (item.rarityId as RarityId) || RarityId.COMMON;
+            rarityId = (item.rarityId as RarityId) || RarityId.COMMON;
         } else if (item.id > 2000 && !item.dimension) {
-             rarityId = RarityId.MOON;
+            rarityId = RarityId.MOON;
         } else if (item.rarityId) {
-             rarityId = item.rarityId as RarityId;
+            rarityId = item.rarityId as RarityId;
         } else {
-             if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
-             else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
-             else rarityId = RarityId.MOON;
+            if (item.id < 1000) rarityId = Math.min(Math.ceil(item.id / 10), 15) as RarityId;
+            else if (item.id < 2000) rarityId = Math.min(Math.max(1, Math.ceil((item.id - 1000) / 10) * 2 + 1), 15) as RarityId;
+            else rarityId = RarityId.MOON;
         }
 
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ 
-            text: item.name, 
-            description: item.description, 
-            rarityId: rarityId, 
-            variantId: VariantId.NONE, 
+        setInspectedItem({
+            text: item.name,
+            description: item.description,
+            rarityId: rarityId,
+            variantId: VariantId.NONE,
             isFullScreen: true,
             skipCutscene: gameSettings.skipInventoryCutscenes // Use Inventory setting
         });
@@ -516,7 +525,7 @@ export default function App() {
             else if (mat.type === 'DREAM') deduct(dreamingGame.inventory, dreamingGame.setInventory);
             else if (mat.type === 'MOON') deduct(moonInventory, setMoonInventory);
         });
-        
+
         if (item.unlocksFeature === 'PRISM_MINE') {
             audioService.playRaritySound(RarityId.COSMIC);
         } else {
@@ -541,11 +550,11 @@ export default function App() {
     const handleIndexSelectItem = (item: ItemData, rarityId: RarityId) => {
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ 
-            text: item.text, 
-            description: item.description, 
-            rarityId: rarityId, 
-            cutscenePhrase: item.cutscenePhrase, 
+        setInspectedItem({
+            text: item.text,
+            description: item.description,
+            rarityId: rarityId,
+            cutscenePhrase: item.cutscenePhrase,
             isFullScreen: false,
             skipCutscene: gameSettings.skipInventoryCutscenes // Use Inventory setting
         });
@@ -677,7 +686,7 @@ export default function App() {
         if (bestDrop.text === "Lucid Lobster") {
             audioService.playLucidSound();
         } else if (bestDrop.text === "Waking Life") {
-             // Waking Life Sound
+            // Waking Life Sound
         } else if (!isMoon) {
             audioService.playBoom(bestDrop.rarityId);
         } else {
@@ -689,10 +698,10 @@ export default function App() {
             setIsAutoSpinning(false);
             if (bestDrop.text === "The Spectrum") {
                 triggerSequence('SPECTRUM', () => {
-                    setInspectedItem({ 
-                        text: bestDrop.text, 
-                        description: bestDrop.description, 
-                        rarityId: bestDrop.rarityId, 
+                    setInspectedItem({
+                        text: bestDrop.text,
+                        description: bestDrop.description,
+                        rarityId: bestDrop.rarityId,
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
                         isFullScreen: true,
@@ -701,10 +710,10 @@ export default function App() {
                 });
             } else if (bestDrop.text === "Nightmare Eel") {
                 triggerSequence('NIGHTMARE', () => {
-                    setInspectedItem({ 
-                        text: bestDrop.text, 
-                        description: bestDrop.description, 
-                        rarityId: bestDrop.rarityId, 
+                    setInspectedItem({
+                        text: bestDrop.text,
+                        description: bestDrop.description,
+                        rarityId: bestDrop.rarityId,
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
                         isFullScreen: true,
@@ -713,10 +722,10 @@ export default function App() {
                 });
             } else if (bestDrop.text === "Lunar Divinity") {
                 triggerSequence('LUNAR', () => {
-                    setInspectedItem({ 
-                        text: bestDrop.text, 
-                        description: bestDrop.description, 
-                        rarityId: bestDrop.rarityId, 
+                    setInspectedItem({
+                        text: bestDrop.text,
+                        description: bestDrop.description,
+                        rarityId: bestDrop.rarityId,
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
                         isFullScreen: true,
@@ -725,10 +734,10 @@ export default function App() {
                 });
             } else if (bestDrop.text === "Hypercube Fragment") {
                 triggerSequence('HYPERCUBE', () => {
-                    setInspectedItem({ 
-                        text: bestDrop.text, 
-                        description: bestDrop.description, 
-                        rarityId: bestDrop.rarityId, 
+                    setInspectedItem({
+                        text: bestDrop.text,
+                        description: bestDrop.description,
+                        rarityId: bestDrop.rarityId,
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
                         isFullScreen: true,
@@ -737,10 +746,22 @@ export default function App() {
                 });
             } else if (bestDrop.text === "Waking Life") {
                 triggerSequence('WAKING_LIFE', () => {
-                    setInspectedItem({ 
-                        text: bestDrop.text, 
-                        description: bestDrop.description, 
-                        rarityId: bestDrop.rarityId, 
+                    setInspectedItem({
+                        text: bestDrop.text,
+                        description: bestDrop.description,
+                        rarityId: bestDrop.rarityId,
+                        variantId: bestDrop.variantId,
+                        cutscenePhrase: bestDrop.cutscenePhrase,
+                        isFullScreen: true,
+                        skipCutscene: gameSettings.skipAllCutscenes
+                    });
+                });
+            } else if (bestDrop.text === "Non-Euclidean Geode") {
+                triggerSequence('NON_EUCLIDEAN', () => {
+                    setInspectedItem({
+                        text: bestDrop.text,
+                        description: bestDrop.description,
+                        rarityId: bestDrop.rarityId,
                         variantId: bestDrop.variantId,
                         cutscenePhrase: bestDrop.cutscenePhrase,
                         isFullScreen: true,
@@ -748,10 +769,10 @@ export default function App() {
                     });
                 });
             } else {
-                setInspectedItem({ 
-                    text: bestDrop.text, 
-                    description: bestDrop.description, 
-                    rarityId: bestDrop.rarityId, 
+                setInspectedItem({
+                    text: bestDrop.text,
+                    description: bestDrop.description,
+                    rarityId: bestDrop.rarityId,
                     variantId: bestDrop.variantId,
                     cutscenePhrase: bestDrop.cutscenePhrase,
                     isFullScreen: true,
@@ -778,12 +799,12 @@ export default function App() {
     const handleInspectItem = (item: InventoryItem) => {
         audioService.playClick();
         setIsAutoSpinning(false);
-        setInspectedItem({ 
-            text: item.text, 
-            description: item.description, 
-            rarityId: item.rarityId, 
-            variantId: item.variantId, 
-            cutscenePhrase: '', 
+        setInspectedItem({
+            text: item.text,
+            description: item.description,
+            rarityId: item.rarityId,
+            variantId: item.variantId,
+            cutscenePhrase: '',
             isFullScreen: true,
             skipCutscene: gameSettings.skipInventoryCutscenes // Use Inventory setting
         });
@@ -823,10 +844,12 @@ export default function App() {
         : "bg-background text-text selection:bg-text selection:text-background";
 
     return (
-        <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : activeSequence === 'LUNAR' ? 'animate-lunar-buildup' : ''}`}>
+        <div className={`relative min-h-screen flex transition-colors duration-1000 ${containerClass} ${activeSequence === 'SPECTRUM' ? 'animate-spectrum-buildup' : activeSequence === 'NIGHTMARE' ? 'animate-nightmare-buildup' : activeSequence === 'LUNAR' ? 'animate-lunar-buildup' : activeSequence === 'INFRARED' ? 'animate-infrared-buildup' : ''}`}>
             {activeSequence === 'HYPERCUBE' && <HypercubeBuildup />}
+            {activeSequence === 'NON_EUCLIDEAN' && <NonEuclideanBuildup />}
             {activeSequence === 'LUCID' && <LucidLobsterBuildup />}
             {activeSequence === 'WAKING_LIFE' && <WakingLifeBuildup />}
+            {activeSequence === 'INFRARED' && <InfraredBuildup />}
             {activeRarityVFX && <SpecialEffects rarityId={activeRarityVFX} />}
             {inspectedItem && <ItemVisualizer item={inspectedItem} onClose={() => setInspectedItem(null)} skipCutscene={inspectedItem.skipCutscene} />}
             {isMoon && (
