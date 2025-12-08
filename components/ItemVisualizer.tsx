@@ -28,6 +28,7 @@ import { DarkMatterView } from '@/components/htmlviews/DarkMatterView';
 import { FrozenTimeHTMLView } from '@/components/models/FrozenTimeHTMLView'; // Keep (Has Cutscene Logic)
 import { StrangeMatterView } from '@/components/htmlviews/StrangeMatterView';
 import { MoonItemView } from '@/components/htmlviews/MoonItemView';
+import { StardustHTMLView } from '@/components/htmlviews/StardustHTMLView';
 
 // --- COMPLEX MODEL WRAPPERS (With Cutscenes) ---
 import { HypercubeFragmentHTMLView } from '@/components/models/HypercubeFragmentHTMLView';
@@ -149,11 +150,12 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
   const isWakingLife = item.text === "Waking Life";
   const isNonEuclideanGeode = item.text === "Non-Euclidean Geode";
   const isInfraredIngot = item.text === "Infrared Ingot";
+  const isStardust = item.text === "Stardust";
 
   // Generic Moon Check
   const isMoonItem = item.rarityId === RarityId.MOON && !isLunarDivinity;
 
-  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife || isNonEuclideanGeode || isInfraredIngot;
+  const isHtmlView = isSpecial || isBlackHoleCore || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife || isNonEuclideanGeode || isInfraredIngot || isStardust;
   const isFullScreen = isHtmlView && (item.isFullScreen !== false);
 
   const isOre = !!oreData;
@@ -182,7 +184,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
           </button>
         )}
 
-        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife || isNonEuclideanGeode) && (
+        {(isOre || isSpecial || isLucidLobster || isNightmareEel || isLunarDivinity || isMoonItem || isSingularityCrystal || isWakingLife || isNonEuclideanGeode || isInfraredIngot || isStardust) && (
           <div className="absolute inset-0 z-0">
             {isSolarPlasma ? (
               <SolarPlasmaView />
@@ -224,6 +226,8 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
               <NonEuclideanGeodeHTMLView onClose={onClose} />
             ) : isInfraredIngot ? (
               <InfraredIngotHTMLView skipCutscene={skipCutscene} />
+            ) : isStardust ? (
+              <StardustHTMLView onClose={onClose} showHud={isFullScreen} />
             ) : isMoonItem ? (
               <MoonItemView item={item} />
             ) : (
@@ -235,7 +239,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
         )}
 
         {/* UI Overlay - HIDDEN if using a full HTML view which has its own UI */}
-        {!isHtmlView && (
+        {(!isHtmlView || (isStardust && !isFullScreen)) && (
           <div className="relative z-10 h-full flex flex-col justify-between p-6 pointer-events-none">
             <div className="flex justify-between items-start border-b border-white/10 pb-4 bg-gradient-to-b from-neutral-900/80 to-transparent">
               <div className="text-left">
@@ -273,7 +277,7 @@ export const ItemVisualizer: React.FC<Props> = ({ item, onClose, skipCutscene = 
         )}
 
         {/* Default Effects Overlay - HIDDEN if using HTML view */}
-        {!isHtmlView && (
+        {(!isHtmlView || (isStardust && !isFullScreen)) && (
           <>
             <div className="absolute inset-0 pointer-events-none border-4 border-transparent rounded-xl mix-blend-overlay opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] z-20" />
             {hasVariant && <div className={`absolute inset-0 pointer-events-none border-2 ${variant.borderClass} opacity-50 z-20`} />}
